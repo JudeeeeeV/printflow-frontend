@@ -11,10 +11,13 @@ interface CheckoutCardProps {
     amount: number;
     gcashNumber: string;
     createdAt?: string;
+    orderState?: string;
+    paymentReceipts?: any[];
 }
 
-export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gcashNumber, createdAt }) => {
+export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gcashNumber, createdAt, orderState, paymentReceipts }) => {
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
+    const [referenceNumber, setReferenceNumber] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -30,6 +33,12 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
             const now = Date.now();
             const diff = expiryTime - now;
 
+            if (orderState === 'AWAITING_PAYMENT_VERIFICATION' || orderState === 'IN_PRODUCTION' || orderState === 'COMPLETED' || orderState === 'AWAITING_PAYMENT') {
+                setTimeLeft('');
+                setIsExpired(false);
+                return;
+            }
+
             if (diff <= 0) {
                 setTimeLeft('00:00');
                 setIsExpired(true);
@@ -44,7 +53,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
         const intervalId = setInterval(updateTimer, 1000);
 
         return () => clearInterval(intervalId);
-    }, [createdAt]);
+    }, [createdAt, orderState]);
 
     useEffect(() => {
         if (isExpired) {
@@ -60,14 +69,10 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
         setError(null);
 
         try {
-            // For MVP, we simulate uploading the file to get a URL, then pass it to the backend.
-            // A real app would upload the receiptFile to S3/Cloud Storage here.
-            const mockReceiptUrl = `https://mockstorage.com/receipts/${orderId}_${receiptFile.name}`;
-            
-            await orderService.uploadReceipt(orderId, mockReceiptUrl);
+            await orderService.uploadReceipt(orderId, receiptFile, referenceNumber);
             
             alert('Receipt uploaded successfully. Awaiting clerk verification.');
-            navigate('/new-order'); // Redirect to a dashboard or back to order page
+            navigate('/new-order'); // Redirect to dashboard
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to upload receipt. Please try again.';
             setError(errorMessage);
@@ -104,7 +109,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-2xl font-black text-black">Checkout & Payment</h2>
-                    {timeLeft && (
+                    {timeLeft && orderState !== 'AWAITING_PAYMENT_VERIFICATION' && (
                         <p className="text-sm font-semibold text-red-500 mt-1">
                             Expires in: {timeLeft}
                         </p>
@@ -142,22 +147,53 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
                     </div>
                 )}
 
-                <QRCodeDisplay gcashNumber={gcashNumber} amount={amount} />
-                
-                <div className="border-t border-gray-100 pt-8">
-                    <ReceiptUploadZone 
-                        onReceiptSelect={setReceiptFile} 
-                        selectedFile={receiptFile} 
-                    />
-                </div>
+                {orderState === 'AWAITING_PAYMENT' && paymentReceipts && paymentReceipts.length > 0 && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                        <p className="text-red-700 text-sm font-bold">Payment Denied</p>
+                        <p className="text-red-600 text-sm">Your previous payment submission was rejected. Please verify the amount and GCash number, and upload a new receipt.</p>
+                    </div>
+                )}
 
-                <div className="pt-4">
-                    <SubmitVerificationButton 
-                        onSubmit={handleSubmit} 
-                        isSubmitting={isSubmitting} 
-                        disabled={!receiptFile || isExpired} 
-                    />
-                </div>
+                {orderState === 'AWAITING_PAYMENT_VERIFICATION' ? (
+                    <div className="bg-yellow-50 border border-yellow-200 p-8 text-center flex flex-col items-center justify-center rounded-sm">
+                        <svg className="w-16 h-16 text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3 className="text-xl font-bold text-yellow-800 mb-2">Verifying Payment...</h3>
+                        <p className="text-yellow-700">The print shop is currently reviewing your uploaded receipt. We'll notify you once it's approved and production begins.</p>
+                    </div>
+                ) : (
+                    <>
+                        <QRCodeDisplay gcashNumber={gcashNumber} amount={amount} />
+                        
+                        <div className="border-t border-gray-100 pt-8">
+                            <ReceiptUploadZone 
+                                onReceiptSelect={setReceiptFile} 
+                                selectedFile={receiptFile} 
+                            />
+                            
+                            <div className="mt-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">GCash Reference Number (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 1234567890123"
+                                    value={referenceNumber}
+                                    onChange={(e) => setReferenceNumber(e.target.value)}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                                />
+                                <p className="text-xs text-gray-500 mt-2">Entering the reference number helps speed up the verification process.</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-4">
+                            <SubmitVerificationButton 
+                                onSubmit={handleSubmit} 
+                                isSubmitting={isSubmitting} 
+                                disabled={!receiptFile || isExpired} 
+                            />
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

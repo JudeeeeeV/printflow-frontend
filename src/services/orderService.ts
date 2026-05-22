@@ -76,13 +76,32 @@ export const orderService = {
         });
     },
 
+    async getShopOrders(): Promise<any[]> {
+        return apiClient<any[]>('/orders/shop', {
+            method: 'GET',
+        });
+    },
+
     /**
      * Uploads the payment receipt for a specific order.
      */
-    async uploadReceipt(orderId: string, receiptUrl: string): Promise<{ message: string; state: string }> {
+    async uploadReceipt(orderId: string, receiptFile: File, referenceNumber?: string): Promise<{ message: string; state: string }> {
+        const formData = new FormData();
+        formData.append('receiptFile', receiptFile);
+        if (referenceNumber) {
+            formData.append('referenceNumber', referenceNumber);
+        }
+
         return apiClient<{ message: string; state: string }>(`/orders/${orderId}/receipt`, {
             method: 'POST',
-            body: JSON.stringify({ receiptUrl }),
+            body: formData,
+        });
+    },
+
+    async verifyPayment(orderId: string, action: 'APPROVE' | 'REJECT', reason?: string): Promise<{ message: string }> {
+        return apiClient<{ message: string }>(`/orders/${orderId}/verify-payment`, {
+            method: 'POST',
+            body: JSON.stringify({ action, reason }),
         });
     },
 

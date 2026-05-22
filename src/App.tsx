@@ -5,6 +5,7 @@ import { NewOrderPage } from './pages/NewOrderPage/NewOrderPage';
 import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { UnauthorizedPage } from './pages/UnauthorizedPage/UnauthorizedPage';
+import { ShopDashboard } from './pages/ShopDashboard/ShopDashboard';
 
 export const App: React.FC = () => {
     return (
@@ -21,6 +22,11 @@ export const App: React.FC = () => {
                 <Route path="/checkout/:orderId" element={
                     <ProtectedRoute allowedRoles={['Student']}>
                         <CheckoutPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/shop-dashboard" element={
+                    <ProtectedRoute allowedRoles={['Print Shop']}>
+                        <ShopDashboard />
                     </ProtectedRoute>
                 } />
                 <Route path="*" element={<Navigate to="/auth" replace />} />

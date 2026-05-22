@@ -5,6 +5,7 @@ export interface RegisterPayload {
     email: string;
     passwordHash: string; // The SDD implies password handled cleanly; we'll send it securely
     role: 'Student' | 'Print Shop';
+    shopName?: string;
 }
 
 export interface LoginPayload {
@@ -35,6 +36,7 @@ export const authService = {
                 email: payload.email,
                 password: payload.passwordHash,
                 accountType: payload.role,
+                shopName: payload.shopName,
             }),
         });
     },

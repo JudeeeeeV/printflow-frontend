@@ -14,6 +14,7 @@ export const RegistrationForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const [accountType, setAccountType] = useState<AccountRole>('Student');
+  const [shopName, setShopName] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +35,13 @@ export const RegistrationForm: React.FC = () => {
       return;
     }
 
+    if (accountType === 'Print Shop') {
+      if (!shopName) {
+        setError('Shop name is required for Print Shops.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -41,11 +49,11 @@ export const RegistrationForm: React.FC = () => {
         email,
         passwordHash: password, // The backend handles bcrypt hashing
         role: accountType,
+        shopName: accountType === 'Print Shop' ? shopName : undefined,
       };
 
       await authService.register(payload);
 
-      // Setup successful
       setSuccess('Account created successfully! You can now log in.');
 
       // Optional: Store token and redirect
@@ -101,6 +109,23 @@ export const RegistrationForm: React.FC = () => {
         onChange={setAccountType}
       />
 
+      {accountType === 'Print Shop' && (
+        <div className="mb-5 border border-gray-200 p-4 bg-gray-50 mt-4">
+          <h3 className="font-bold mb-4">Print Shop Details</h3>
+          <div className="mb-4">
+            <label className="block text-sm mb-2 font-semibold text-black" htmlFor="shopName">Shop Name</label>
+            <input
+              id="shopName"
+              type="text"
+              className="w-full pl-4 pr-4 py-3 text-base text-black bg-white rounded-none outline-none transition-all duration-200 ease-out ring-1 ring-gray-300 focus:ring-2 focus:ring-black"
+              placeholder="e.g. TLBH Print Co."
+              value={shopName}
+              onChange={(e) => setShopName(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 p-4 bg-white ring-4 ring-black text-black font-bold text-sm animate-shake">
           {error}
@@ -112,6 +137,8 @@ export const RegistrationForm: React.FC = () => {
           {success}
         </div>
       )}
+
+
 
       <div className="mt-2">
         <SubmitButton

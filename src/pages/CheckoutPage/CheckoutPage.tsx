@@ -11,7 +11,9 @@ export const CheckoutPage: React.FC = () => {
 
     // Fetch order details
     useEffect(() => {
-        if (orderId) {
+        if (!orderId) return;
+
+        const fetchOrder = () => {
             orderService.getOrder(orderId)
                 .then(data => {
                     setOrder(data);
@@ -21,7 +23,15 @@ export const CheckoutPage: React.FC = () => {
                     alert('Order not found or expired.');
                     navigate('/new-order');
                 });
-        }
+        };
+
+        // Initial fetch
+        fetchOrder();
+
+        // Poll every 5 seconds
+        const intervalId = setInterval(fetchOrder, 5000);
+
+        return () => clearInterval(intervalId);
     }, [navigate, orderId]);
 
     if (!orderId) {
@@ -47,6 +57,8 @@ export const CheckoutPage: React.FC = () => {
                     amount={order?.total || 15.00}
                     gcashNumber="09123456789" // Mock shop GCash number
                     createdAt={order?.created_at}
+                    orderState={order?.state}
+                    paymentReceipts={order?.payment_receipts}
                 />
             </div>
         </div>

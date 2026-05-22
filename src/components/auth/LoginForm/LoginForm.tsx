@@ -39,7 +39,12 @@ export const LoginForm: React.FC = () => {
             const response = await authService.login(payload);
             localStorage.setItem('jwt_token', response.token);
             localStorage.setItem('user_role', response.user.roleTag);
-            navigate('/new-order');
+            
+            if (response.user.roleTag === 'Print Shop') {
+                navigate('/shop-dashboard');
+            } else {
+                navigate('/new-order');
+            }
 
         } catch (err: unknown) {
             if (err instanceof Error) {

@@ -5,7 +5,9 @@ import { ShopSelector } from '../../components/orders/ShopSelector/ShopSelector'
 import { FileUploadZone } from '../../components/orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../../components/orders/OrderSummary/OrderSummary';
 import { MyOrdersList } from '../../components/dashboard/MyOrdersList';
-import { orderService, type PrintShop, type OrderEstimate } from '../../services/orderService';
+import { orderService, type OrderEstimate } from '../../services/orderService';
+import { shopService } from '../../services/shopService';
+import type { PrintShop } from '../../services/orderService';
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
@@ -26,13 +28,11 @@ export const NewOrderPage: React.FC = () => {
     const [estimate, setEstimate] = useState<OrderEstimate | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Mock initial fetch for print shops
+    // Fetch verified print shops from DB
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setShops([
-            { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', name: 'TLBH Print Co.', rating: 4.8, status: 'OPEN' },
-            { id: '550e8400-e29b-41d4-a716-446655440000', name: 'Campus Graphics', rating: 4.5, status: 'BUSY' },
-        ]);
+        shopService.getShops()
+            .then(data => setShops(data))
+            .catch(err => console.error("Failed to fetch shops:", err));
     }, []);
 
     const handleFileSelect = async (selectedFile: File) => {

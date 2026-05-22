@@ -11,8 +11,13 @@ export const AuthPage: React.FC = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('jwt_token');
+        const role = localStorage.getItem('user_role');
         if (token) {
-            navigate('/new-order');
+            if (role === 'Print Shop') {
+                navigate('/shop-dashboard');
+            } else {
+                navigate('/new-order');
+            }
         }
     }, [navigate]);
 

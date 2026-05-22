@@ -25,10 +25,13 @@ export const MyOrdersList: React.FC = () => {
             });
     }, []);
 
-    const formatState = (state: string) => {
+    const formatState = (state: string, hasReceipts: boolean) => {
         switch (state) {
             case 'OPEN_INQUIRY': return { text: 'Pending Checkout', color: 'bg-yellow-100 text-yellow-800' };
-            case 'AWAITING_PAYMENT': return { text: 'Awaiting Payment', color: 'bg-blue-100 text-blue-800' };
+            case 'AWAITING_PAYMENT': return hasReceipts 
+                ? { text: 'Payment Denied', color: 'bg-red-100 text-red-800' }
+                : { text: 'Awaiting Payment', color: 'bg-blue-100 text-blue-800' };
+            case 'AWAITING_PAYMENT_VERIFICATION': return { text: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800' };
             case 'PROOF_APPROVED': return { text: 'Proof Approved', color: 'bg-indigo-100 text-indigo-800' };
             case 'IN_PRODUCTION': return { text: 'In Production', color: 'bg-purple-100 text-purple-800' };
             case 'READY_FOR_PICKUP': return { text: 'Ready', color: 'bg-green-100 text-green-800' };
@@ -80,7 +83,8 @@ export const MyOrdersList: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {orders.map(order => {
-                            const badge = formatState(order.state);
+                            const hasReceipts = true; // In the DB, order might not return receipts here if not joined, but AWAITING_PAYMENT means it had receipts rejected because initial is OPEN_INQUIRY
+                            const badge = formatState(order.state, hasReceipts);
                             return (
                                 <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
@@ -108,12 +112,12 @@ export const MyOrdersList: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
-                                        {order.state === 'OPEN_INQUIRY' && (
+                                        {(order.state === 'OPEN_INQUIRY' || order.state === 'AWAITING_PAYMENT') && (
                                             <button 
                                                 onClick={() => navigate(`/checkout/${order.id}`)}
-                                                className="text-white bg-black px-4 py-1.5 rounded hover:bg-gray-800 transition-colors"
+                                                className={`text-white px-4 py-1.5 rounded transition-colors ${order.state === 'AWAITING_PAYMENT' ? 'bg-red-600 hover:bg-red-700' : 'bg-black hover:bg-gray-800'}`}
                                             >
-                                                Checkout
+                                                {order.state === 'AWAITING_PAYMENT' ? 'Re-upload Receipt' : 'Checkout'}
                                             </button>
                                         )}
                                     </td>
