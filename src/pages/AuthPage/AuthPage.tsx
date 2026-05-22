@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RegistrationForm } from '../../components/auth/RegistrationForm/RegistrationForm';
 import { LoginForm } from '../../components/auth/LoginForm/LoginForm';
 
@@ -6,6 +7,14 @@ type AuthView = 'login' | 'register';
 
 export const AuthPage: React.FC = () => {
     const [activeView, setActiveView] = useState<AuthView>('login');
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem('jwt_token');
+        if (token) {
+            navigate('/new-order');
+        }
+    }, [navigate]);
 
     return (
         <div className="min-h-screen flex justify-center items-center bg-white relative overflow-hidden font-sans">

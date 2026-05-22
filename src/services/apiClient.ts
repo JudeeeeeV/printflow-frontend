@@ -29,9 +29,9 @@ export async function apiClient<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // TODO: Retrieve token from storage and attach to headers for protected routes
-  // const token = localStorage.getItem('jwt_token');
-  // if (token) headers.set('Authorization', `Bearer ${token}`);
+  // Retrieve token from storage and attach to headers for protected routes
+  const token = localStorage.getItem('jwt_token');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const config: RequestInit = {
     ...options,
@@ -40,7 +40,7 @@ export async function apiClient<T>(
 
   try {
     const response = await fetch(url, config);
-    
+
     // Attempt to parse JSON response
     let data;
     const contentType = response.headers.get('content-type');
@@ -51,6 +51,10 @@ export async function apiClient<T>(
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('jwt_token');
+        window.location.href = '/auth';
+      }
       throw new ApiError(
         data?.message || 'An error occurred during the request.',
         response.status,

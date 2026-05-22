@@ -1,5 +1,4 @@
-// @ts-ignore
-// @ts-ignore
+
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +38,7 @@ export const LoginForm: React.FC = () => {
 
             const response = await authService.login(payload);
             localStorage.setItem('jwt_token', response.token);
+            localStorage.setItem('user_role', response.user.roleTag);
             navigate('/new-order');
 
         } catch (err: unknown) {
@@ -67,9 +67,8 @@ export const LoginForm: React.FC = () => {
                     <input
                         id="login-password"
                         type={showPassword ? 'text' : 'password'}
-                        className={`w-full pl-4 pr-12 py-3 text-base text-black bg-white rounded-none outline-none transition-all duration-200 ease-out ring-inset ${
-                            error ? 'ring-4 ring-black font-bold animate-shake' : 'ring-1 ring-gray-300 focus:ring-2 focus:ring-black'
-                        }`}
+                        className={`w-full pl-4 pr-12 py-3 text-base text-black bg-white rounded-none outline-none transition-all duration-200 ease-out ring-inset ${error ? 'ring-4 ring-black font-bold animate-shake' : 'ring-1 ring-gray-300 focus:ring-2 focus:ring-black'
+                            }`}
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
