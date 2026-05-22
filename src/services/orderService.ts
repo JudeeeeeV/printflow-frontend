@@ -57,10 +57,14 @@ export const orderService = {
     /**
      * Submits the final print order.
      */
-    async submitOrder(shopId: string, assetUrl: string): Promise<SubmitOrderResponse> {
+    async submitOrder(shopId: string, file: File): Promise<SubmitOrderResponse> {
+        const formData = new FormData();
+        formData.append('shopId', shopId);
+        formData.append('file', file);
+
         return apiClient<SubmitOrderResponse>('/orders', {
             method: 'POST',
-            body: JSON.stringify({ shopId, assetUrl }),
+            body: formData as unknown as BodyInit,
         });
     },
 

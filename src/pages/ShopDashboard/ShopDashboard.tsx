@@ -5,7 +5,9 @@ import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
 import { AnimatePresence } from 'framer-motion';
-
+import { daemonSocketService } from '../../services/daemonSocketService';
+import type { DaemonStatus } from '../../services/daemonSocketService';
+import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
 export const ShopDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [shopData, setShopData] = useState<any>(null);
@@ -26,6 +28,13 @@ export const ShopDashboard: React.FC = () => {
     // Batch processing state
     const [selectedReadyOrders, setSelectedReadyOrders] = useState<string[]>([]);
     const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+    
+    // Daemon state
+    const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>('OFFLINE');
+    const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+    const [jobProgresses, setJobProgresses] = useState<{ orderId: string; status: string }[]>([]);
+    const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
+    const [selectedPrinter, setSelectedPrinter] = useState<string>('');
 
     const loadShopData = () => {
         shopService.getMyShop()
@@ -54,6 +63,45 @@ export const ShopDashboard: React.FC = () => {
         }, 10000);
         return () => clearInterval(timer);
     }, []);
+
+    useEffect(() => {
+        if (shopData?.id) {
+            daemonSocketService.connect(shopData.id);
+
+            const unsubscribeStatus = daemonSocketService.onStatusChange((status) => {
+                setDaemonStatus(status);
+            });
+
+            const unsubscribeProgress = daemonSocketService.onJobProgress(({ orderId, status }) => {
+                setJobProgresses(prev => {
+                    const existing = prev.find(p => p.orderId === orderId);
+                    if (existing) {
+                        return prev.map(p => p.orderId === orderId ? { ...p, status } : p);
+                    }
+                    return [...prev, { orderId, status }];
+                });
+                
+                // If a job completes, reload data to move it to the completed column
+                if (status === 'COMPLETED' || status === 'SUCCESS') {
+                    loadShopData();
+                }
+            });
+
+            const unsubscribePrinters = daemonSocketService.onPrintersList((printers) => {
+                setAvailablePrinters(printers);
+                if (printers.length > 0 && !selectedPrinter) {
+                    setSelectedPrinter(printers[0]);
+                }
+            });
+
+            return () => {
+                unsubscribeStatus();
+                unsubscribeProgress();
+                unsubscribePrinters();
+                daemonSocketService.disconnect();
+            };
+        }
+    }, [shopData?.id]);
 
     const handleLogout = () => {
         localStorage.removeItem('jwt_token');
@@ -122,25 +170,54 @@ export const ShopDashboard: React.FC = () => {
         }
     };
 
+    const handleManualDownload = () => {
+        let downloadCount = 0;
+        selectedReadyOrders.forEach(orderId => {
+            const order = shopOrders.find(o => o.id === orderId);
+            if (order && order.assets && order.assets.length > 0) {
+                const assetUrl = order.assets[0].file_url;
+                window.open(assetUrl, '_blank');
+                downloadCount++;
+            }
+        });
+        if (downloadCount === 0) {
+            alert("No assets found for the selected orders.");
+        } else {
+            alert(`Initiated download for ${downloadCount} asset(s). Make sure your browser allows popups!`);
+        }
+    };
+
     const handleBatchComplete = async () => {
         if (selectedReadyOrders.length === 0) return;
-        if (!window.confirm(`Are you sure you want to mark ${selectedReadyOrders.length} orders as Completed?`)) return;
-
+        
         setIsBatchProcessing(true);
+        // Initialize progresses for all selected orders
+        setJobProgresses(selectedReadyOrders.map(id => ({ orderId: id, status: 'QUEUED' })));
+        setIsProgressModalOpen(true);
+        
         try {
-            // Note: In a real app we'd want a batch API endpoint.
-            // For now, we simulate a fast loop.
-            await Promise.all(selectedReadyOrders.map(() => 
-                 // Assuming we don't have an endpoint, we just mock update in UI
-                 // Actually, we don't have update state endpoint for clerk yet in orderService?
-                 // Wait, we don't have a transition endpoint. Let's just alert for now.
-                 new Promise(resolve => setTimeout(resolve, 500))
-            ));
-            alert('Batch processing complete! (Mocked)');
+            const response = await fetch(`http://localhost:3000/edge/batch-execute/${shopData.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                },
+                body: JSON.stringify({ 
+                    orderIds: selectedReadyOrders,
+                    printerName: selectedPrinter || undefined
+                })
+            });
+            
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Failed to dispatch batch');
+            }
+            
             setSelectedReadyOrders([]);
-            loadShopData();
+            // Don't close modal here, wait for daemon status updates via WS
         } catch (err: any) {
             alert('Batch error: ' + err.message);
+            setIsProgressModalOpen(false);
         } finally {
             setIsBatchProcessing(false);
         }
@@ -173,16 +250,39 @@ export const ShopDashboard: React.FC = () => {
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     const completedOrders = shopOrders
-        .filter(o => ['READY_FOR_PICKUP', 'COMPLETED'].includes(o.state))
+        .filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
 
     return (
         <div className="h-screen bg-gray-50 font-sans flex flex-col overflow-hidden">
             <header className="bg-white border-b border-gray-200 py-4 px-6 flex justify-between items-center shrink-0 z-10 shadow-sm">
-                <div>
-                    <h1 className="text-2xl font-black text-black">Print Shop Dashboard</h1>
-                    <p className="text-sm font-medium text-gray-500">{name}</p>
+                <div className="flex items-center gap-6">
+                    <div>
+                        <h1 className="text-2xl font-black text-black">Print Shop Dashboard</h1>
+                        <p className="text-sm font-medium text-gray-500">{name}</p>
+                    </div>
+                    
+                    {/* Daemon Status Badge */}
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">
+                        <span className={`relative flex h-3 w-3`}>
+                            {daemonStatus === 'CONNECTED' && (
+                                <>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </>
+                            )}
+                            {daemonStatus === 'RECONNECTING' && (
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500 animate-pulse"></span>
+                            )}
+                            {daemonStatus === 'OFFLINE' && (
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
+                            )}
+                        </span>
+                        <span className="text-xs font-bold text-gray-700">
+                            Daemon: {daemonStatus === 'CONNECTED' ? 'Connected' : daemonStatus === 'RECONNECTING' ? 'Reconnecting...' : 'Offline'}
+                        </span>
+                    </div>
                 </div>
                 <button onClick={handleLogout} className="border-2 border-black text-black px-4 py-2 font-bold hover:bg-gray-100 transition-colors">
                     Logout
@@ -307,23 +407,65 @@ export const ShopDashboard: React.FC = () => {
                             
                             {/* Batch Controls */}
                             {printReadyOrders.length > 0 && (
-                                <div className="p-3 bg-white border-b border-gray-100 flex items-center justify-between shrink-0 shadow-sm z-10">
-                                    <label className="flex items-center text-sm font-bold text-gray-700 cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            className="mr-2 w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                                            checked={selectedReadyOrders.length === printReadyOrders.length && printReadyOrders.length > 0}
-                                            onChange={handleSelectAllReady}
-                                        />
-                                        Select All
-                                    </label>
-                                    <button 
-                                        onClick={handleBatchComplete}
-                                        disabled={selectedReadyOrders.length === 0 || isBatchProcessing}
-                                        className="text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                                    >
-                                        Batch Complete ({selectedReadyOrders.length})
-                                    </button>
+                                <div className="p-3 bg-white border-b border-gray-100 flex flex-col gap-2 shrink-0 shadow-sm z-10">
+                                    <div className="flex items-center justify-between">
+                                        <label className="flex items-center text-sm font-bold text-gray-700 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                className="mr-2 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                                                checked={selectedReadyOrders.length === printReadyOrders.length && printReadyOrders.length > 0}
+                                                onChange={handleSelectAllReady}
+                                            />
+                                            Select All
+                                        </label>
+                                        <span className="text-xs font-bold text-gray-500">{selectedReadyOrders.length} selected</span>
+                                    </div>
+                                    
+                                    {daemonStatus === 'CONNECTED' ? (
+                                        <div className="flex flex-col gap-2">
+                                            {availablePrinters.length > 0 ? (
+                                                <div className="w-full">
+                                                    <select 
+                                                        className="w-full text-xs bg-gray-50 border border-gray-300 text-gray-900 rounded-sm focus:ring-black focus:border-black block p-2"
+                                                        value={selectedPrinter}
+                                                        onChange={(e) => setSelectedPrinter(e.target.value)}
+                                                    >
+                                                        {availablePrinters.map(printer => (
+                                                            <option key={printer} value={printer}>{printer}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 font-medium italic">Fetching printers...</span>
+                                            )}
+                                            <button 
+                                                onClick={handleBatchComplete}
+                                                disabled={selectedReadyOrders.length === 0 || isBatchProcessing}
+                                                className="w-full text-sm font-bold bg-black hover:bg-gray-800 text-white px-3 py-2.5 rounded-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                                </svg>
+                                                Send to Daemon (Batch)
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full bg-red-50 border border-red-200 rounded-sm p-3 flex flex-col gap-2">
+                                            <span className="text-xs font-bold text-red-700 flex items-center gap-1">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                                Daemon Offline
+                                            </span>
+                                            <button 
+                                                onClick={handleManualDownload}
+                                                disabled={selectedReadyOrders.length === 0}
+                                                className="w-full text-xs font-bold bg-white text-red-700 border border-red-200 px-3 py-1.5 rounded-sm hover:bg-red-100 transition-colors disabled:opacity-50"
+                                            >
+                                                Download Assets Manually
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -379,13 +521,18 @@ export const ShopDashboard: React.FC = () => {
                 )}
             </main>
 
-            {/* Render Slide-Over Panel */}
             <PaymentReviewPanel
                 isOpen={!!selectedPaymentOrder}
                 order={selectedPaymentOrder}
                 onClose={() => setSelectedPaymentOrder(null)}
                 onVerify={handleVerifyPayment}
                 isVerifying={isVerifying}
+            />
+
+            <PrintJobProgressModal
+                isOpen={isProgressModalOpen}
+                onClose={() => setIsProgressModalOpen(false)}
+                jobs={jobProgresses}
             />
         </div>
     );

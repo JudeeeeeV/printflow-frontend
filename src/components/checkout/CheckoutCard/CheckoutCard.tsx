@@ -10,12 +10,13 @@ interface CheckoutCardProps {
     orderId: string;
     amount: number;
     gcashNumber: string;
+    gcashQrUrl?: string;
     createdAt?: string;
     orderState?: string;
     paymentReceipts?: any[];
 }
 
-export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gcashNumber, createdAt, orderState, paymentReceipts }) => {
+export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gcashNumber, gcashQrUrl, createdAt, orderState, paymentReceipts }) => {
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
     const [referenceNumber, setReferenceNumber] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,7 +165,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
                     </div>
                 ) : (
                     <>
-                        <QRCodeDisplay gcashNumber={gcashNumber} amount={amount} />
+                        <QRCodeDisplay gcashNumber={gcashNumber} gcashQrUrl={gcashQrUrl} amount={amount} />
                         
                         <div className="border-t border-gray-100 pt-8">
                             <ReceiptUploadZone 

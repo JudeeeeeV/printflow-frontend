@@ -54,8 +54,9 @@ export const CheckoutPage: React.FC = () => {
             <div className="max-w-4xl mx-auto">
                 <CheckoutCard 
                     orderId={orderId} 
-                    amount={order?.total || 15.00}
-                    gcashNumber="09123456789" // Mock shop GCash number
+                    amount={order?.total ?? 15.00}
+                    gcashNumber={order?.shops?.gcash_number || "09123456789"}
+                    gcashQrUrl={order?.shops?.gcash_qr_url}
                     createdAt={order?.created_at}
                     orderState={order?.state}
                     paymentReceipts={order?.payment_receipts}

@@ -17,7 +17,18 @@ export const UnauthorizedPage: React.FC = () => {
                     You do not have the required permissions to view this page. Please return to the dashboard.
                 </p>
                 <button
-                    onClick={() => navigate('/new-order')}
+                    onClick={() => {
+                        const role = localStorage.getItem('user_role');
+                        if (role === 'Print Shop') {
+                            navigate('/shop-dashboard');
+                        } else if (role === 'Student') {
+                            navigate('/new-order');
+                        } else {
+                            localStorage.removeItem('jwt_token');
+                            localStorage.removeItem('user_role');
+                            navigate('/auth');
+                        }
+                    }}
                     className="w-full py-3 bg-black text-white font-bold hover:bg-gray-800 transition-colors"
                 >
                     Return to Dashboard

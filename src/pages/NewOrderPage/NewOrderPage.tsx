@@ -65,7 +65,7 @@ export const NewOrderPage: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await orderService.submitOrder(selectedShopId, 'https://mockstorage.com/temp-url.pdf');
+            const response = await orderService.submitOrder(selectedShopId, file);
             // navigate to checkout page with orderId
             navigate(`/checkout/${response.orderId}`);
         } catch (err: any) {
