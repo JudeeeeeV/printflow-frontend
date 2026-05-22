@@ -62,14 +62,15 @@ export const ShopDashboard: React.FC = () => {
     };
 
     const handleUploadPermit = async () => {
-        if (!permitFile) return;
+        if (!permitFile || !qrFile) return;
         setIsUploading(true);
         setUploadError(null);
         try {
+            await shopService.uploadGcashQr(qrFile);
             await shopService.verifyPermit(permitFile);
             loadShopData();
         } catch (err: any) {
-            setUploadError(err.message || 'Failed to submit business permit.');
+            setUploadError(err.message || 'Failed to submit verification documents.');
         } finally {
             setIsUploading(false);
         }
@@ -189,25 +190,46 @@ export const ShopDashboard: React.FC = () => {
             </header>
 
             <main className="flex-1 flex flex-col overflow-hidden">
-                {verification_status !== 'VERIFIED' && verification_status !== 'OPEN' ? (
+                {verification_status === 'PENDING_REVIEW' ? (
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="bg-white border border-gray-200 p-8 flex flex-col items-center justify-center mt-10 rounded-sm shadow-sm max-w-2xl mx-auto w-full">
+                            <svg className="w-16 h-16 text-blue-500 mb-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">Verification Under Review</h2>
+                            <p className="text-gray-600 max-w-md text-center">
+                                We have received your business permit and GCash QR code. Your shop verification is currently under review. Please check back later.
+                            </p>
+                        </div>
+                    </div>
+                ) : verification_status !== 'VERIFIED' && verification_status !== 'OPEN' ? (
                     // Unverified State (Unchanged structure, placed in center)
                     <div className="flex-1 overflow-y-auto p-6">
                         <div className="bg-white border border-gray-200 p-8 flex flex-col items-center justify-center mt-10 rounded-sm shadow-sm max-w-2xl mx-auto w-full">
                             <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                             <h2 className="text-2xl font-bold text-gray-800 mb-2">Shop Verification Required</h2>
                             <p className="text-gray-600 max-w-md text-center mb-8">
-                                Your shop is currently unverified. Please submit your official business permit.
+                                Your shop is currently unverified. Please submit your official business permit and GCash QR code.
                             </p>
-                            <div className="w-full bg-gray-50 border border-gray-200 p-6 rounded-sm mb-6">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Upload Business Permit (Image/PDF)</label>
-                                <input
-                                    type="file" accept="image/*,application/pdf"
-                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 mb-4"
-                                    onChange={(e) => setPermitFile(e.target.files?.[0] || null)}
-                                    disabled={isUploading}
-                                />
-                                {uploadError && <p className="text-red-500 font-bold text-sm mb-4">{uploadError}</p>}
-                                <button onClick={handleUploadPermit} disabled={!permitFile || isUploading} className={`w-full py-3 font-bold text-white transition-colors ${!permitFile || isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-black hover:bg-gray-800'}`}>
+                            <div className="w-full bg-gray-50 border border-gray-200 p-6 rounded-sm mb-6 flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Upload Business Permit (Image/PDF)</label>
+                                    <input
+                                        type="file" accept="image/*,application/pdf"
+                                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
+                                        onChange={(e) => setPermitFile(e.target.files?.[0] || null)}
+                                        disabled={isUploading}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Upload GCash QR Code (Image)</label>
+                                    <input
+                                        type="file" accept="image/*"
+                                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        onChange={(e) => setQrFile(e.target.files?.[0] || null)}
+                                        disabled={isUploading}
+                                    />
+                                </div>
+                                {uploadError && <p className="text-red-500 font-bold text-sm">{uploadError}</p>}
+                                <button onClick={handleUploadPermit} disabled={!permitFile || !qrFile || isUploading} className={`w-full py-3 mt-2 font-bold text-white transition-colors ${!permitFile || !qrFile || isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-black hover:bg-gray-800'}`}>
                                     {isUploading ? 'Uploading & Analyzing...' : 'Submit for Verification'}
                                 </button>
                             </div>
