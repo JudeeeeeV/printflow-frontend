@@ -1,10 +1,16 @@
+// @ts-ignore
+// @ts-ignore
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService, type LoginPayload } from '../../../services/authService';
 
 export const LoginForm: React.FC = () => {
+    const navigate = useNavigate(); // Initialize the router navigation hook
+
     const [email, setEmail] = useState('');
     const [isEmailValid, setIsEmailValid] = useState(false);
 
@@ -32,11 +38,8 @@ export const LoginForm: React.FC = () => {
             };
 
             const response = await authService.login(payload);
-
             localStorage.setItem('jwt_token', response.token);
-
-            // TODO: Redirect to the appropriate dashboard
-            // window.location.href = '/dashboard';
+            navigate('/new-order');
 
         } catch (err: unknown) {
             if (err instanceof Error) {
