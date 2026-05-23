@@ -5,8 +5,6 @@ import { ShopSelector } from '../../components/orders/ShopSelector/ShopSelector'
 import { FileUploadZone } from '../../components/orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../../components/orders/OrderSummary/OrderSummary';
 import { MyOrdersList } from '../../components/dashboard/MyOrdersList';
-// You will need to create this component based on MyOrdersList
-// import { MyDraftsList } from '../../components/dashboard/MyDraftsList'; 
 import { orderService, type OrderEstimate } from '../../services/orderService';
 import { shopService } from '../../services/shopService';
 import type { PrintShop } from '../../services/orderService';
@@ -111,17 +109,16 @@ export const NewOrderPage: React.FC = () => {
                             Create New Order
                         </button>
                         <button 
-                            onClick={() => setActiveTab('orders')}
-                            className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'orders' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}
-                        >
-                            My Orders
-                        </button>
-                        {/* New Drafts Tab */}
-                        <button 
                             onClick={() => setActiveTab('drafts')}
                             className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'drafts' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}
                         >
                             Drafts
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('orders')}
+                            className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'orders' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}
+                        >
+                            My Orders
                         </button>
                     </div>
                 </div>
@@ -186,10 +183,7 @@ export const NewOrderPage: React.FC = () => {
                 {activeTab === 'orders' && <MyOrdersList />}
                 
                 {activeTab === 'drafts' && (
-                    // Placeholder until you build the real component
                     <div className="p-8 text-center text-gray-500">
-                        <h2 className="text-xl font-bold mb-2">My Drafts</h2>
-                        <p>Your saved drafts will appear here.</p>
                         <MyDraftsList />
                     </div>
                 )}
