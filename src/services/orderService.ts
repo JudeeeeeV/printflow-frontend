@@ -114,4 +114,38 @@ export const orderService = {
             method: 'DELETE',
         });
     },
+
+    // Fetch all drafts for the current user
+    getDrafts: async () => {
+        return await apiClient('/orders/drafts', { 
+            method: 'GET' 
+        });
+    },
+
+    // Convert a draft to a real order (starts the 15-minute timer)
+    submitDraft: async (draftId: string) => {
+        return await apiClient(`/orders/${draftId}/submit`, { 
+            method: 'PATCH' 
+        });
+    },
+
+    // Delete a draft permanently
+    deleteDraft: async (draftId: string) => {
+        return await apiClient(`/orders/${draftId}`, { 
+            method: 'DELETE' 
+        });
+    },
+
+    saveDraft: async (shopId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('shopId', shopId);
+        formData.append('file', file);
+        formData.append('isDraft', 'true'); // THIS is the magic flag for the backend
+
+        // Reusing your existing POST /orders endpoint
+        return await apiClient('/orders', {
+            method: 'POST',
+            body: formData,
+        });
+    }
 };

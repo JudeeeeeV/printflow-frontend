@@ -4,10 +4,11 @@ interface OrderSummaryProps {
     estimate: { total: number; rushFee: number; estimatedDelivery: string } | null;
     isSubmitting: boolean;
     onSubmit: () => void;
+    onSaveDraft: () => void;
     isReady: boolean;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, isReady }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady }) => {
     return (
         <div className="bg-white border-2 border-gray-100 p-6 flex flex-col h-full">
             <h3 className="text-xl font-bold text-black mb-6">Order Summary</h3>
@@ -31,7 +32,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
                     </p>
                 </div>
             ) : (
-                <div className="flex-grow flex items-center justify-center text-gray-400 text-sm">
+                <div className="flex-grow flex items-center justify-center text-gray-400 text-sm text-center">
                     Select a shop and upload a file to view pricing.
                 </div>
             )}
@@ -45,8 +46,9 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
                     {isSubmitting ? 'PROCESSING...' : 'SUBMIT ORDER'}
                 </button>
                 <button
+                    onClick={onSaveDraft}
                     disabled={!isReady || isSubmitting}
-                    className="w-full border-2 border-black text-black font-bold py-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full border-2 border-black text-black font-bold py-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     Save as Draft
                 </button>

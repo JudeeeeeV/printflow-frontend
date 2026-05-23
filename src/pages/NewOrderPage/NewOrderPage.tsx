@@ -5,9 +5,12 @@ import { ShopSelector } from '../../components/orders/ShopSelector/ShopSelector'
 import { FileUploadZone } from '../../components/orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../../components/orders/OrderSummary/OrderSummary';
 import { MyOrdersList } from '../../components/dashboard/MyOrdersList';
+// You will need to create this component based on MyOrdersList
+// import { MyDraftsList } from '../../components/dashboard/MyDraftsList'; 
 import { orderService, type OrderEstimate } from '../../services/orderService';
 import { shopService } from '../../services/shopService';
 import type { PrintShop } from '../../services/orderService';
+import { MyDraftsList } from '../../components/dashboard/MyDraftsList';
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
@@ -17,7 +20,8 @@ export const NewOrderPage: React.FC = () => {
         navigate('/auth');
     };
 
-    const [activeTab, setActiveTab] = useState<'new' | 'orders'>('new');
+    // Added 'drafts' to the type union
+    const [activeTab, setActiveTab] = useState<'new' | 'orders' | 'drafts'>('new');
     const [shops, setShops] = useState<PrintShop[]>([]);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
 
@@ -28,7 +32,6 @@ export const NewOrderPage: React.FC = () => {
     const [estimate, setEstimate] = useState<OrderEstimate | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Fetch verified print shops from DB
     useEffect(() => {
         shopService.getShops()
             .then(data => setShops(data))
@@ -46,12 +49,9 @@ export const NewOrderPage: React.FC = () => {
         setValidationResult(null);
 
         try {
-            // In production, this calls orderService.validateAsset()
             await new Promise(resolve => setTimeout(resolve, 1500));
-
             setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });
             setEstimate({ total: 15.00, rushFee: 3.00, estimatedDelivery: 'Tomorrow, 2PM' });
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
             setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
             setEstimate(null);
@@ -66,10 +66,33 @@ export const NewOrderPage: React.FC = () => {
         setIsSubmitting(true);
         try {
             const response = await orderService.submitOrder(selectedShopId, file);
-            // navigate to checkout page with orderId
             navigate(`/checkout/${response.orderId}`);
         } catch (err: any) {
             alert(`Failed to submit order: ${err.message || 'Unknown error'}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // New handler for saving a draft
+    const handleSaveDraft = async () => {
+        if (!selectedShopId || !file || !validationResult?.passed) return;
+
+        setIsSubmitting(true);
+        try {
+            // Replaced the mock delay with the actual API call
+            await orderService.saveDraft(selectedShopId, file);
+            
+            alert('Order saved as draft!');
+            setActiveTab('drafts'); 
+            
+            // Reset the form so they can start a new order if they want
+            setFile(null);
+            setSelectedShopId(null);
+            setValidationResult(null);
+            
+        } catch (err: any) {
+            alert(`Failed to save draft: ${err.message || 'Unknown error'}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -93,6 +116,13 @@ export const NewOrderPage: React.FC = () => {
                         >
                             My Orders
                         </button>
+                        {/* New Drafts Tab */}
+                        <button 
+                            onClick={() => setActiveTab('drafts')}
+                            className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'drafts' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}
+                        >
+                            Drafts
+                        </button>
                     </div>
                 </div>
                 <button 
@@ -104,56 +134,64 @@ export const NewOrderPage: React.FC = () => {
             </div>
             
             <div key={activeTab} className="animate-slide-fade">
-                {activeTab === 'new' ? (
+                {activeTab === 'new' && (
                     <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-8">
+                            <div className="bg-white p-6 shadow-sm border border-gray-100">
+                                <ShopSelector
+                                    shops={shops}
+                                    selectedShopId={selectedShopId}
+                                    onSelect={setSelectedShopId}
+                                />
 
-                    <div className="lg:col-span-2 space-y-8">
-                        <div className="bg-white p-6 shadow-sm border border-gray-100">
-                            <ShopSelector
-                                shops={shops}
-                                selectedShopId={selectedShopId}
-                                onSelect={setSelectedShopId}
-                            />
+                                <div className={`transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                    <FileUploadZone
+                                        onFileSelect={handleFileSelect}
+                                        isValidating={isValidating}
+                                        validationResult={validationResult}
+                                    />
+                                </div>
 
-                            <div className={`transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                                <FileUploadZone
-                                    onFileSelect={handleFileSelect}
-                                    isValidating={isValidating}
-                                    validationResult={validationResult}
+                                {file && validationResult?.passed && (
+                                    <div className="mt-8 bg-gray-200 h-[500px] flex items-center justify-center overflow-hidden relative group border border-gray-300">
+                                        {file.type.startsWith('image/') ? (
+                                            <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-contain" />
+                                        ) : file.type === 'application/pdf' ? (
+                                            <iframe src={URL.createObjectURL(file)} title="PDF Preview" className="w-full h-full border-none" />
+                                        ) : (
+                                            <span className="text-gray-500 font-bold">Preview not available for this file type</span>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none">
+                                            <span className="bg-white text-black px-6 py-2 font-bold text-sm rounded">Live Preview Active</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="lg:col-span-1">
+                            <div className="sticky top-10 h-[500px]">
+                                <OrderSummary
+                                    estimate={estimate}
+                                    isSubmitting={isSubmitting}
+                                    onSubmit={handleSubmitOrder}
+                                    onSaveDraft={handleSaveDraft} // Passed the new handler down
+                                    isReady={!!selectedShopId && !!validationResult?.passed}
                                 />
                             </div>
-
-                            {file && validationResult?.passed && (
-                                <div className="mt-8 bg-gray-200 h-[500px] flex items-center justify-center overflow-hidden relative group border border-gray-300">
-                                    {file.type.startsWith('image/') ? (
-                                        <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-contain" />
-                                    ) : file.type === 'application/pdf' ? (
-                                        <iframe src={URL.createObjectURL(file)} title="PDF Preview" className="w-full h-full border-none" />
-                                    ) : (
-                                        <span className="text-gray-500 font-bold">Preview not available for this file type</span>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none">
-                                        <span className="bg-white text-black px-6 py-2 font-bold text-sm rounded">Live Preview Active</span>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
-
-                    <div className="lg:col-span-1">
-                        <div className="sticky top-10 h-[500px]">
-                            <OrderSummary
-                                estimate={estimate}
-                                isSubmitting={isSubmitting}
-                                onSubmit={handleSubmitOrder}
-                                isReady={!!selectedShopId && !!validationResult?.passed}
-                            />
-                        </div>
+                )}
+                
+                {activeTab === 'orders' && <MyOrdersList />}
+                
+                {activeTab === 'drafts' && (
+                    // Placeholder until you build the real component
+                    <div className="p-8 text-center text-gray-500">
+                        <h2 className="text-xl font-bold mb-2">My Drafts</h2>
+                        <p>Your saved drafts will appear here.</p>
+                        <MyDraftsList />
                     </div>
-
-                </div>
-                ) : (
-                    <MyOrdersList />
                 )}
             </div>
         </div>
