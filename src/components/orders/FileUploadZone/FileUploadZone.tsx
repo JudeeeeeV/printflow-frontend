@@ -39,7 +39,16 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
                     accept=".pdf,.png"
                     className="hidden"
                     ref={fileInputRef}
-                    onChange={(e) => e.target.files && onFileSelect(e.target.files[0])}
+                    // Added click handler to reset the input value, allowing the exact same file to be selected twice if needed
+                    onClick={(e) => {
+                        (e.target as HTMLInputElement).value = '';
+                    }}
+                    // Added length check to prevent passing undefined if the user cancels the dialog
+                    onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                            onFileSelect(e.target.files[0]);
+                        }
+                    }}
                 />
 
                 <button
