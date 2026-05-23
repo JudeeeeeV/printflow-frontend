@@ -9,6 +9,8 @@ import { orderService, type OrderEstimate } from '../../services/orderService';
 import { shopService } from '../../services/shopService';
 import type { PrintShop } from '../../services/orderService';
 import { MyDraftsList } from '../../components/dashboard/MyDraftsList';
+import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
+import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
@@ -19,6 +21,7 @@ export const NewOrderPage: React.FC = () => {
     };
 
     // Added 'drafts' to the type union
+    const [editingDraft, setEditingDraft] = useState<DraftOrder | null>(null);
     const [activeTab, setActiveTab] = useState<'new' | 'orders' | 'drafts'>('new');
     const [shops, setShops] = useState<PrintShop[]>([]);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
@@ -103,7 +106,7 @@ export const NewOrderPage: React.FC = () => {
                     <h1 className="text-3xl font-black text-black tracking-tight mt-2">PrintFlow Dashboard</h1>
                     <div className="flex space-x-8 mt-6">
                         <button 
-                            onClick={() => setActiveTab('new')}
+                            onClick={() => { setActiveTab('new'); setEditingDraft(null); }}
                             className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'new' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}
                         >
                             Create New Order
@@ -182,10 +185,23 @@ export const NewOrderPage: React.FC = () => {
                 
                 {activeTab === 'orders' && <MyOrdersList />}
                 
-                {activeTab === 'drafts' && (
-                    <div className="p-8 text-center text-gray-500">
-                        <MyDraftsList />
+                {activeTab === 'drafts' && !editingDraft && (
+                    <div className="max-w-6xl mx-auto">
+                        <h2 className="text-2xl font-black text-black mb-6">My Drafts</h2>
+                        <MyDraftsList onEditDraft={setEditingDraft} /> 
                     </div>
+                )}
+
+                {activeTab === 'drafts' && editingDraft && (
+                    <EditDraftPanel 
+                        draft={editingDraft} 
+                        shops={shops}
+                        onCancel={() => setEditingDraft(null)}
+                        onSuccess={(orderId) => {
+                            setEditingDraft(null);
+                            navigate(`/checkout/${orderId}`);
+                        }}
+                    />
                 )}
             </div>
         </div>
