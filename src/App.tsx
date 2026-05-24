@@ -6,6 +6,13 @@ import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { UnauthorizedPage } from './pages/UnauthorizedPage/UnauthorizedPage';
 import { ShopDashboard } from './pages/ShopDashboard/ShopDashboard';
+import { ShopLayout } from './components/layout/ShopLayout';
+import { ShopAnalyticsPage } from './pages/ShopAnalyticsPage/ShopAnalyticsPage';
+import { ShopOverviewPage } from './pages/ShopOverviewPage/ShopOverviewPage';
+import { ShopArchivedPage } from './pages/ShopArchivedPage/ShopArchivedPage';
+import { ShopOrdersPage } from './pages/ShopOrdersPage/ShopOrdersPage';
+import { ShopInventoryPage } from './pages/ShopInventoryPage/ShopInventoryPage';
+import { ShopSettingsPage } from './pages/ShopSettingsPage/ShopSettingsPage';
 
 export const App: React.FC = () => {
     return (
@@ -26,9 +33,17 @@ export const App: React.FC = () => {
                 } />
                 <Route path="/shop-dashboard" element={
                     <ProtectedRoute allowedRoles={['Print Shop']}>
-                        <ShopDashboard />
+                        <ShopLayout />
                     </ProtectedRoute>
-                } />
+                }>
+                    <Route index element={<ShopDashboard />} />
+                    <Route path="overview" element={<ShopOverviewPage />} />
+                    <Route path="archived" element={<ShopArchivedPage />} />
+                    <Route path="analytics" element={<ShopAnalyticsPage />} />
+                    <Route path="orders" element={<ShopOrdersPage />} />
+                    <Route path="inventory" element={<ShopInventoryPage />} />
+                    <Route path="settings" element={<ShopSettingsPage />} />
+                </Route>
                 <Route path="*" element={<Navigate to="/auth" replace />} />
             </Routes>
         </Router>

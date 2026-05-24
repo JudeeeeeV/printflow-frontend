@@ -255,28 +255,28 @@ export const ShopDashboard: React.FC = () => {
 
 
     return (
-        <div className="h-screen bg-gray-50 font-sans flex flex-col overflow-hidden">
-            <header className="bg-white border-b border-gray-200 py-4 px-6 flex justify-between items-center shrink-0 z-10 shadow-sm">
+        <div className="flex flex-col h-full overflow-hidden font-sans">
+            <div className="bg-white border-b border-gray-200 py-3 px-6 flex justify-between items-center shrink-0 shadow-sm z-10">
                 <div className="flex items-center gap-6">
                     <div>
-                        <h1 className="text-2xl font-black text-black">Print Shop Dashboard</h1>
-                        <p className="text-sm font-medium text-gray-500">{name}</p>
+                        <h2 className="text-xl font-black text-black">{name}</h2>
+                        <p className="text-xs font-medium text-gray-500">Live Queue</p>
                     </div>
                     
                     {/* Daemon Status Badge */}
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">
-                        <span className={`relative flex h-3 w-3`}>
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1 rounded-full">
+                        <span className={`relative flex h-2.5 w-2.5`}>
                             {daemonStatus === 'CONNECTED' && (
                                 <>
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                                 </>
                             )}
                             {daemonStatus === 'RECONNECTING' && (
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500 animate-pulse"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500 animate-pulse"></span>
                             )}
                             {daemonStatus === 'OFFLINE' && (
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-gray-400"></span>
                             )}
                         </span>
                         <span className="text-xs font-bold text-gray-700">
@@ -284,10 +284,7 @@ export const ShopDashboard: React.FC = () => {
                         </span>
                     </div>
                 </div>
-                <button onClick={handleLogout} className="border-2 border-black text-black px-4 py-2 font-bold hover:bg-gray-100 transition-colors">
-                    Logout
-                </button>
-            </header>
+            </div>
 
             <main className="flex-1 flex flex-col overflow-hidden">
                 {verification_status === 'PENDING_REVIEW' ? (
