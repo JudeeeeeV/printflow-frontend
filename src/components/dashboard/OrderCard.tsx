@@ -66,6 +66,21 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                 </div>
             </div>
             
+            <div className="flex gap-2 mb-3">
+                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold rounded-sm border border-gray-200">
+                    {order.paper_size || 'A4'}
+                </span>
+                {order.print_color_mode === 'COLOR' ? (
+                    <span className="px-2 py-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white text-[10px] font-bold rounded-sm">
+                        COLOR
+                    </span>
+                ) : (
+                    <span className="px-2 py-1 bg-black text-white text-[10px] font-bold rounded-sm">
+                        B&W
+                    </span>
+                )}
+            </div>
+            
             <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                     <span className="text-gray-500 font-medium">Total Amount:</span>

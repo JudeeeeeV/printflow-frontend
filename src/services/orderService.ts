@@ -5,6 +5,7 @@ export interface PrintShop {
     name: string;
     rating: number;
     status: 'OPEN' | 'CLOSED' | 'BUSY';
+    pricing_matrix?: any;
 }
 
 export interface ValidationResult {
@@ -16,8 +17,9 @@ export interface ValidationResult {
 
 export interface OrderEstimate {
     total: number;
-    rushFee: number;
-    estimatedDelivery: string;
+    pageCount: number;
+    basePrice: number;
+    colorAdditive: number;
 }
 
 export interface SubmitOrderResponse {
@@ -57,10 +59,12 @@ export const orderService = {
     /**
      * Submits the final print order.
      */
-    async submitOrder(shopId: string, file: File): Promise<SubmitOrderResponse> {
+    async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string): Promise<SubmitOrderResponse> {
         const formData = new FormData();
         formData.append('shopId', shopId);
         formData.append('file', file);
+        formData.append('paperSize', paperSize);
+        formData.append('printColorMode', printColorMode);
 
         return apiClient<SubmitOrderResponse>('/orders', {
             method: 'POST',
@@ -136,11 +140,13 @@ export const orderService = {
         });
     },
 
-    saveDraft: async (shopId: string, file: File) => {
+    saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string) => {
         const formData = new FormData();
         formData.append('shopId', shopId);
         formData.append('file', file);
         formData.append('isDraft', 'true'); // THIS is the magic flag for the backend
+        formData.append('paperSize', paperSize);
+        formData.append('printColorMode', printColorMode);
 
         // Reusing your existing POST /orders endpoint
         return await apiClient('/orders', {

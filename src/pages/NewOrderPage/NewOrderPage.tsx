@@ -11,6 +11,7 @@ import type { PrintShop } from '../../services/orderService';
 import { MyDraftsList } from '../../components/dashboard/MyDraftsList';
 import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
 import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
+import { PDFDocument } from 'pdf-lib';
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
@@ -26,6 +27,10 @@ export const NewOrderPage: React.FC = () => {
     const [shops, setShops] = useState<PrintShop[]>([]);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
 
+    const [paperSize, setPaperSize] = useState<string>('A4');
+    const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
+    const [pageCount, setPageCount] = useState<number>(1);
+
     const [file, setFile] = useState<File | null>(null);
     const [isValidating, setIsValidating] = useState(false);
     const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>(null);
@@ -39,6 +44,28 @@ export const NewOrderPage: React.FC = () => {
             .catch(err => console.error("Failed to fetch shops:", err));
     }, []);
 
+    const updateEstimate = (shopId: string, size: string, mode: string, pCount: number) => {
+        const shop = shops.find(s => s.id === shopId);
+        let base = 3.00;
+        let addon = 0.00;
+        if (shop && shop.pricing_matrix) {
+            base = shop.pricing_matrix.paper_sizes?.[size] ?? 3.00;
+            addon = shop.pricing_matrix.color_mode_multipliers?.[mode] ?? 0.00;
+        }
+        setEstimate({ 
+            total: (base + addon) * pCount, 
+            pageCount: pCount,
+            basePrice: base,
+            colorAdditive: addon
+        });
+    };
+
+    useEffect(() => {
+        if (selectedShopId && file && validationResult?.passed) {
+            updateEstimate(selectedShopId, paperSize, printColorMode, pageCount);
+        }
+    }, [paperSize, printColorMode, selectedShopId, file, validationResult?.passed, shops, pageCount]);
+
     const handleFileSelect = async (selectedFile: File) => {
         if (!selectedShopId) {
             alert('Please select a print shop first.');
@@ -49,10 +76,37 @@ export const NewOrderPage: React.FC = () => {
         setIsValidating(true);
         setValidationResult(null);
 
+        let detectedSize = 'A4';
+        let detectedPageCount = 1;
+
+        if (selectedFile.type === 'application/pdf') {
+            try {
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const pdfDoc = await PDFDocument.load(arrayBuffer);
+                detectedPageCount = pdfDoc.getPageCount();
+                
+                if (detectedPageCount > 0) {
+                    const page = pdfDoc.getPage(0);
+                    const { width, height } = page.getSize();
+                    const h = Math.max(width, height);
+                    if (Math.abs(h - 792) < 20) {
+                        detectedSize = 'SHORT';
+                    } else if (Math.abs(h - 1008) < 20) {
+                        detectedSize = 'LONG';
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse PDF:", e);
+            }
+        }
+        
+        setPaperSize(detectedSize);
+        setPageCount(detectedPageCount);
+
         try {
             await new Promise(resolve => setTimeout(resolve, 1500));
             setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });
-            setEstimate({ total: 15.00, rushFee: 3.00, estimatedDelivery: 'Tomorrow, 2PM' });
+            updateEstimate(selectedShopId, detectedSize, printColorMode, detectedPageCount);
         } catch (err) {
             setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
             setEstimate(null);
@@ -66,7 +120,7 @@ export const NewOrderPage: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await orderService.submitOrder(selectedShopId, file);
+            const response = await orderService.submitOrder(selectedShopId, file, paperSize, printColorMode);
             navigate(`/checkout/${response.orderId}`);
         } catch (err: any) {
             alert(`Failed to submit order: ${err.message || 'Unknown error'}`);
@@ -82,7 +136,7 @@ export const NewOrderPage: React.FC = () => {
         setIsSubmitting(true);
         try {
             // Replaced the mock delay with the actual API call
-            await orderService.saveDraft(selectedShopId, file);
+            await orderService.saveDraft(selectedShopId, file, paperSize, printColorMode);
             
             alert('Order saved as draft!');
             setActiveTab('drafts'); 
@@ -170,13 +224,17 @@ export const NewOrderPage: React.FC = () => {
                         </div>
 
                         <div className="lg:col-span-1">
-                            <div className="sticky top-10 h-[500px]">
+                            <div className="sticky top-10">
                                 <OrderSummary
                                     estimate={estimate}
                                     isSubmitting={isSubmitting}
                                     onSubmit={handleSubmitOrder}
-                                    onSaveDraft={handleSaveDraft} // Passed the new handler down
+                                    onSaveDraft={handleSaveDraft}
                                     isReady={!!selectedShopId && !!validationResult?.passed}
+                                    paperSize={paperSize}
+                                    pageCount={pageCount}
+                                    printColorMode={printColorMode}
+                                    setPrintColorMode={setPrintColorMode}
                                 />
                             </div>
                         </div>
