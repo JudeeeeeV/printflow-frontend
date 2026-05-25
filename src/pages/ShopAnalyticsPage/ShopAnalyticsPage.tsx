@@ -3,6 +3,7 @@ import { Calendar, Download, CheckCircle, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { apiClient } from '../../services/apiClient';
 import { orderService } from '../../services/orderService';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 const KPICard = ({ title, value, subtext, subtextColor = 'text-gray-500' }: { title: string, value: string, subtext: string, subtextColor?: string }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-5 flex-1 shadow-sm">
@@ -78,7 +79,7 @@ export const ShopAnalyticsPage: React.FC = () => {
         }
     };
 
-    if (isLoading) return <div className="p-8 font-sans">Loading analytics...</div>;
+    if (isLoading) return <LoadingSpinner message="Loading analytics..." />;
     if (error) return <div className="p-8 font-sans text-red-500">Error: {error}</div>;
 
     return (

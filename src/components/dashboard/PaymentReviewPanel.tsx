@@ -89,35 +89,45 @@ export const PaymentReviewPanel: React.FC<PaymentReviewPanelProps> = ({ isOpen, 
                         </div>
 
                         <div className="p-4 bg-gray-50 border-t border-gray-200 mt-auto">
-                            <button
-                                onClick={() => onVerify(order.id, 'APPROVE')}
-                                disabled={isVerifying}
-                                className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none mb-4 rounded-sm flex items-center justify-center"
-                            >
-                                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
-                                Verify & Send to Production
-                            </button>
+                            {order.state === 'ESCALATED_DISPUTE' ? (
+                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-sm">
+                                    <p className="text-blue-800 font-bold text-center text-sm">
+                                        This payment is under review by Platform Administration.
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => onVerify(order.id, 'APPROVE')}
+                                        disabled={isVerifying}
+                                        className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none mb-4 rounded-sm flex items-center justify-center"
+                                    >
+                                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                                        Verify & Send to Production
+                                    </button>
 
-                            <div className="space-y-2">
-                                <label className="font-bold text-xs text-gray-700 flex items-center">
-                                    <svg className="w-3.5 h-3.5 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                    Reject Payment
-                                </label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Optional reason (e.g. Blurry, Wrong Amount)" 
-                                    value={rejectReason}
-                                    onChange={e => setRejectReason(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-sm focus:ring-1 focus:ring-black focus:border-transparent transition-all text-xs"
-                                />
-                                <button
-                                    onClick={() => onVerify(order.id, 'REJECT', rejectReason)}
-                                    disabled={isVerifying}
-                                    className="w-full py-2 bg-white hover:bg-red-50 text-red-600 font-bold border border-red-200 hover:border-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none rounded-sm text-sm"
-                                >
-                                    Reject & Request New Receipt
-                                </button>
-                            </div>
+                                    <div className="space-y-2">
+                                        <label className="font-bold text-xs text-gray-700 flex items-center">
+                                            <svg className="w-3.5 h-3.5 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                            Reject Payment
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Optional reason (e.g. Blurry, Wrong Amount)" 
+                                            value={rejectReason}
+                                            onChange={e => setRejectReason(e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded-sm focus:ring-1 focus:ring-black focus:border-transparent transition-all text-xs"
+                                        />
+                                        <button
+                                            onClick={() => onVerify(order.id, 'REJECT', rejectReason)}
+                                            disabled={isVerifying}
+                                            className="w-full py-2 bg-white hover:bg-red-50 text-red-600 font-bold border border-red-200 hover:border-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none rounded-sm text-sm"
+                                        >
+                                            Reject & Request New Receipt
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </motion.div>
                 </>

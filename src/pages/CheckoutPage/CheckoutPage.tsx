@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckoutCard } from '../../components/checkout/CheckoutCard/CheckoutCard';
 import { orderService } from '../../services/orderService';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export const CheckoutPage: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
@@ -42,11 +43,7 @@ export const CheckoutPage: React.FC = () => {
         );
     }
     if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <p className="text-gray-500 font-semibold animate-pulse">Loading order details...</p>
-            </div>
-        );
+        return <LoadingSpinner message="Loading order details..." />;
     }
 
     return (
@@ -58,6 +55,8 @@ export const CheckoutPage: React.FC = () => {
                     gcashNumber={order?.shops?.gcash_number || "09123456789"}
                     gcashQrUrl={order?.shops?.gcash_qr_url}
                     createdAt={order?.created_at}
+                    expiresAt={order?.expires_at}
+                    shopRejectionReason={order?.shop_rejection_reason}
                     orderState={order?.state}
                     paymentReceipts={order?.payment_receipts}
                 />

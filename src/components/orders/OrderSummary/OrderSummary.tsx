@@ -7,22 +7,30 @@ interface OrderSummaryProps {
     onSaveDraft: () => void;
     isReady: boolean;
     paperSize: string;
+    setPaperSize: (size: string) => void;
     pageCount: number;
     printColorMode: string;
     setPrintColorMode: (mode: string) => void;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady, paperSize, pageCount, printColorMode, setPrintColorMode }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady, paperSize, setPaperSize, pageCount, printColorMode, setPrintColorMode }) => {
     return (
         <div className="bg-white border-2 border-gray-100 p-6 flex flex-col min-h-[500px] h-fit">
             <h3 className="text-xl font-bold text-black mb-6">Order Summary</h3>
 
             <div className="mb-6 space-y-4">
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Detected Paper Size</label>
-                    <div className="w-full border-2 border-gray-200 p-2 rounded-sm bg-gray-50 text-gray-500 font-bold">
-                        {paperSize === 'SHORT' ? 'Short (Letter)' : paperSize === 'LONG' ? 'Long (Legal)' : 'A4'}
-                    </div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Paper Size</label>
+                    <select
+                        value={paperSize}
+                        onChange={(e) => setPaperSize(e.target.value)}
+                        disabled={isSubmitting}
+                        className="w-full border-2 border-gray-200 p-2 rounded-sm bg-white text-gray-900 font-bold focus:ring-black focus:border-black disabled:opacity-50 disabled:bg-gray-50"
+                    >
+                        <option value="A4">A4</option>
+                        <option value="SHORT">Short (Letter)</option>
+                        <option value="LONG">Long (Legal)</option>
+                    </select>
                 </div>
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Color Mode</label>

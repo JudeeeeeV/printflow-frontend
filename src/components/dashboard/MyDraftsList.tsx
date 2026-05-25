@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Trash2, Edit2 } from 'lucide-react';
 import { orderService } from '../../services/orderService';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 export interface DraftOrder {
     id: string;
@@ -20,16 +21,19 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
     const [drafts, setDrafts] = useState<DraftOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
         fetchDrafts();
-    }, []);
+    }, [currentPage]);
 
     const fetchDrafts = async () => {
         setIsLoading(true);
         try {
-            const data = await orderService.getDrafts() as DraftOrder[];
-            setDrafts(data);
+            const res = await orderService.getDrafts(currentPage, 10);
+            setDrafts(res.data as DraftOrder[]);
+            setTotalPages(Math.max(1, Math.ceil(res.total / 10)));
         } catch (error) {
             console.error('Failed to fetch drafts:', error);
         } finally {
@@ -50,7 +54,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
         }
     };
 
-    if (isLoading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div></div>;
+    if (isLoading) return <LoadingSpinner message="Loading drafts..." fullPage={false} />;
 
     if (drafts.length === 0) return (
         <div className="bg-white border-2 border-dashed border-gray-300 p-12 text-center flex flex-col items-center justify-center">
@@ -61,6 +65,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
     );
 
     return (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {drafts.map((draft) => (
                 <div key={draft.id} className="bg-white border-2 border-gray-100 p-6 flex flex-col hover:border-black transition-colors duration-200">
@@ -102,5 +107,27 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
                 </div>
             ))}
         </div>
+        {drafts.length > 0 && totalPages > 1 && (
+            <div className="col-span-full mt-8 p-4 border border-gray-100 bg-gray-50 flex items-center justify-between">
+                <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-sm disabled:opacity-50 hover:bg-gray-100 transition-colors"
+                >
+                    Previous
+                </button>
+                <span className="text-sm text-gray-600 font-medium">
+                    Page {currentPage} of {totalPages}
+                </span>
+                <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-sm disabled:opacity-50 hover:bg-gray-100 transition-colors"
+                >
+                    Next
+                </button>
+            </div>
+        )}
+        </>
     );
 };

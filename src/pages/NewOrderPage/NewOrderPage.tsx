@@ -232,6 +232,7 @@ export const NewOrderPage: React.FC = () => {
                                     onSaveDraft={handleSaveDraft}
                                     isReady={!!selectedShopId && !!validationResult?.passed}
                                     paperSize={paperSize}
+                                    setPaperSize={setPaperSize}
                                     pageCount={pageCount}
                                     printColorMode={printColorMode}
                                     setPrintColorMode={setPrintColorMode}

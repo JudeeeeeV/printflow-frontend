@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { shopService } from '../../services/shopService';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
@@ -223,7 +224,7 @@ export const ShopDashboard: React.FC = () => {
         }
     };
 
-    if (isLoading) return <div className="min-h-screen flex items-center justify-center font-sans">Loading dashboard...</div>;
+    if (isLoading) return <LoadingSpinner message="Loading Live Queue..." />;
     if (error) return (
         <div className="min-h-screen flex flex-col items-center justify-center font-sans p-4">
             <div className="text-red-500 mb-4 text-xl font-bold">Error</div>
@@ -237,7 +238,7 @@ export const ShopDashboard: React.FC = () => {
     // Derived Kanban Data
     // New Orders: Pending review, approved proof, awaiting payment, or just open inquiry
     const newOrders = shopOrders
-        .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION'].includes(o.state))
+        .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state))
         .sort((a, b) => {
             // Put AWAITING_PAYMENT_VERIFICATION at the very top
             if (a.state === 'AWAITING_PAYMENT_VERIFICATION' && b.state !== 'AWAITING_PAYMENT_VERIFICATION') return -1;
@@ -379,7 +380,7 @@ export const ShopDashboard: React.FC = () => {
                                         <OrderCard 
                                             key={order.id} 
                                             order={order} 
-                                            onClick={() => order.state === 'AWAITING_PAYMENT_VERIFICATION' ? setSelectedPaymentOrder(order) : null} 
+                                            onClick={() => ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? setSelectedPaymentOrder(order) : null} 
                                         />
                                     ))}
                                 </AnimatePresence>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { orderService } from '../../services/orderService';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export interface Order {
     id: string;
@@ -22,7 +23,7 @@ export const ShopOrdersPage: React.FC = () => {
         fetchOrders();
     }, []);
 
-    if (isLoading) return <div className="p-8">Loading all orders...</div>;
+    if (isLoading) return <LoadingSpinner message="Loading all orders..." />;
 
     return (
         <div className="p-8 font-sans h-full flex flex-col">

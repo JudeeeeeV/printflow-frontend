@@ -12,33 +12,40 @@ interface CheckoutCardProps {
     gcashNumber: string;
     gcashQrUrl?: string;
     createdAt?: string;
+    expiresAt?: string;
+    shopRejectionReason?: string;
     orderState?: string;
     paymentReceipts?: any[];
 }
 
-export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gcashNumber, gcashQrUrl, createdAt, orderState, paymentReceipts }) => {
+export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gcashNumber, gcashQrUrl, createdAt, expiresAt, shopRejectionReason, orderState, paymentReceipts }) => {
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
     const [referenceNumber, setReferenceNumber] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [showDisputeModal, setShowDisputeModal] = useState(false);
+    const [disputeReason, setDisputeReason] = useState('');
+    const [isDisputing, setIsDisputing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [timeLeft, setTimeLeft] = useState<string>('');
     const [isExpired, setIsExpired] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!createdAt) return;
-
         const updateTimer = () => {
-            const expiryTime = new Date(createdAt).getTime() + 15 * 60000;
-            const now = Date.now();
-            const diff = expiryTime - now;
-
-            if (orderState === 'AWAITING_PAYMENT_VERIFICATION' || orderState === 'IN_PRODUCTION' || orderState === 'COMPLETED' || orderState === 'AWAITING_PAYMENT') {
+            let expiryTime = 0;
+            if (orderState === 'AWAITING_PAYMENT' && expiresAt) {
+                expiryTime = new Date(expiresAt).getTime();
+            } else if (createdAt && orderState === 'OPEN_INQUIRY') {
+                expiryTime = new Date(createdAt).getTime() + 15 * 60000;
+            } else {
                 setTimeLeft('');
                 setIsExpired(false);
                 return;
             }
+
+            const now = Date.now();
+            const diff = expiryTime - now;
 
             if (diff <= 0) {
                 setTimeLeft('00:00');
@@ -46,7 +53,18 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
             } else {
                 const mins = Math.floor(diff / 60000);
                 const secs = Math.floor((diff % 60000) / 1000);
-                setTimeLeft(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+                
+                if (orderState === 'AWAITING_PAYMENT') {
+                    const hours = Math.floor(mins / 60);
+                    const remainingMins = mins % 60;
+                    if (hours > 0) {
+                        setTimeLeft(`${hours}h ${remainingMins.toString().padStart(2, '0')}m`);
+                    } else {
+                        setTimeLeft(`${remainingMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+                    }
+                } else {
+                    setTimeLeft(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+                }
             }
         };
 
@@ -54,7 +72,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
         const intervalId = setInterval(updateTimer, 1000);
 
         return () => clearInterval(intervalId);
-    }, [createdAt, orderState]);
+    }, [createdAt, expiresAt, orderState]);
 
     useEffect(() => {
         if (isExpired) {
@@ -99,8 +117,56 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
         }
     };
 
+    const handleDispute = async () => {
+        if (!disputeReason.trim()) {
+            alert('Please provide a reason for the dispute.');
+            return;
+        }
+
+        setIsDisputing(true);
+        try {
+            await orderService.disputePayment(orderId, disputeReason);
+            alert('Payment dispute escalated to administration.');
+            navigate('/new-order');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to escalate dispute.';
+            setError(errorMessage);
+            setIsDisputing(false);
+        }
+    };
+
     return (
         <div className="bg-white p-8 shadow-sm border border-gray-100 max-w-2xl mx-auto w-full relative overflow-hidden">
+            {showDisputeModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white p-6 max-w-md w-full shadow-xl">
+                        <h3 className="text-xl font-black mb-2">Dispute Rejection</h3>
+                        <p className="text-sm text-gray-600 mb-4">Please explain why you believe the payment is valid. Platform administration will review your receipt and explanation.</p>
+                        <textarea
+                            value={disputeReason}
+                            onChange={(e) => setDisputeReason(e.target.value)}
+                            placeholder="I transferred the exact amount to the number provided..."
+                            className="w-full h-32 p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black mb-4 resize-none"
+                        ></textarea>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowDisputeModal(false)}
+                                className="px-4 py-2 font-bold text-gray-600 hover:text-black"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDispute}
+                                disabled={isDisputing}
+                                className="px-4 py-2 bg-black text-white font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
+                            >
+                                {isDisputing ? 'Submitting...' : 'Submit Dispute'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isExpired && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
                     <p className="text-xl font-black text-red-600">Order Expired</p>
@@ -151,11 +217,31 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
                 {orderState === 'AWAITING_PAYMENT' && paymentReceipts && paymentReceipts.length > 0 && (
                     <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                         <p className="text-red-700 text-sm font-bold">Payment Denied</p>
-                        <p className="text-red-600 text-sm">Your previous payment submission was rejected. Please verify the amount and GCash number, and upload a new receipt.</p>
+                        <p className="text-red-600 text-sm mb-2">Your previous payment submission was rejected.</p>
+                        {shopRejectionReason && (
+                            <p className="text-red-700 text-sm font-medium bg-red-100 p-2 rounded mb-3">
+                                <strong>Reason:</strong> {shopRejectionReason}
+                            </p>
+                        )}
+                        <p className="text-red-600 text-sm font-semibold mb-3">Please upload a valid receipt, or this order will be cancelled when the timer expires.</p>
+                        <button
+                            onClick={() => setShowDisputeModal(true)}
+                            className="text-sm font-bold text-black underline hover:text-gray-700"
+                        >
+                            Dispute Rejection
+                        </button>
                     </div>
                 )}
 
-                {orderState === 'AWAITING_PAYMENT_VERIFICATION' ? (
+                {orderState === 'ESCALATED_DISPUTE' ? (
+                    <div className="bg-blue-50 border border-blue-200 p-8 text-center flex flex-col items-center justify-center rounded-sm">
+                        <svg className="w-16 h-16 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <h3 className="text-xl font-bold text-blue-800 mb-2">Dispute Under Review</h3>
+                        <p className="text-blue-700">Platform administration is currently reviewing your payment dispute. You will be notified of their decision.</p>
+                    </div>
+                ) : orderState === 'AWAITING_PAYMENT_VERIFICATION' ? (
                     <div className="bg-yellow-50 border border-yellow-200 p-8 text-center flex flex-col items-center justify-center rounded-sm">
                         <svg className="w-16 h-16 text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>

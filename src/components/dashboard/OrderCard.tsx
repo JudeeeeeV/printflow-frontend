@@ -12,6 +12,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
     // Determine the state badge configuration
     let badgeText = order.state;
     let badgeColor = 'bg-gray-100 text-gray-800';
+    let isDisputed = false;
     
     switch (order.state) {
         case 'AWAITING_PAYMENT_VERIFICATION':
@@ -42,6 +43,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
             badgeText = 'Completed';
             badgeColor = 'bg-gray-100 text-gray-800';
             break;
+        case 'ESCALATED_DISPUTE':
+            badgeText = 'Dispute Under Review';
+            badgeColor = 'bg-blue-100 text-blue-800 border border-blue-300';
+            isDisputed = true;
+            break;
     }
 
     return (
@@ -54,7 +60,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
             whileHover={{ scale: 1.01 }}
             onClick={onClick}
             className={`bg-white border rounded-sm p-3 shadow-none hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
-                isPaymentPending ? 'border-yellow-300' : 'border-gray-200'
+                isPaymentPending ? 'border-yellow-300' : isDisputed ? 'border-blue-300' : 'border-gray-200'
             }`}
         >
             <div className="flex justify-between items-start mb-3">
@@ -113,6 +119,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                     <button className="w-full py-2 bg-yellow-50 text-yellow-700 font-bold text-xs rounded-sm hover:bg-yellow-100 transition-colors">
                         Review Payment
                     </button>
+                </div>
+            )}
+
+            {isDisputed && (
+                <div className="mt-4 pt-3 border-t border-blue-100">
+                    <p className="w-full py-2 bg-blue-50 text-blue-700 font-bold text-[10px] text-center rounded-sm">
+                        Platform Administration is reviewing this payment.
+                    </p>
                 </div>
             )}
         </motion.div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { orderService } from '../../services/orderService';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export interface Order {
     id: string;
@@ -23,7 +24,7 @@ export const ShopArchivedPage: React.FC = () => {
         fetchArchived();
     }, []);
 
-    if (isLoading) return <div className="p-8">Loading archived orders...</div>;
+    if (isLoading) return <LoadingSpinner message="Loading archived orders..." />;
 
     return (
         <div className="p-8 font-sans h-full flex flex-col">
