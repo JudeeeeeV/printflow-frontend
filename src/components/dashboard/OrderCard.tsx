@@ -16,7 +16,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
     switch (order.state) {
         case 'AWAITING_PAYMENT_VERIFICATION':
             badgeText = 'Payment Review Pending';
-            badgeColor = 'bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-[0_0_10px_rgba(250,204,21,0.5)]';
+            badgeColor = 'bg-yellow-100 text-yellow-800 border border-yellow-300';
             break;
         case 'AWAITING_PAYMENT':
             badgeText = 'Awaiting Payment';
@@ -47,12 +47,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            whileHover={{ scale: 1.02 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            whileHover={{ scale: 1.01 }}
             onClick={onClick}
-            className={`bg-white border rounded-lg p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow duration-200 ${
+            className={`bg-white border rounded-sm p-3 shadow-none hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
                 isPaymentPending ? 'border-yellow-300' : 'border-gray-200'
             }`}
         >
@@ -61,7 +62,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                     <h4 className="font-black text-gray-900">Order #{order.id.slice(0, 8)}</h4>
                     <p className="text-xs text-gray-500 font-medium">Client ID: {order.client_id.slice(0, 8)}</p>
                 </div>
-                <div className={`px-2 py-1 text-[10px] font-bold rounded-sm ${badgeColor} ${isPaymentPending ? 'animate-pulse' : ''}`}>
+                <div className={`px-2 py-1 text-[10px] font-bold rounded-sm ${badgeColor}`}>
                     {badgeText}
                 </div>
             </div>
@@ -71,7 +72,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                     {order.paper_size || 'A4'}
                 </span>
                 {order.print_color_mode === 'COLOR' ? (
-                    <span className="px-2 py-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white text-[10px] font-bold rounded-sm">
+                    <span className="px-2 py-1 bg-indigo-500 text-white text-[10px] font-bold rounded-sm">
                         COLOR
                     </span>
                 ) : (

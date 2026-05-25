@@ -267,10 +267,7 @@ export const ShopDashboard: React.FC = () => {
                     <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1 rounded-full">
                         <span className={`relative flex h-2.5 w-2.5`}>
                             {daemonStatus === 'CONNECTED' && (
-                                <>
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                                </>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                             )}
                             {daemonStatus === 'RECONNECTING' && (
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500 animate-pulse"></span>
@@ -290,7 +287,7 @@ export const ShopDashboard: React.FC = () => {
                 {verification_status === 'PENDING_REVIEW' ? (
                     <div className="flex-1 overflow-y-auto p-6">
                         <div className="bg-white border border-gray-200 p-8 flex flex-col items-center justify-center mt-10 rounded-sm shadow-sm max-w-2xl mx-auto w-full">
-                            <svg className="w-16 h-16 text-blue-500 mb-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg className="w-16 h-16 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             <h2 className="text-2xl font-bold text-gray-800 mb-2">Verification Under Review</h2>
                             <p className="text-gray-600 max-w-md text-center">
                                 We have received your business permit and GCash QR code. Your shop verification is currently under review. Please check back later.
@@ -339,7 +336,6 @@ export const ShopDashboard: React.FC = () => {
                         <div className="bg-white border-b border-gray-200 p-4 shrink-0 flex items-center justify-between shadow-sm z-10">
                             <div className="flex items-center">
                                 <span className="flex h-3 w-3 relative mr-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                                 </span>
                                 <span className="font-bold text-gray-800">Queue Active</span>
@@ -469,16 +465,16 @@ export const ShopDashboard: React.FC = () => {
                             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                 <AnimatePresence>
                                     {printReadyOrders.map(order => (
-                                        <div key={order.id} className="relative group">
-                                            <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div key={order.id} className="flex items-center gap-3 group">
+                                            <div className="shrink-0 pl-1">
                                                 <input 
                                                     type="checkbox" 
-                                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-black cursor-pointer"
                                                     checked={selectedReadyOrders.includes(order.id)}
                                                     onChange={() => handleToggleReadySelection(order.id)}
                                                 />
                                             </div>
-                                            <div className={`transition-transform ${selectedReadyOrders.includes(order.id) ? 'pl-8 opacity-90 scale-[0.98]' : 'group-hover:pl-8'}`}>
+                                            <div className={`flex-1 transition-transform ${selectedReadyOrders.includes(order.id) ? 'opacity-90 scale-[0.98]' : 'scale-100'}`}>
                                                 <OrderCard order={order} onClick={() => handleToggleReadySelection(order.id)} />
                                             </div>
                                         </div>
