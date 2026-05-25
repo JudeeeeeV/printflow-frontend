@@ -4,7 +4,7 @@ import { ShopSelector } from '../orders/ShopSelector/ShopSelector';
 import { FileUploadZone } from '../orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../orders/OrderSummary/OrderSummary';
 import { orderService } from '../../services/orderService';
-import type { PrintShop } from '../../services/orderService'; // Safe import
+import type { PrintShop, OrderEstimate } from '../../services/orderService';
 import type { DraftOrder } from './MyDraftsList';
 
 interface EditDraftPanelProps {
@@ -18,15 +18,18 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
     const [selectedShopId, setSelectedShopId] = useState<string | null>(draft.shopId);
     const [newFile, setNewFile] = useState<File | null>(null);
     const [isValidating, setIsValidating] = useState(false);
-    
+    const [paperSize, setPaperSize] = useState<string>('A4');
+    const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
+    const [pageCount, setPageCount] = useState<number>(1);
+
     // Pre-fill validation so they can submit immediately without uploading a new file
-    const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({ 
-        passed: true, message: 'Valid file loaded from draft' 
+    const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({
+        passed: true, message: 'Valid file loaded from draft'
     });
-    const [estimate, setEstimate] = useState<{ total: number; rushFee: number; estimatedDelivery: string } | null>({ 
-        total: draft.total, rushFee: 3.00, estimatedDelivery: 'Tomorrow, 2PM' 
+    const [estimate, setEstimate] = useState<OrderEstimate | null>({
+        total: draft.total, pageCount: 1, basePrice: draft.total, colorAdditive: 0
     });
-    
+
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleFileSelect = async (selectedFile: File) => {
@@ -36,7 +39,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
         try {
             await new Promise(resolve => setTimeout(resolve, 1500));
             setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });
-            setEstimate({ total: 15.00, rushFee: 3.00, estimatedDelivery: 'Tomorrow, 2PM' });
+            setEstimate({ total: 15.00, pageCount: 1, basePrice: 15.00, colorAdditive: 0 });
         } catch (err) {
             setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
             setEstimate(null);
@@ -59,7 +62,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
             if (newFile) {
                 // They uploaded a new file! Create a brand new order, delete the old draft.
                 const response = await orderService.submitOrder(selectedShopId, newFile);
-                await orderService.deleteDraft(draft.id); 
+                await orderService.deleteDraft(draft.id);
                 onSuccess(response.orderId);
             } else {
                 // They changed nothing, just ready to checkout with the existing draft.
@@ -112,7 +115,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
                 <div className="lg:col-span-2 space-y-8">
                     <div className="bg-white p-6 shadow-sm border border-gray-100">
                         <ShopSelector shops={shops} selectedShopId={selectedShopId} onSelect={setSelectedShopId} />
-                        
+
                         <div className="mt-8">
                             <h3 className="text-sm font-semibold text-gray-700 mb-3">Replace Design File (Optional)</h3>
                             <FileUploadZone onFileSelect={handleFileSelect} isValidating={isValidating} validationResult={validationResult} />
@@ -142,6 +145,11 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
                             onSubmit={handleSubmitOrder}
                             onSaveDraft={handleSaveDraftChanges}
                             isReady={!!selectedShopId && !!validationResult?.passed}
+                            paperSize={paperSize}
+                            setPaperSize={setPaperSize}
+                            pageCount={pageCount}
+                            printColorMode={printColorMode}
+                            setPrintColorMode={setPrintColorMode}
                         />
                     </div>
                 </div>
