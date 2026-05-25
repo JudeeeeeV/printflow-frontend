@@ -51,7 +51,7 @@ export async function apiClient<T>(
     }
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !endpoint.startsWith('/auth')) {
         localStorage.removeItem('jwt_token');
         window.location.href = '/auth';
       }
