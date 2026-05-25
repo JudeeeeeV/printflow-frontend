@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+<div align="center">
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# 🖨️ PrintFlow - Student Portal
 
-Currently, two official plugins are available:
+<a href="https://readme-typing-svg.herokuapp.com">
+  <img src="https://readme-typing-svg.herokuapp.com/?lines=PrintFlow+-+Student+Portal;State-driven+job+ticketing;On-campus+commercial+printing&font=Inter&center=true&width=550&height=50&color=3B82F6&vCenter=true&size=22" alt="Typing SVG" />
+</a>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+<p align="center">
+  <img src="https://img.shields.io/badge/Frontend-React-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Build-Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+</p>
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+<img src="demo.gif" width="600" alt="UI Demo GIF Placeholder" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"/>
 
-## Expanding the ESLint configuration
+</div>
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+<br />
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📖 Context
+PrintFlow is a state-driven job ticketing and procurement ledger for on-campus commercial printing at CIT-U. This repository houses the client-facing React application where students upload assets, view auto-generated pricing, and pay seamlessly via PayMongo.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## ✨ Features
+
+| Feature | Description |
+| :---: | :--- |
+| 🤖 **Agentic AI Asset Validation** | Automatically analyzes uploaded documents for specifications and compliance before checkout. |
+| ⚡ **Real-time Spooler Updates** | Leverages WebSockets to give students live updates as their documents are printed. |
+| 💳 **Automated Checkout** | Fully integrated with PayMongo for secure, instant payment processing. |
+
+---
+
+## 🚀 Local Setup
+
+To get the student portal running locally:
+
+```bash
+# 1. Clone the repository and navigate inside
+cd printflow-frontend
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Environment Variables:**
+Ensure you have a `.env` file in the root directory pointing to the backend API:
+```env
+VITE_API_URL=http://localhost:3000
 ```
+
+---
+
+## 👥 Contributors
+Proudly developed by the PrintFlow team:
+- **Jude Mikael Valencia**
+- **Karol Vincent Bebedor**
+- **Noeh Arbee Boiser**
+- **Aldrin Suse**
