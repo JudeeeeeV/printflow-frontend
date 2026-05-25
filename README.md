@@ -1,9 +1,9 @@
 <div align="center">
 
-# 🖨️ PrintFlow - Student Portal
+# 🖨️ PrintFlow - Student & Shop Portal
 
 <a href="https://readme-typing-svg.herokuapp.com">
-  <img src="https://readme-typing-svg.herokuapp.com/?lines=PrintFlow+-+Student+Portal;State-driven+job+ticketing;On-campus+commercial+printing&font=Inter&center=true&width=550&height=50&color=3B82F6&vCenter=true&size=22" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.herokuapp.com/?lines=PrintFlow+-+Student+%26+Shop+Portal;State-driven+job+ticketing;On-campus+commercial+printing&font=Inter&center=true&width=550&height=50&color=3B82F6&vCenter=true&size=22" alt="Typing SVG" />
 </a>
 
 <p align="center">
@@ -21,7 +21,7 @@
 <br />
 
 ## 📖 Context
-PrintFlow is a state-driven job ticketing and procurement ledger for on-campus commercial printing at CIT-U. This repository houses the client-facing React application where students upload assets, view auto-generated pricing, and pay seamlessly via PayMongo.
+PrintFlow is a state-driven job ticketing and procurement ledger for on-campus commercial printing at CIT-U. This repository houses the client-facing React application serving **both Students and Print Shops**. Students can upload assets and view auto-generated pricing, while print shops can manage their print queues, verify manual payments, and view analytics.
 
 ---
 
@@ -31,13 +31,13 @@ PrintFlow is a state-driven job ticketing and procurement ledger for on-campus c
 | :---: | :--- |
 | 🤖 **Agentic AI Asset Validation** | Automatically analyzes uploaded documents for specifications and compliance before checkout. |
 | ⚡ **Real-time Spooler Updates** | Leverages WebSockets to give students live updates as their documents are printed. |
-| 💳 **Automated Checkout** | Fully integrated with PayMongo for secure, instant payment processing. |
+| 🧾 **Receipt Verification Workflow** | Students manually upload payment receipts which are securely routed to the Shop dashboard for approval or dispute. |
 
 ---
 
 ## 🚀 Local Setup
 
-To get the student portal running locally:
+To get the portal running locally:
 
 ```bash
 # 1. Clone the repository and navigate inside
