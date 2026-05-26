@@ -36,6 +36,48 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
         setNewFile(selectedFile);
         setIsValidating(true);
         setValidationResult(null);
+
+        // Validate PDF integrity
+        if (selectedFile.type === 'application/pdf') {
+            try {
+                const { PDFDocument } = await import('pdf-lib');
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const pdfDoc = await PDFDocument.load(arrayBuffer);
+                if (pdfDoc.getPageCount() === 0) {
+                    setValidationResult({ passed: false, message: 'Corrupted PDF: File contains no pages.' });
+                    setEstimate(null);
+                    setIsValidating(false);
+                    return;
+                }
+            } catch (e) {
+                console.error("Failed to parse PDF:", e);
+                setValidationResult({ passed: false, message: 'Corrupted File: This PDF could not be read. Please re-export and try again.' });
+                setEstimate(null);
+                setIsValidating(false);
+                return;
+            }
+        } else if (selectedFile.type.startsWith('image/')) {
+            try {
+                const isValid = await new Promise<boolean>((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img.naturalWidth > 0 && img.naturalHeight > 0);
+                    img.onerror = () => resolve(false);
+                    img.src = URL.createObjectURL(selectedFile);
+                });
+                if (!isValid) {
+                    setValidationResult({ passed: false, message: 'Corrupted File: This image could not be loaded. It may be damaged or truncated.' });
+                    setEstimate(null);
+                    setIsValidating(false);
+                    return;
+                }
+            } catch (e) {
+                setValidationResult({ passed: false, message: 'Corrupted File: This image could not be validated.' });
+                setEstimate(null);
+                setIsValidating(false);
+                return;
+            }
+        }
+
         try {
             await new Promise(resolve => setTimeout(resolve, 1500));
             setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });

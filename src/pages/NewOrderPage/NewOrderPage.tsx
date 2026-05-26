@@ -84,19 +84,50 @@ export const NewOrderPage: React.FC = () => {
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
                 detectedPageCount = pdfDoc.getPageCount();
+
+                if (detectedPageCount === 0) {
+                    setValidationResult({ passed: false, message: 'Corrupted PDF: File contains no pages.' });
+                    setEstimate(null);
+                    setIsValidating(false);
+                    return;
+                }
                 
-                if (detectedPageCount > 0) {
-                    const page = pdfDoc.getPage(0);
-                    const { width, height } = page.getSize();
-                    const h = Math.max(width, height);
-                    if (Math.abs(h - 792) < 20) {
-                        detectedSize = 'SHORT';
-                    } else if (Math.abs(h - 1008) < 20) {
-                        detectedSize = 'LONG';
-                    }
+                const page = pdfDoc.getPage(0);
+                const { width, height } = page.getSize();
+                const h = Math.max(width, height);
+                if (Math.abs(h - 792) < 20) {
+                    detectedSize = 'SHORT';
+                } else if (Math.abs(h - 1008) < 20) {
+                    detectedSize = 'LONG';
                 }
             } catch (e) {
                 console.error("Failed to parse PDF:", e);
+                setValidationResult({ passed: false, message: 'Corrupted File: This PDF could not be read. Please re-export and try again.' });
+                setEstimate(null);
+                setIsValidating(false);
+                return;
+            }
+        } else if (selectedFile.type.startsWith('image/')) {
+            // Validate image integrity by attempting to load it
+            try {
+                const isValidImage = await new Promise<boolean>((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img.naturalWidth > 0 && img.naturalHeight > 0);
+                    img.onerror = () => resolve(false);
+                    img.src = URL.createObjectURL(selectedFile);
+                });
+                if (!isValidImage) {
+                    setValidationResult({ passed: false, message: 'Corrupted File: This image could not be loaded. It may be damaged or truncated.' });
+                    setEstimate(null);
+                    setIsValidating(false);
+                    return;
+                }
+            } catch (e) {
+                console.error("Failed to validate image:", e);
+                setValidationResult({ passed: false, message: 'Corrupted File: This image could not be validated.' });
+                setEstimate(null);
+                setIsValidating(false);
+                return;
             }
         }
         
