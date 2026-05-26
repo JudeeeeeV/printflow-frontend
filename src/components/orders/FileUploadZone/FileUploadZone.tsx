@@ -31,12 +31,12 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
                 onDrop={handleDrop}
             >
                 <UploadCloud className="w-12 h-12 text-gray-400 mb-4" />
-                <p className="font-bold text-black mb-1">Drag & Drop PDF/PNG here</p>
+                <p className="font-bold text-black mb-1">Upload PDF / Images</p>
                 <p className="text-sm text-gray-500 mb-4">Maximum file size: 50MB</p>
 
                 <input
                     type="file"
-                    accept=".pdf,.png"
+                    accept=".pdf,image/png,image/jpeg,image/webp"
                     className="hidden"
                     ref={fileInputRef}
                     // Added click handler to reset the input value, allowing the exact same file to be selected twice if needed
