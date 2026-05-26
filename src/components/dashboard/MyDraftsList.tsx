@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Trash2, Edit2 } from 'lucide-react';
 import { orderService } from '../../services/orderService';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { Pagination } from '../common/Pagination';
 
 export interface DraftOrder {
     id: string;
@@ -33,7 +34,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
         try {
             const res = await orderService.getDrafts(currentPage, 10);
             setDrafts(res.data as DraftOrder[]);
-            setTotalPages(Math.max(1, Math.ceil(res.total / 10)));
+            setTotalPages(res.meta.totalPages);
         } catch (error) {
             console.error('Failed to fetch drafts:', error);
         } finally {
@@ -108,24 +109,15 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
             ))}
         </div>
         {drafts.length > 0 && totalPages > 1 && (
-            <div className="col-span-full mt-8 p-4 border border-gray-100 bg-gray-50 flex items-center justify-between">
-                <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-sm disabled:opacity-50 hover:bg-gray-100 transition-colors"
-                >
-                    Previous
-                </button>
-                <span className="text-sm text-gray-600 font-medium">
-                    Page {currentPage} of {totalPages}
-                </span>
-                <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-sm disabled:opacity-50 hover:bg-gray-100 transition-colors"
-                >
-                    Next
-                </button>
+            <div className="col-span-full mt-8 p-4 border border-gray-100 bg-gray-50 flex items-center justify-center">
+                <Pagination 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(p) => {
+                        setCurrentPage(p);
+                        window.scrollTo(0, 0);
+                    }}
+                />
             </div>
         )}
         </>

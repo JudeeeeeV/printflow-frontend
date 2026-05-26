@@ -78,7 +78,7 @@ export const orderService = {
         });
     },
 
-    async getUserOrders(sortByDate: 'asc' | 'desc' = 'desc', status: string = 'All', page: number = 1, limit: number = 10): Promise<{ data: any[], total: number }> {
+    async getUserOrders(sortByDate: 'asc' | 'desc' = 'desc', status: string = 'All', page: number = 1, limit: number = 10): Promise<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }> {
         const queryParams = new URLSearchParams();
         queryParams.append('sortByDate', sortByDate);
         if (status && status !== 'All') {
@@ -88,7 +88,7 @@ export const orderService = {
         queryParams.append('limit', limit.toString());
         
         const queryString = queryParams.toString();
-        return apiClient<{ data: any[], total: number }>(`/orders?${queryString}`, { method: 'GET' });
+        return apiClient<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }>(`/orders?${queryString}`, { method: 'GET' });
     },
 
     async getShopOrders(): Promise<any[]> {
@@ -134,12 +134,12 @@ export const orderService = {
     },
 
     // Fetch all drafts for the current user
-    getDrafts: async (page: number = 1, limit: number = 10): Promise<{ data: any[], total: number }> => {
+    getDrafts: async (page: number = 1, limit: number = 10): Promise<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }> => {
         const queryParams = new URLSearchParams();
         queryParams.append('page', page.toString());
         queryParams.append('limit', limit.toString());
         const queryString = queryParams.toString();
-        return await apiClient<{ data: any[], total: number }>(`/orders/drafts?${queryString}`, { 
+        return await apiClient<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }>(`/orders/drafts?${queryString}`, { 
             method: 'GET' 
         });
     },

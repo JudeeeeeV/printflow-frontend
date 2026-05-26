@@ -3,6 +3,7 @@ import { orderService } from '../../services/orderService';
 import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ArrowDown, ArrowUp, Filter, ChevronDown } from 'lucide-react';
+import { Pagination } from '../common/Pagination';
 
 export const MyOrdersList: React.FC = () => {
     const [orders, setOrders] = useState<any[]>([]);
@@ -24,7 +25,7 @@ export const MyOrdersList: React.FC = () => {
         orderService.getUserOrders(sortByDate, statusFilter, currentPage, 10)
             .then(res => {
                 setOrders(res.data);
-                setTotalPages(Math.max(1, Math.ceil(res.total / 10)));
+                setTotalPages(res.meta.totalPages);
                 setIsLoading(false);
             })
             .catch(err => {
@@ -190,24 +191,15 @@ export const MyOrdersList: React.FC = () => {
                 </div>
             )}
             {!isLoading && orders.length > 0 && totalPages > 1 && (
-                <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-                    <button
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-sm disabled:opacity-50 hover:bg-gray-100 transition-colors"
-                    >
-                        Previous
-                    </button>
-                    <span className="text-sm text-gray-600 font-medium">
-                        Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-sm disabled:opacity-50 hover:bg-gray-100 transition-colors"
-                    >
-                        Next
-                    </button>
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-center">
+                    <Pagination 
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={(p) => {
+                            setCurrentPage(p);
+                            window.scrollTo(0, 0);
+                        }}
+                    />
                 </div>
             )}
         </div>
