@@ -9,6 +9,7 @@ import { AnimatePresence } from 'framer-motion';
 import { daemonSocketService } from '../../services/daemonSocketService';
 import type { DaemonStatus } from '../../services/daemonSocketService';
 import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
+import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 export const ShopDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [shopData, setShopData] = useState<any>(null);
@@ -36,6 +37,11 @@ export const ShopDashboard: React.FC = () => {
     const [jobProgresses, setJobProgresses] = useState<{ orderId: string; status: string }[]>([]);
     const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
     const [selectedPrinter, setSelectedPrinter] = useState<string>('');
+
+    // Filter states
+    const [searchQuery, setSearchQuery] = useState('');
+    const [paperSizeFilter, setPaperSizeFilter] = useState('ALL');
+    const [colorModeFilter, setColorModeFilter] = useState('ALL');
 
     const loadShopData = () => {
         shopService.getMyShop()
@@ -236,8 +242,18 @@ export const ShopDashboard: React.FC = () => {
     const { name, verification_status } = shopData;
 
     // Derived Kanban Data
+    const searchLower = searchQuery.toLowerCase();
+    const filteredShopOrders = shopOrders.filter(order => {
+        const matchSearch = !searchQuery || 
+            order.id.slice(0, 8).toLowerCase().includes(searchLower) || 
+            (order.client_id || '').slice(0, 8).toLowerCase().includes(searchLower);
+        const matchPaper = paperSizeFilter === 'ALL' || order.paper_size === paperSizeFilter;
+        const matchColor = colorModeFilter === 'ALL' || order.print_color_mode === colorModeFilter;
+        return matchSearch && matchPaper && matchColor;
+    });
+
     // New Orders: Pending review, approved proof, awaiting payment, or just open inquiry
-    const newOrders = shopOrders
+    const newOrders = filteredShopOrders
         .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state))
         .sort((a, b) => {
             // Put AWAITING_PAYMENT_VERIFICATION at the very top
@@ -246,11 +262,11 @@ export const ShopDashboard: React.FC = () => {
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
 
-    const printReadyOrders = shopOrders
+    const printReadyOrders = filteredShopOrders
         .filter(o => ['IN_PRODUCTION'].includes(o.state))
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-    const completedOrders = shopOrders
+    const completedOrders = filteredShopOrders
         .filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -366,6 +382,14 @@ export const ShopDashboard: React.FC = () => {
                             </div>
                         </div>
 
+                        <KanbanFilterBar 
+                            onSearch={setSearchQuery} 
+                            paperSizeFilter={paperSizeFilter} 
+                            setPaperSizeFilter={setPaperSizeFilter} 
+                            colorModeFilter={colorModeFilter} 
+                            setColorModeFilter={setColorModeFilter} 
+                        />
+
                         <div className="flex-1 flex overflow-x-auto p-6 gap-6">
                         
                         {/* Column 1: New Orders */}
@@ -385,8 +409,12 @@ export const ShopDashboard: React.FC = () => {
                                     ))}
                                 </AnimatePresence>
                                 {newOrders.length === 0 && (
-                                    <div className="h-full flex items-center justify-center">
-                                        <p className="text-gray-400 font-medium">No new orders.</p>
+                                    <div className="h-full flex items-center justify-center text-center px-4">
+                                        <p className="text-gray-400 font-medium">
+                                            {shopOrders.filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state)).length > 0 
+                                                ? "No orders match your filters." 
+                                                : "No new orders."}
+                                        </p>
                                     </div>
                                 )}
                             </div>
@@ -482,8 +510,12 @@ export const ShopDashboard: React.FC = () => {
                                     ))}
                                 </AnimatePresence>
                                 {printReadyOrders.length === 0 && (
-                                    <div className="h-full flex items-center justify-center">
-                                        <p className="text-gray-400 font-medium">No orders in production.</p>
+                                    <div className="h-full flex items-center justify-center text-center px-4">
+                                        <p className="text-gray-400 font-medium">
+                                            {shopOrders.filter(o => ['IN_PRODUCTION'].includes(o.state)).length > 0 
+                                                ? "No orders match your filters." 
+                                                : "No orders in production."}
+                                        </p>
                                     </div>
                                 )}
                             </div>
@@ -502,8 +534,12 @@ export const ShopDashboard: React.FC = () => {
                                     ))}
                                 </AnimatePresence>
                                 {completedOrders.length === 0 && (
-                                    <div className="h-full flex items-center justify-center">
-                                        <p className="text-gray-400 font-medium">No completed orders.</p>
+                                    <div className="h-full flex items-center justify-center text-center px-4">
+                                        <p className="text-gray-400 font-medium">
+                                            {shopOrders.filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state)).length > 0 
+                                                ? "No orders match your filters." 
+                                                : "No completed orders."}
+                                        </p>
                                     </div>
                                 )}
                             </div>
