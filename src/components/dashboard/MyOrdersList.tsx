@@ -154,7 +154,7 @@ export const MyOrdersList: React.FC = () => {
                                             {new Date(order.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                            ${order.total.toFixed(2)}
+                                            ₱{order.total.toFixed(2)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex flex-col items-start">

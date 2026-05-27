@@ -45,7 +45,7 @@ export const ShopOrdersPage: React.FC = () => {
                                 <td className="px-6 py-4 font-medium text-gray-900">#{order.id.slice(0, 8)}</td>
                                 <td className="px-6 py-4">{order.student_id?.slice(0,8) || 'Unknown'}</td>
                                 <td className="px-6 py-4">{new Date(order.created_at).toLocaleDateString()}</td>
-                                <td className="px-6 py-4">${order.total}</td>
+                                <td className="px-6 py-4">₱{order.total}</td>
                                 <td className="px-6 py-4">
                                     <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">
                                         {order.state.replace(/_/g, ' ')}
