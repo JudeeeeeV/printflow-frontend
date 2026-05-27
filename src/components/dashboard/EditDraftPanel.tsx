@@ -103,7 +103,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
         try {
             if (newFile) {
                 // They uploaded a new file! Create a brand new order, delete the old draft.
-                const response = await orderService.submitOrder(selectedShopId, newFile);
+                const response = await orderService.submitOrder(selectedShopId, newFile, paperSize, printColorMode);
                 await orderService.deleteDraft(draft.id);
                 onSuccess(response.orderId);
             } else {
@@ -129,7 +129,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
         setIsSubmitting(true);
         try {
             if (newFile) {
-                await orderService.saveDraft(selectedShopId, newFile);
+                await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode);
                 await orderService.deleteDraft(draft.id);
                 alert('Draft updated successfully!');
                 onCancel();
