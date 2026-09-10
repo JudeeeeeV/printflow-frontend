@@ -112,7 +112,7 @@ export const ShopLayout: React.FC = () => {
                             Welcome to the Printflow Shop Dashboard. Here you can manage your live print queue, view analytics, and configure your shop settings.
                         </p>
                         <div className="flex justify-end">
-                            <button onClick={() => setIsHelpOpen(false)} className="px-6 py-2 bg-carbon-blue-60 text-white text-sm font-bold hover:bg-carbon-blue-70 transition-colors">
+                            <button onClick={() => setIsHelpOpen(false)} className="px-6 py-2 bg-carbon-gray-100 text-white text-sm font-bold hover:bg-black transition-colors">
                                 Close
                             </button>
                         </div>
