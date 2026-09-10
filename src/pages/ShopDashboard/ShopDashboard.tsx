@@ -203,7 +203,7 @@ export const ShopDashboard: React.FC = () => {
         setIsProgressModalOpen(true);
         
         try {
-            const response = await fetch(`http://localhost:3000/edge/batch-execute/${shopData.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ('https://printflow-backend-wen3.onrender.com')}/edge/batch-execute/${shopData.id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

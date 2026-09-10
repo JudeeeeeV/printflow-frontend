@@ -3,7 +3,7 @@
 /**
  * Base API client configuration for connecting to the local NestJS backend.
  */
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || ('https://printflow-backend-wen3.onrender.com')));
 
 export class ApiError extends Error {
   status: number;

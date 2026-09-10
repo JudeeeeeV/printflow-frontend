@@ -9,7 +9,7 @@ class DaemonSocketService {
   private printersListeners: ((printers: string[]) => void)[] = [];
   
   // Update this to match your backend URL
-  private readonly BACKEND_URL = 'http://localhost:3000/daemon'; 
+  private readonly BACKEND_URL = 'https://printflow-backend-wen3.onrender.com/daemon'; 
 
   connect(shopId: string) {
     if (this.socket) {
