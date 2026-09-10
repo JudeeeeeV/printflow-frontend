@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ListTodo, BarChart3, HelpCircle, LifeBuoy, Settings, LogOut } from 'lucide-react';
+import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
 
 export const ShopLayout: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [shopName, setShopName] = useState<string>('Print Shop');
-    
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [isSupportOpen, setIsSupportOpen] = useState(false);
+
     const token = localStorage.getItem('jwt_token');
     const role = localStorage.getItem('user_role');
 
@@ -36,18 +38,18 @@ export const ShopLayout: React.FC = () => {
     };
 
     const navItems = [
-        { name: 'Live Queue', path: '/shop-dashboard', icon: ListTodo, exact: true },
-        { name: 'Analytics', path: '/shop-dashboard/analytics', icon: BarChart3 },
+        { name: 'Live Queue', path: '/shop-dashboard', icon: List, exact: true },
+        { name: 'Analytics', path: '/shop-dashboard/analytics', icon: ChartBar },
         { name: 'Settings', path: '/shop-dashboard/settings', icon: Settings },
     ];
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-gray-800 overflow-hidden">
+        <div className="flex h-screen bg-carbon-gray-10 font-sans text-gray-800 overflow-hidden">
             {/* Sidebar */}
-            <aside className="w-64 bg-[#F8F9FA] border-r border-gray-200 flex flex-col shrink-0 z-20">
+            <aside className="w-64 bg-[#F8F9FA] border-r border-[#e0e0e0] flex flex-col shrink-0 z-20">
                 {/* Profile Section */}
-                <div className="p-6 border-b border-gray-200 flex flex-col justify-center min-h-[80px]">
-                    <h2 className="text-sm font-bold text-gray-900 truncate">{shopName}</h2>
+                <div className="p-6 border-b border-[#e0e0e0] flex flex-col justify-center min-h-[80px]">
+                    <h2 className="text-sm font-bold text-carbon-gray-100 truncate">{shopName}</h2>
                     <p className="text-xs text-gray-500">Shop Dashboard</p>
                 </div>
 
@@ -60,11 +62,10 @@ export const ShopLayout: React.FC = () => {
                             <Link
                                 key={item.path}
                                 to={item.path}
-                                className={`flex items-center px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                                    isActive
-                                        ? 'bg-blue-50 text-blue-600'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                }`}
+                                className={`flex items-center px-4 py-2.5 text-sm font-medium transition-colors ${isActive
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'
+                                    }`}
                             >
                                 <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
                                 {item.name}
@@ -73,17 +74,17 @@ export const ShopLayout: React.FC = () => {
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-gray-200 space-y-1 shrink-0">
-                    <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-100 transition-colors">
-                        <HelpCircle className="w-5 h-5 mr-3 text-gray-400" />
+                <div className="p-4 border-t border-[#e0e0e0] space-y-2 shrink-0">
+                    <button onClick={() => setIsHelpOpen(true)} className="w-full flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                        <Help className="w-5 h-5 mr-3 text-gray-400" />
                         Help
-                    </Link>
-                    <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-100 transition-colors">
-                        <LifeBuoy className="w-5 h-5 mr-3 text-gray-400" />
+                    </button>
+                    <button onClick={() => setIsSupportOpen(true)} className="w-full flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                        <HelpDesk className="w-5 h-5 mr-3 text-gray-400" />
                         Support
-                    </Link>
-                    <button onClick={handleLogout} className="w-full flex items-center px-4 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors mt-2">
-                        <LogOut className="w-5 h-5 mr-3 text-red-500" />
+                    </button>
+                    <button onClick={handleLogout} className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-bold text-white bg-carbon-gray-100 hover:bg-black transition-colors mt-4">
+                        <Logout className="w-5 h-5 mr-2" />
                         Logout
                     </button>
                 </div>
@@ -92,10 +93,58 @@ export const ShopLayout: React.FC = () => {
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col overflow-hidden relative bg-white">
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto bg-gray-50 flex flex-col relative">
+                <div className="flex-1 overflow-y-auto bg-carbon-gray-10 flex flex-col relative">
                     <Outlet />
                 </div>
             </main>
+
+            {/* Help Modal */}
+            {isHelpOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsHelpOpen(false)}>
+                    <div className="bg-white w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center border-b border-gray-200 pb-4 mb-4">
+                            <h3 className="text-lg font-bold text-carbon-gray-100">Help Center</h3>
+                            <button onClick={() => setIsHelpOpen(false)} className="text-gray-400 hover:text-carbon-gray-100">
+                                <Close className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-6">
+                            Welcome to the Printflow Shop Dashboard. Here you can manage your live print queue, view analytics, and configure your shop settings.
+                        </p>
+                        <div className="flex justify-end">
+                            <button onClick={() => setIsHelpOpen(false)} className="px-6 py-2 bg-carbon-blue-60 text-white text-sm font-bold hover:bg-carbon-blue-70 transition-colors">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Support Modal */}
+            {isSupportOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsSupportOpen(false)}>
+                    <div className="bg-white w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center border-b border-gray-200 pb-4 mb-4">
+                            <h3 className="text-lg font-bold text-carbon-gray-100">Contact Support</h3>
+                            <button onClick={() => setIsSupportOpen(false)} className="text-gray-400 hover:text-carbon-gray-100">
+                                <Close className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            If you're experiencing technical difficulties or have billing inquiries, please reach out to our support team.
+                        </p>
+                        <div className="bg-gray-50 p-4 border border-gray-200 mb-6">
+                            <p className="text-sm font-semibold text-carbon-gray-100">Email: printflow@gmail.com</p>
+                            {/* <p className="text-sm font-semibold text-carbon-gray-100 mt-2">Phone: +1 (800) 555-0199</p> */}
+                        </div>
+                        <div className="flex justify-end">
+                            <button onClick={() => setIsSupportOpen(false)} className="px-6 py-2 bg-carbon-gray-100 text-white text-sm font-bold hover:bg-black transition-colors">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

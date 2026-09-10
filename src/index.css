@@ -2,14 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: white;
-  color: black;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    @apply bg-carbon-gray-10 text-carbon-gray-100;
+  }
 }
 
 @keyframes slideFadeIn {

@@ -15,39 +15,39 @@ import { ShopInventoryPage } from './pages/ShopInventoryPage/ShopInventoryPage';
 import { ShopSettingsPage } from './pages/ShopSettingsPage/ShopSettingsPage';
 
 export const App: React.FC = () => {
-    return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Navigate to="/auth" replace />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                <Route path="/new-order" element={
-                    <ProtectedRoute allowedRoles={['Student']}>
-                        <NewOrderPage />
-                    </ProtectedRoute>
-                } />
-                <Route path="/checkout/:orderId" element={
-                    <ProtectedRoute allowedRoles={['Student']}>
-                        <CheckoutPage />
-                    </ProtectedRoute>
-                } />
-                <Route path="/shop-dashboard" element={
-                    <ProtectedRoute allowedRoles={['Print Shop']}>
-                        <ShopLayout />
-                    </ProtectedRoute>
-                }>
-                    <Route index element={<ShopDashboard />} />
-                    <Route path="overview" element={<ShopOverviewPage />} />
-                    <Route path="archived" element={<ShopArchivedPage />} />
-                    <Route path="analytics" element={<ShopAnalyticsPage />} />
-                    <Route path="orders" element={<ShopOrdersPage />} />
-                    <Route path="inventory" element={<ShopInventoryPage />} />
-                    <Route path="settings" element={<ShopSettingsPage />} />
-                </Route>
-                <Route path="*" element={<Navigate to="/auth" replace />} />
-            </Routes>
-        </Router>
-    );
+ return (
+ <Router>
+ <Routes>
+ <Route path="/" element={<Navigate to="/auth" replace />} />
+ <Route path="/auth" element={<AuthPage />} />
+ <Route path="/unauthorized" element={<UnauthorizedPage />} />
+ <Route path="/new-order" element={
+ <ProtectedRoute allowedRoles={['Student']}>
+ <NewOrderPage />
+ </ProtectedRoute>
+ } />
+ <Route path="/checkout/:orderId" element={
+ <ProtectedRoute allowedRoles={['Student']}>
+ <CheckoutPage />
+ </ProtectedRoute>
+ } />
+ <Route path="/shop-dashboard" element={
+ <ProtectedRoute allowedRoles={['Print Shop']}>
+ <ShopLayout />
+ </ProtectedRoute>
+ }>
+ <Route index element={<ShopDashboard />} />
+ <Route path="overview" element={<ShopOverviewPage />} />
+ <Route path="archived" element={<ShopArchivedPage />} />
+ <Route path="analytics" element={<ShopAnalyticsPage />} />
+ <Route path="orders" element={<ShopOrdersPage />} />
+ <Route path="inventory" element={<ShopInventoryPage />} />
+ <Route path="settings" element={<ShopSettingsPage />} />
+ </Route>
+ <Route path="*" element={<Navigate to="/auth" replace />} />
+ </Routes>
+ </Router>
+ );
 };
 
 export default App;
