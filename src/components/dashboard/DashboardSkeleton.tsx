@@ -1,8 +1,6 @@
 import React from 'react';
 
 export const DashboardSkeleton: React.FC = () => {
-    const columns = ['New Orders', 'Print Ready', 'Completed'];
-
     return (
         <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-x-auto p-4 lg:p-6 gap-6 bg-transparent min-h-[calc(100vh-64px)]">
             {[1, 2, 3].map((colIndex) => (
