@@ -379,7 +379,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                                                 <Cell key={i} fill={COLOR_PALETTE[i % COLOR_PALETTE.length]} />
                                             ))}
                                         </Pie>
-                                        <Tooltip formatter={(value: number, name: string) => [`${value} orders`, name]} />
+                                        <Tooltip formatter={(value: any, name: any) => [`${value} orders`, name]} />
                                         <Legend verticalAlign="bottom" iconType="circle" formatter={(value) => <span className="text-xs font-medium text-gray-600">{value}</span>} />
                                         {renderCenterLabel(colorTotal, 'orders')}
                                     </PieChart>
@@ -412,7 +412,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                                                 <Cell key={i} fill={PAPER_PALETTE[i % PAPER_PALETTE.length]} />
                                             ))}
                                         </Pie>
-                                        <Tooltip formatter={(value: number, name: string) => [`${value} orders`, name]} />
+                                        <Tooltip formatter={(value: any, name: any) => [`${value} orders`, name]} />
                                         <Legend verticalAlign="bottom" iconType="circle" formatter={(value) => <span className="text-xs font-medium text-gray-600">{value}</span>} />
                                         {renderCenterLabel(paperTotal, 'orders')}
                                     </PieChart>

@@ -20,7 +20,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
     const [isValidating, setIsValidating] = useState(false);
     const [paperSize, setPaperSize] = useState<string>('A4');
     const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
-    const [pageCount, setPageCount] = useState<number>(1);
+    const [pageCount] = useState<number>(1);
 
     // Pre-fill validation so they can submit immediately without uploading a new file
     const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({

@@ -13,7 +13,7 @@ interface OrderSummaryProps {
     setPrintColorMode: (mode: string) => void;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady, paperSize, setPaperSize, pageCount, printColorMode, setPrintColorMode }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady, paperSize, setPaperSize, printColorMode, setPrintColorMode }) => {
     return (
         <div className="bg-white border-2 border-gray-100 p-6 flex flex-col min-h-[500px] h-fit">
             <h3 className="text-xl font-bold text-black mb-6">Order Summary</h3>
