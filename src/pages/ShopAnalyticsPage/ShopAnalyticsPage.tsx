@@ -8,6 +8,7 @@ import { apiClient } from '../../services/apiClient';
 import { orderService } from '../../services/orderService';
 import { AnalyticsSkeleton } from './AnalyticsSkeleton';
 import { Renew } from '@carbon/icons-react';
+import { AlertModal } from '../../components/common/AlertModal';
 
 // ── Inline Loading Overlay ──
 const InlineLoader = () => (
@@ -124,6 +125,11 @@ export const ShopAnalyticsPage: React.FC = () => {
  const [tablePage, setTablePage] = useState(1);
  const TABLE_PAGE_SIZE = 5;
 
+ const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'}>({ isOpen: false, message: '' });
+ const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string) => {
+ setAlertState({ isOpen: true, message, type, title });
+ };
+
  const fetchAnalytics = useCallback(async (preset: DatePreset, cStart?: string, cEnd?: string) => {
  setIsLoading(true);
  setError(null);
@@ -192,7 +198,7 @@ export const ShopAnalyticsPage: React.FC = () => {
  document.body.removeChild(link);
  } catch (err) {
  console.error("Failed to export CSV", err);
- alert("Failed to export CSV data");
+ showAlert("Failed to export CSV data", "error", "Export Failed");
  } finally {
  setIsExporting(false);
  }
@@ -515,6 +521,13 @@ export const ShopAnalyticsPage: React.FC = () => {
 
  {/* Bottom spacer */}
  <div className="h-6" />
+ <AlertModal 
+ isOpen={alertState.isOpen}
+ message={alertState.message}
+ title={alertState.title}
+ type={alertState.type}
+ onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+ />
  </div>
  </div>
  );

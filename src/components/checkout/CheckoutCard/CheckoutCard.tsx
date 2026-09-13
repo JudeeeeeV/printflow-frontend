@@ -5,6 +5,7 @@ import { ReceiptUploadZone } from '../ReceiptUploadZone/ReceiptUploadZone';
 import { SubmitVerificationButton } from '../SubmitVerificationButton/SubmitVerificationButton';
 import { orderService } from '../../../services/orderService';
 import { useNavigate } from 'react-router-dom';
+import { AlertModal } from '../../common/AlertModal';
 
 interface CheckoutCardProps {
  orderId: string;
@@ -32,6 +33,11 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
  const [timeLeft, setTimeLeft] = useState<string>('');
  const [isExpired, setIsExpired] = useState(false);
  const navigate = useNavigate();
+
+ const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'; onCloseCallback?: () => void}>({ isOpen: false, message: '' });
+ const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string, onCloseCallback?: () => void) => {
+ setAlertState({ isOpen: true, message, type, title, onCloseCallback });
+ };
 
  useEffect(() => {
  const updateTimer = () => {
@@ -78,8 +84,9 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
 
  useEffect(() => {
  if (isExpired) {
- alert('Your order has expired. Redirecting to dashboard.');
- navigate('/new-order');
+ showAlert('Your order has expired. Redirecting to dashboard.', 'warning', 'Order Expired', () => {
+ navigate('/new-order?tab=orders');
+ });
  }
  }, [isExpired, navigate]);
 
@@ -107,7 +114,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
  try {
  await orderService.cancelOrder(orderId);
  setShowCancelModal(false);
- navigate('/new-order');
+ navigate('/new-order?tab=orders');
  } catch (err: unknown) {
  const errorMessage = err instanceof Error ? err.message : 'Failed to cancel order.';
  setError(errorMessage);
@@ -117,15 +124,16 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
 
  const handleDispute = async () => {
  if (!disputeReason.trim()) {
- alert('Please provide a reason for the dispute.');
+ showAlert('Please provide a reason for the dispute.', 'warning', 'Missing Information');
  return;
  }
 
  setIsDisputing(true);
  try {
  await orderService.disputePayment(orderId, disputeReason);
- alert('Payment dispute escalated to administration.');
- navigate('/new-order');
+ showAlert('Payment dispute escalated to administration.', 'success', 'Dispute Submitted', () => {
+ navigate('/new-order?tab=orders');
+ });
  } catch (err: unknown) {
  const errorMessage = err instanceof Error ? err.message : 'Failed to escalate dispute.';
  setError(errorMessage);
@@ -183,7 +191,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
  
  <div className="flex items-center space-x-4">
  <button
- onClick={() => navigate('/new-order')}
+ onClick={() => navigate('/new-order?tab=orders')}
  className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-[#e0e0e0] hover:bg-carbon-gray-10 hover:border-[#8d8d8d] transition-all active:scale-95 "
  title="Return to Dashboard"
  >
@@ -291,7 +299,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
  <button 
  onClick={() => {
  setShowSuccessModal(false);
- navigate('/new-order');
+ navigate('/new-order?tab=orders');
  }}
  className="px-6 py-2 bg-carbon-gray-100 text-white text-sm font-bold hover:bg-black transition-colors"
  >
@@ -326,6 +334,17 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({ orderId, amount, gca
  </div>
  </div>
  )}
+
+ <AlertModal 
+ isOpen={alertState.isOpen}
+ message={alertState.message}
+ title={alertState.title}
+ type={alertState.type}
+ onClose={() => {
+ setAlertState(prev => ({ ...prev, isOpen: false }));
+ if (alertState.onCloseCallback) alertState.onCloseCallback();
+ }}
+ />
  </div>
  );
 };

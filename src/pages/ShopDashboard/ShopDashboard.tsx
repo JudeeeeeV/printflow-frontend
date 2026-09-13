@@ -10,6 +10,8 @@ import { daemonSocketService } from '../../services/daemonSocketService';
 import type { DaemonStatus } from '../../services/daemonSocketService';
 import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
+import { AlertModal } from '../../components/common/AlertModal';
+
 export const ShopDashboard: React.FC = () => {
  const navigate = useNavigate();
  const [shopData, setShopData] = useState<any>(null);
@@ -42,6 +44,11 @@ export const ShopDashboard: React.FC = () => {
  const [searchQuery, setSearchQuery] = useState('');
  const [paperSizeFilter, setPaperSizeFilter] = useState('ALL');
  const [colorModeFilter, setColorModeFilter] = useState('ALL');
+
+ const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'}>({ isOpen: false, message: '' });
+ const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string) => {
+ setAlertState({ isOpen: true, message, type, title });
+ };
 
  const loadShopData = () => {
  shopService.getMyShop()
@@ -139,7 +146,7 @@ export const ShopDashboard: React.FC = () => {
  await shopService.uploadGcashQr(qrFile);
  loadShopData();
  setQrFile(null);
- alert('GCash QR Code uploaded successfully!');
+ showAlert('GCash QR Code uploaded successfully!', 'success', 'Success');
  } catch (err: any) {
  setUploadQrError(err.message || 'Failed to submit GCash QR code.');
  } finally {
@@ -157,7 +164,7 @@ export const ShopDashboard: React.FC = () => {
  // Actual refresh
  loadShopData();
  } catch (err: any) {
- alert(err.message || 'Failed to verify payment');
+ showAlert(err.message || 'Failed to verify payment', 'error', 'Verification Failed');
  } finally {
  setIsVerifying(false);
  }
@@ -177,20 +184,49 @@ export const ShopDashboard: React.FC = () => {
  }
  };
 
- const handleManualDownload = () => {
+ const handleManualDownload = async () => {
  let downloadCount = 0;
- selectedReadyOrders.forEach(orderId => {
+ for (const orderId of selectedReadyOrders) {
  const order = shopOrders.find(o => o.id === orderId);
  if (order && order.assets && order.assets.length > 0) {
  const assetUrl = order.assets[0].file_url;
+ 
+ const urlParts = assetUrl.split('/');
+ let rawName = decodeURIComponent(urlParts[urlParts.length - 1] || 'asset.pdf');
+ const match = rawName.match(/-\d{13}-(.+)$/);
+ let fileName = match ? match[1] : rawName;
+ fileName = `Order_${order.id.slice(0, 8)}_${fileName}`;
+
+ try {
+ const response = await fetch(assetUrl);
+ if (!response.ok) throw new Error('Network response was not ok');
+ const blob = await response.blob();
+ const objectUrl = window.URL.createObjectURL(blob);
+ const link = document.createElement('a');
+ link.href = objectUrl;
+ link.download = fileName;
+ document.body.appendChild(link);
+ link.click();
+ document.body.removeChild(link);
+ window.URL.revokeObjectURL(objectUrl);
+ } catch (err) {
+ console.error('Failed to force download, falling back to new tab:', err);
  window.open(assetUrl, '_blank');
- downloadCount++;
  }
- });
+ downloadCount++;
+ try {
+ await orderService.updateOrderState(orderId, 'READY_FOR_PICKUP');
+ } catch(updateErr) {
+ console.error('Failed to update state for order:', orderId, updateErr);
+ }
+ }
+ }
  if (downloadCount === 0) {
- alert("No assets found for the selected orders.");
+ showAlert("No assets found for the selected orders.", 'warning', 'No Assets Found');
  } else {
- alert(`Initiated download for ${downloadCount} asset(s). Make sure your browser allows popups!`);
+ showAlert(`Successfully downloaded ${downloadCount} asset(s). Orders marked as Ready for Pickup.`, 'success', 'Downloads Complete');
+ setSelectedReadyOrders([]);
+ loadShopData();
  }
  };
 
@@ -223,7 +259,7 @@ export const ShopDashboard: React.FC = () => {
  setSelectedReadyOrders([]);
  // Don't close modal here, wait for daemon status updates via WS
  } catch (err: any) {
- alert('Batch error: ' + err.message);
+ showAlert('Batch error: ' + err.message, 'error', 'Batch Failed');
  setIsProgressModalOpen(false);
  } finally {
  setIsBatchProcessing(false);
@@ -563,6 +599,14 @@ export const ShopDashboard: React.FC = () => {
  isOpen={isProgressModalOpen}
  onClose={() => setIsProgressModalOpen(false)}
  jobs={jobProgresses}
+ />
+ 
+ <AlertModal 
+ isOpen={alertState.isOpen}
+ message={alertState.message}
+ title={alertState.title}
+ type={alertState.type}
+ onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
  />
  </div>
  );

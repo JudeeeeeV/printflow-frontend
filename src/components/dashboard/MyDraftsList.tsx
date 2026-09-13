@@ -3,6 +3,7 @@ import { Document, TrashCan, Edit } from '@carbon/icons-react';
 import { orderService } from '../../services/orderService';
 import { TableSkeleton } from '../common/TableSkeleton';
 import { Pagination } from '../common/Pagination';
+import { AlertModal } from '../common/AlertModal';
 
 export interface DraftOrder {
  id: string;
@@ -12,6 +13,9 @@ export interface DraftOrder {
  fileUrl: string;
  total: number;
  updatedAt: string;
+ paperSize: string;
+ printColorMode: string;
+ pageCount: number;
 }
 
 interface MyDraftsListProps {
@@ -24,6 +28,11 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
  const [currentPage, setCurrentPage] = useState(1);
  const [totalPages, setTotalPages] = useState(1);
+
+ const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'}>({ isOpen: false, message: '' });
+ const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string) => {
+ setAlertState({ isOpen: true, message, type, title });
+ };
 
  useEffect(() => {
  fetchDrafts();
@@ -49,7 +58,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  await orderService.deleteDraft(draftId);
  setDrafts(prev => prev.filter(draft => draft.id !== draftId));
  } catch (error) {
- alert('Failed to delete draft.');
+ showAlert('Failed to delete draft.', 'error', 'Delete Failed');
  } finally {
  setIsActionLoading(null);
  }
@@ -120,6 +129,14 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  />
  </div>
  )}
+
+ <AlertModal 
+ isOpen={alertState.isOpen}
+ message={alertState.message}
+ title={alertState.title}
+ type={alertState.type}
+ onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+ />
  </>
  );
 };

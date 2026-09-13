@@ -60,12 +60,12 @@ export const CheckoutPage: React.FC = () => {
  </svg>
  <h3 className="text-xl font-bold text-carbon-gray-100 mb-2">Order Not Found</h3>
  <p className="text-sm text-gray-600 mb-6">This order may have expired, been cancelled, or never existed.</p>
- <button 
- onClick={() => navigate('/new-order')}
- className="w-full px-6 py-3 bg-carbon-gray-100 text-white font-bold hover:bg-black transition-colors"
- >
- Return to Dashboard
- </button>
+  <button 
+  onClick={() => navigate('/new-order?tab=orders')}
+  className="w-full px-6 py-3 bg-carbon-gray-100 text-white font-bold hover:bg-black transition-colors"
+  >
+  Return to Dashboard
+  </button>
  </div>
  </div>
  );

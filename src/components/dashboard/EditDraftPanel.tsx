@@ -3,6 +3,7 @@ import { ArrowLeft } from '@carbon/icons-react';
 import { ShopSelector } from '../orders/ShopSelector/ShopSelector';
 import { FileUploadZone } from '../orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../orders/OrderSummary/OrderSummary';
+import { AlertModal } from '../common/AlertModal';
 import { orderService } from '../../services/orderService';
 import type { PrintShop, OrderEstimate } from '../../services/orderService';
 import type { DraftOrder } from './MyDraftsList';
@@ -18,24 +19,53 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  const [selectedShopId, setSelectedShopId] = useState<string | null>(draft.shopId);
  const [newFile, setNewFile] = useState<File | null>(null);
  const [isValidating, setIsValidating] = useState(false);
- const [paperSize, setPaperSize] = useState<string>('A4');
- const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
- const [pageCount] = useState<number>(1);
+ const [paperSize, setPaperSize] = useState<string>(draft.paperSize || 'A4');
+ const [printColorMode, setPrintColorMode] = useState<string>(draft.printColorMode || 'BLACK_AND_WHITE');
+ const [pageCount, setPageCount] = useState<number>(draft.pageCount || 1);
 
  // Pre-fill validation so they can submit immediately without uploading a new file
  const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({
  passed: true, message: 'Valid file loaded from draft'
  });
  const [estimate, setEstimate] = useState<OrderEstimate | null>({
- total: draft.total, pageCount: 1, basePrice: draft.total, colorAdditive: 0
+ total: draft.total, pageCount: draft.pageCount || 1, basePrice: draft.total, colorAdditive: 0
  });
 
  const [isSubmitting, setIsSubmitting] = useState(false);
+
+ const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'; onCloseAction?: () => void}>({ isOpen: false, message: '' });
+ const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string, onCloseAction?: () => void) => {
+ setAlertState({ isOpen: true, message, type, title, onCloseAction });
+ };
+
+ const updateEstimate = (shopId: string, size: string, mode: string, pCount: number) => {
+ const shop = shops.find(s => s.id === shopId);
+ let base = 3.00;
+ let addon = 0.00;
+ if (shop && shop.pricing_matrix) {
+ base = shop.pricing_matrix.paper_sizes?.[size] ?? 3.00;
+ addon = shop.pricing_matrix.color_mode_multipliers?.[mode] ?? 0.00;
+ }
+ setEstimate({ 
+ total: (base + addon) * pCount, 
+ pageCount: pCount,
+ basePrice: base,
+ colorAdditive: addon
+ });
+ };
+
+ React.useEffect(() => {
+ if (selectedShopId && validationResult?.passed) {
+ updateEstimate(selectedShopId, paperSize, printColorMode, pageCount);
+ }
+ }, [paperSize, printColorMode, selectedShopId, validationResult?.passed, shops, pageCount]);
 
  const handleFileSelect = async (selectedFile: File) => {
  setNewFile(selectedFile);
  setIsValidating(true);
  setValidationResult(null);
+
+ let detectedPageCount = 1;
 
  // Validate PDF integrity
  if (selectedFile.type === 'application/pdf') {
@@ -43,7 +73,8 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  const { PDFDocument } = await import('pdf-lib');
  const arrayBuffer = await selectedFile.arrayBuffer();
  const pdfDoc = await PDFDocument.load(arrayBuffer);
- if (pdfDoc.getPageCount() === 0) {
+ detectedPageCount = pdfDoc.getPageCount();
+ if (detectedPageCount === 0) {
  setValidationResult({ passed: false, message: 'Corrupted PDF: File contains no pages.' });
  setEstimate(null);
  setIsValidating(false);
@@ -78,10 +109,12 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  }
  }
 
+ setPageCount(detectedPageCount);
+
  try {
  await new Promise(resolve => setTimeout(resolve, 1500));
  setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });
- setEstimate({ total: 15.00, pageCount: 1, basePrice: 15.00, colorAdditive: 0 });
+ // The useEffect will automatically update the estimate now when pageCount or validationResult changes
  } catch (err) {
  setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
  setEstimate(null);
@@ -95,7 +128,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
 
  // SAFEGUARD: Prevent corrupted orders if they change shops but don't re-upload
  if (selectedShopId !== draft.shopId && !newFile) {
- alert('You changed the Print Shop. Please re-upload your design file to validate it against this shop.');
+ showAlert('You changed the Print Shop. Please re-upload your design file to validate it against this shop.', 'warning', 'Re-upload Required');
  return;
  }
 
@@ -107,12 +140,15 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  await orderService.deleteDraft(draft.id);
  onSuccess(response.orderId);
  } else {
- // They changed nothing, just ready to checkout with the existing draft.
+ // They changed settings but didn't upload a new file, update draft first then submit.
+ if (estimate) {
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, estimate.total, estimate.pageCount);
+ }
  await orderService.submitDraft(draft.id);
  onSuccess(draft.id);
  }
  } catch (err: any) {
- alert(`Failed to submit: ${err.message || 'Unknown error'}`);
+ showAlert(`Failed to submit: ${err.message || 'Unknown error'}`, 'error', 'Submission Failed');
  } finally {
  setIsSubmitting(false);
  }
@@ -122,7 +158,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  if (!selectedShopId || !validationResult?.passed) return;
 
  if (selectedShopId !== draft.shopId && !newFile) {
- alert('You changed the Print Shop. Please re-upload your design file to save.');
+ showAlert('You changed the Print Shop. Please re-upload your design file to save.', 'warning', 'Re-upload Required');
  return;
  }
 
@@ -131,14 +167,17 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  if (newFile) {
  await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode);
  await orderService.deleteDraft(draft.id);
- alert('Draft updated successfully!');
- onCancel();
+ showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
- alert('No changes were made to the draft.');
- onCancel();
+ if (estimate) {
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, estimate.total, estimate.pageCount);
+ showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
+ } else {
+ showAlert('No changes were made to the draft.', 'info', 'No Changes', () => onCancel());
+ }
  }
  } catch (err: any) {
- alert(`Failed to save draft: ${err.message || 'Unknown error'}`);
+ showAlert(`Failed to save draft: ${err.message || 'Unknown error'}`, 'error', 'Save Failed');
  } finally {
  setIsSubmitting(false);
  }
@@ -196,6 +235,17 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  </div>
  </div>
  </div>
+
+ <AlertModal 
+ isOpen={alertState.isOpen}
+ message={alertState.message}
+ title={alertState.title}
+ type={alertState.type}
+ onClose={() => {
+     setAlertState(prev => ({ ...prev, isOpen: false }));
+     if (alertState.onCloseAction) alertState.onCloseAction();
+ }}
+ />
  </div>
  );
 };

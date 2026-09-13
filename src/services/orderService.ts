@@ -158,18 +158,32 @@ export const orderService = {
  });
  },
 
- saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string) => {
- const formData = new FormData();
- formData.append('shopId', shopId);
- formData.append('file', file);
- formData.append('isDraft', 'true'); // THIS is the magic flag for the backend
- formData.append('paperSize', paperSize);
- formData.append('printColorMode', printColorMode);
+  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string) => {
+    const formData = new FormData();
+    formData.append('shopId', shopId);
+    formData.append('file', file);
+    formData.append('isDraft', 'true'); // THIS is the magic flag for the backend
+    formData.append('paperSize', paperSize);
+    formData.append('printColorMode', printColorMode);
 
- // Reusing your existing POST /orders endpoint
- return await apiClient('/orders', {
- method: 'POST',
- body: formData,
- });
- }
+    // Reusing your existing POST /orders endpoint
+    return await apiClient('/orders', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string, total: number, pageCount: number) => {
+    return await apiClient(`/orders/${draftId}/update-draft`, {
+      method: 'PATCH',
+      body: JSON.stringify({ shopId, paperSize, printColorMode, total, pageCount }),
+    });
+  },
+
+  async updateOrderState(orderId: string, state: string): Promise<{ message: string; state: string }> {
+    return apiClient<{ message: string; state: string }>(`/orders/${orderId}/state`, {
+      method: 'PATCH',
+      body: JSON.stringify({ state }),
+    });
+  }
 };
