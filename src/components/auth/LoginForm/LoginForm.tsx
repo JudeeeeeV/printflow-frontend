@@ -7,7 +7,11 @@ import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService, type LoginPayload } from '../../../services/authService';
 
-export const LoginForm: React.FC = () => {
+interface LoginFormProps {
+  onForgotPassword?: () => void;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
  const navigate = useNavigate(); // Initialize the router navigation hook
 
  const [email, setEmail] = useState('');
@@ -87,6 +91,13 @@ export const LoginForm: React.FC = () => {
  {showPassword ? <ViewOff size={20} strokeWidth={2.5} /> : <View size={20} strokeWidth={2.5} />}
  </button>
  </div>
+ {onForgotPassword && (
+ <div className="mt-2 flex justify-start">
+ <button type="button" onClick={onForgotPassword} className="text-sm font-semibold text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors">
+ Forgot password?
+ </button>
+ </div>
+ )}
  </div>
 
  {error && (

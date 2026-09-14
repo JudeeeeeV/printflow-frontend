@@ -22,7 +22,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ value, onChange }) => {
  };
 
  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
- const newValue = e.target.value;
+ const newValue = e.target.value.trim();
  const validationError = validateEmail(newValue);
  setError(validationError);
  // Pass value and validation status up to the parent
@@ -35,6 +35,8 @@ export const EmailInput: React.FC<EmailInputProps> = ({ value, onChange }) => {
  <input
  id="email"
  type="email"
+ required
+ autoComplete="email"
  className={`px-4 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
  error ? 'ring-4 ring-black font-bold animate-shake' : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60'
  }`}

@@ -23,14 +23,20 @@ export interface AuthResponse {
 }
 
 export const authService = {
+ async verifyEmail(payload: RegisterPayload, code: string): Promise<{ verified: boolean }> {
+ return apiClient('/auth/verify-email', { method: 'POST', body: JSON.stringify({ email: payload.email, password: payload.passwordHash, accountType: payload.role, shopName: payload.shopName, code }) });
+ },
+ async resendCode(email: string): Promise<{ message: string }> {
+ return apiClient('/auth/resend-code', { method: 'POST', body: JSON.stringify({ email }) });
+ },
  /**
  * Registers a new user via the NestJS /auth/register endpoint.
  * Based on the SDD Sequence Diagram for User Registration.
  */
- async register(payload: RegisterPayload): Promise<AuthResponse> {
+ async register(payload: RegisterPayload): Promise<{ requiresEmailVerification: boolean; email: string }> {
  // Note: the SDD mentions password is sent in the payload.
  // Ensure the backend uses HTTPS in production.
- return apiClient<AuthResponse>('/auth/register', {
+ return apiClient<{ requiresEmailVerification: boolean; email: string }>('/auth/register', {
  method: 'POST',
  body: JSON.stringify({
  email: payload.email,
@@ -49,6 +55,24 @@ export const authService = {
  method: 'POST',
  body: JSON.stringify({
  email: payload.email,
+ password: payload.passwordHash,
+ }),
+ });
+ },
+
+ async sendPasswordReset(email: string): Promise<{ message: string }> {
+ return apiClient('/auth/forgot-password/send', {
+ method: 'POST',
+ body: JSON.stringify({ email }),
+ });
+ },
+
+ async resetPassword(payload: { email: string; code: string; passwordHash: string }): Promise<{ success: boolean }> {
+ return apiClient('/auth/forgot-password/reset', {
+ method: 'POST',
+ body: JSON.stringify({
+ email: payload.email,
+ code: payload.code,
  password: payload.passwordHash,
  }),
  });
