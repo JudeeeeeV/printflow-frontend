@@ -108,8 +108,11 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
       <form className="flex flex-col w-full" onSubmit={handleResetPassword}>
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-carbon-gray-100 mb-2">Reset password</h2>
-          <p className="text-base text-gray-600">
+          <p className="text-base text-gray-600 mb-2">
             We sent an 8-digit code to <span className="font-bold">{email}</span>.
+          </p>
+          <p className="text-sm font-semibold text-yellow-600">
+            (If you don't see it, check your spam or junk folder)
           </p>
         </div>
 
