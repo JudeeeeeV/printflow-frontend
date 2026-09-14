@@ -19,6 +19,14 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer
+  React.useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => setCooldown(c => c - 1), 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +45,26 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Could not send reset code.');
+      } else {
+        setError('An unexpected error occurred.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (isSubmitting || cooldown > 0) return;
+    setError(null);
+    setMessage(null);
+    setIsSubmitting(true);
+    try {
+      await authService.sendPasswordReset(email);
+      setCooldown(60);
+      setMessage('A new code has been sent to your email.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Could not resend code.');
       } else {
         setError('An unexpected error occurred.');
       }
@@ -115,6 +143,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
             (If you don't see it, check your spam or junk folder)
           </p>
         </div>
+
+        {message && (
+          <div className="mb-4 p-4 bg-green-50 ring-1 ring-green-500 text-green-900 font-semibold text-sm">
+            {message}
+          </div>
+        )}
 
         <div className="mb-5">
           <label htmlFor="reset-code" className="block text-sm mb-2 font-semibold text-carbon-gray-100">
@@ -196,20 +230,30 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           </div>
         )}
 
-        <div className="mt-2 flex flex-col gap-3">
+        <div className="mt-6">
           <SubmitButton
             label="Reset Password"
             isLoading={isSubmitting}
             disabled={!isPasswordStrong || code.length !== 8 || isSubmitting}
           />
-          <button
-            type="button"
-            onClick={onBackToLogin}
-            disabled={isSubmitting}
-            className="w-full py-3 bg-transparent text-carbon-gray-100 font-bold transition-all hover:underline disabled:opacity-50"
-          >
-            Cancel
-          </button>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm mt-4">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isSubmitting || cooldown > 0}
+              className="font-bold text-carbon-gray-100 hover:text-carbon-blue-60 disabled:text-gray-400 transition-colors"
+            >
+              {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+            </button>
+            <button
+              type="button"
+              onClick={onBackToLogin}
+              disabled={isSubmitting}
+              className="font-bold text-gray-500 hover:text-carbon-gray-100 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </form>
     );

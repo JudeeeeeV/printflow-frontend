@@ -15,7 +15,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
   const [rateLimited, setRateLimited] = useState(false);
   async function verify(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !/^[0-9]{6}$/.test(code)) return;
+    if (busy || !/^[0-9]{8}$/.test(code)) return;
     setBusy(true); setError('');
     try {
       await authService.verifyEmail(registration, code);
