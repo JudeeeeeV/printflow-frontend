@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ViewOff } from '@carbon/icons-react';
+import { View, ViewOff, Checkmark } from '@carbon/icons-react';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService } from '../../../services/authService';
@@ -45,6 +45,14 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
     }
   };
 
+  const hasLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSymbol = /[^A-Za-z0-9\s]/.test(password);
+  
+  const isPasswordStrong = hasLength && hasUpper && hasLower && hasNumber && hasSymbol;
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -54,8 +62,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    if (!isPasswordStrong) {
+      setError('Please meet all the new password requirements.');
       return;
     }
 
@@ -148,6 +156,31 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
               {showPassword ? <ViewOff size={20} strokeWidth={2.5} /> : <View size={20} strokeWidth={2.5} />}
             </button>
           </div>
+          
+          {/* Password Strength Checker */}
+          <div className="mt-3 bg-gray-50 p-3 text-sm space-y-1.5 border border-gray-100">
+            <p className="font-semibold text-gray-700 mb-2 text-xs uppercase tracking-wider">Password Requirements:</p>
+            <div className={`flex items-center space-x-2 ${hasLength ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+               <Checkmark size={16} className={hasLength ? 'opacity-100' : 'opacity-30'} />
+               <span>At least 8 characters long</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${hasUpper ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+               <Checkmark size={16} className={hasUpper ? 'opacity-100' : 'opacity-30'} />
+               <span>Contains an uppercase letter</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${hasLower ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+               <Checkmark size={16} className={hasLower ? 'opacity-100' : 'opacity-30'} />
+               <span>Contains a lowercase letter</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${hasNumber ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+               <Checkmark size={16} className={hasNumber ? 'opacity-100' : 'opacity-30'} />
+               <span>Contains a number</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${hasSymbol ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+               <Checkmark size={16} className={hasSymbol ? 'opacity-100' : 'opacity-30'} />
+               <span>Contains a special character</span>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -160,7 +193,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           <SubmitButton
             label="Reset Password"
             isLoading={isSubmitting}
-            disabled={code.length !== 8 || password.length < 8}
+            disabled={code.length !== 8 || !isPasswordStrong}
           />
           <button
             type="button"

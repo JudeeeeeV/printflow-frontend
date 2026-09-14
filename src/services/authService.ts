@@ -76,5 +76,15 @@ export const authService = {
  password: payload.passwordHash,
  }),
  });
+ },
+
+ async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean, message: string }> {
+ return apiClient('/auth/change-password', {
+ method: 'POST',
+ body: JSON.stringify({
+ currentPassword,
+ newPassword
+ })
+ });
  }
 };

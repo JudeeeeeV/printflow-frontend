@@ -13,11 +13,13 @@ import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
 import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
 import { AlertModal } from '../../components/common/AlertModal';
 import { PDFDocument } from 'pdf-lib';
+import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const tabParam = searchParams.get('tab') as 'new' | 'orders' | 'drafts' | null;
+    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
     const handleLogout = () => {
         localStorage.removeItem('jwt_token');
@@ -225,12 +227,20 @@ export const NewOrderPage: React.FC = () => {
                         </button>
                     </div>
                 </div>
-                <button
-                    onClick={handleLogout}
-                    className="bg-white border-2 border-black text-carbon-gray-100 font-bold py-2 px-6 hover:bg-gray-100 transition-colors mb-4 md:mb-2"
-                >
-                    Logout
-                </button>
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={() => setIsChangePasswordOpen(true)}
+                        className="bg-transparent border-2 border-transparent text-gray-500 hover:text-carbon-gray-100 font-bold py-2 px-6 transition-colors mb-2 md:mb-0"
+                    >
+                        Account Settings
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className="bg-white border-2 border-black text-carbon-gray-100 font-bold py-2 px-6 hover:bg-gray-100 transition-colors mb-4 md:mb-2"
+                    >
+                        Logout
+                    </button>
+                </div>
             </div>
 
             <div key={activeTab} className="animate-slide-fade">
@@ -319,6 +329,10 @@ export const NewOrderPage: React.FC = () => {
                         if (alertState.onCloseAction) alertState.onCloseAction();
                     }}
                 />
+
+                {isChangePasswordOpen && (
+                    <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
+                )}
             </div>
         </div>
     );

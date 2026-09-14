@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close } from '@carbon/icons-react';
+import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
+import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 
 export const ShopLayout: React.FC = () => {
     const location = useLocation();
@@ -9,6 +10,7 @@ export const ShopLayout: React.FC = () => {
     const [shopName, setShopName] = useState<string>('Print Shop');
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [isSupportOpen, setIsSupportOpen] = useState(false);
+    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
     const token = localStorage.getItem('jwt_token');
     const role = localStorage.getItem('user_role');
@@ -75,6 +77,10 @@ export const ShopLayout: React.FC = () => {
                 </nav>
 
                 <div className="p-4 border-t border-[#e0e0e0] space-y-2 shrink-0">
+                    <button onClick={() => setIsChangePasswordOpen(true)} className="w-full flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                        <UserProfile className="w-5 h-5 mr-3 text-gray-400" />
+                        Account Settings
+                    </button>
                     <button onClick={() => setIsHelpOpen(true)} className="w-full flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
                         <Help className="w-5 h-5 mr-3 text-gray-400" />
                         Help
@@ -144,6 +150,10 @@ export const ShopLayout: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Change Password Modal */}
+            {isChangePasswordOpen && (
+                <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
             )}
         </div>
     );
