@@ -109,9 +109,9 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-carbon-gray-100 mb-2">Reset password</h2>
           <p className="text-base text-gray-600 mb-2">
-            We sent an 8-digit code to <span className="font-bold">{email}</span>.
+            We sent an 8-digit reset code to <span className="font-bold">{email}</span>.
           </p>
-          <p className="text-sm font-semibold text-yellow-600">
+          <p className="text-sm font-bold text-carbon-gray-100">
             (If you don't see it, check your spam or junk folder)
           </p>
         </div>
@@ -127,13 +127,17 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
             inputMode="numeric"
             autoComplete="one-time-code"
             required
+            pattern="[0-9]{8}"
+            minLength={8}
             maxLength={8}
-            className={`w-full px-4 py-3 text-base font-mono tracking-[0.5em] text-center text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
-              error ? 'ring-4 ring-black font-bold animate-shake' : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60'
+            className={`w-full px-4 py-4 text-3xl font-bold tracking-[0.3em] text-center text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+              error ? 'ring-4 ring-black animate-shake' : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 placeholder:text-gray-300 placeholder:font-normal'
             }`}
             placeholder="00000000"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+            disabled={isSubmitting}
+            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
+            aria-label="8-digit reset code"
           />
         </div>
 
@@ -196,7 +200,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           <SubmitButton
             label="Reset Password"
             isLoading={isSubmitting}
-            disabled={code.length !== 8 || !isPasswordStrong}
+            disabled={!isPasswordStrong || code.length !== 8 || isSubmitting}
           />
           <button
             type="button"

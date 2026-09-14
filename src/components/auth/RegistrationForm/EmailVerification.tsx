@@ -15,7 +15,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
   const [rateLimited, setRateLimited] = useState(false);
   async function verify(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !/^[0-9]{8}$/.test(code)) return;
+    if (busy || !/^[0-9]{6}$/.test(code)) return;
     setBusy(true); setError('');
     try {
       await authService.verifyEmail(registration, code);
@@ -66,7 +66,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
           <p className="text-base text-gray-600 mb-2">
             We sent an 8-digit code to <span className="font-bold">{email}</span>.
           </p>
-          <p className="text-sm font-semibold text-yellow-600 mb-6">
+          <p className="text-sm font-bold text-carbon-gray-100 mb-6">
             (If you don't see it, check your spam or junk folder)
           </p>
         </div>

@@ -106,11 +106,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
  </div>
  )}
 
- <div className="mt-2">
+ <div className="mt-6">
  <SubmitButton
  label="Sign In"
  isLoading={isSubmitting}
- disabled={!email || !password || !isEmailValid}
  />
  </div>
  </form>
