@@ -1,5 +1,5 @@
 // src/pages/NewOrderPage/NewOrderPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShopSelector } from '../../components/orders/ShopSelector/ShopSelector';
 import { FileUploadZone } from '../../components/orders/FileUploadZone/FileUploadZone';
@@ -37,6 +37,15 @@ export const NewOrderPage: React.FC = () => {
     };
     const [shops, setShops] = useState<PrintShop[]>([]);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+    const uploadSectionRef = useRef<HTMLDivElement>(null);
+
+    const handleShopSelect = (shopId: string) => {
+        setSelectedShopId(shopId);
+        uploadSectionRef.current?.scrollIntoView({
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+            block: 'start',
+        });
+    };
 
     const [paperSize, setPaperSize] = useState<string>('A4');
     const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
@@ -255,10 +264,10 @@ export const NewOrderPage: React.FC = () => {
                                 <ShopSelector
                                     shops={shops}
                                     selectedShopId={selectedShopId}
-                                    onSelect={setSelectedShopId}
+                                    onSelect={handleShopSelect}
                                 />
 
-                                <div className={`transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <div ref={uploadSectionRef} className={`scroll-mt-6 transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                                     <FileUploadZone
                                         onFileSelect={handleFileSelect}
                                         isValidating={isValidating}
