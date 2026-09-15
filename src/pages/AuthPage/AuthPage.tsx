@@ -84,7 +84,7 @@ export const AuthPage: React.FC = () => {
                             aria-label={activeView === 'register' ? 'Account registration' : undefined}
                         >
                             {activeView !== 'forgot-password' && (
-                                <div className="mb-7 animate-fade-in-up border-l-4 border-carbon-blue-60 pl-4" style={{ animationDelay: '100ms' }}>
+                                <div className="mb-7 animate-fade-in-up pl-4" style={{ animationDelay: '100ms' }}>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Account access</p>
                                     <h2 className="mt-1 text-3xl font-black tracking-tight text-carbon-gray-100">
                                         {activeView === 'login' ? 'Welcome back' : 'Create your account'}
