@@ -24,7 +24,11 @@ export const AuthPage: React.FC = () => {
     }, [navigate]);
 
     return (
-        <div className={`bg-carbon-gray-10 font-sans text-carbon-gray-100 lg:grid lg:grid-cols-[minmax(340px,0.9fr)_minmax(520px,1.1fr)] ${activeView === 'register' ? `${styles.registrationPage} fixed inset-0 grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-rows-[minmax(0,1fr)]` : 'relative min-h-screen overflow-x-clip lg:h-screen lg:overflow-hidden'}`}>
+        <div className={`bg-carbon-gray-10 font-sans text-carbon-gray-100 lg:grid lg:grid-cols-[minmax(340px,0.9fr)_minmax(520px,1.1fr)] ${activeView === 'register'
+            ? `${styles.registrationPage} fixed inset-0 grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-rows-[minmax(0,1fr)]`
+            : activeView === 'login'
+                ? `${styles.loginPage} fixed inset-0 grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-rows-[minmax(0,1fr)]`
+                : 'relative min-h-screen overflow-x-clip lg:h-screen lg:overflow-hidden'}`}>
             <aside className={styles.brandPanel}>
                 <div className="flex items-center justify-between gap-4">
                     <h1 className="text-2xl font-bold tracking-tight">PrintFlow<span className="text-carbon-blue-60">.</span></h1>
@@ -68,13 +72,17 @@ export const AuthPage: React.FC = () => {
                 </div>
             </aside>
 
-            <main className={`relative flex min-w-0 items-start justify-center px-4 py-6 sm:px-8 sm:py-10 lg:px-12 lg:py-10 xl:px-16 ${activeView === 'register' ? 'min-h-0 overflow-hidden' : 'min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'} ${activeView === 'login' ? 'lg:items-center' : ''}`}>
+            <main className={`${styles.authMain} relative flex min-w-0 items-start justify-center px-4 py-6 sm:px-8 sm:py-10 lg:px-12 lg:py-10 xl:px-16 ${activeView === 'register'
+                ? 'min-h-0 overflow-hidden'
+                : activeView === 'login'
+                    ? 'min-h-0 overflow-y-auto'
+                    : 'min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'} ${activeView === 'login' ? 'lg:items-center' : ''}`}>
                 <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 hidden h-24 w-24 border-b border-l border-gray-300 lg:block" />
 
                 <div className={`relative z-10 min-w-0 w-full ${activeView === 'register' ? 'grid h-full min-h-0 max-w-[560px] grid-rows-[minmax(0,1fr)_auto]' : 'max-w-[500px]'}`}>
                     <div className={`border border-gray-200 border-t-4 border-t-carbon-blue-60 bg-white shadow-[0_16px_40px_rgba(22,22,22,0.10)] ${activeView === 'register' ? 'min-h-0 overflow-hidden' : ''}`}>
                         <div
-                            className={`px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10 ${activeView === 'register' ? 'h-full min-h-0 overflow-y-auto overscroll-contain' : ''}`}
+                            className={`${styles.authCardContent} px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10 ${activeView === 'register' ? 'h-full min-h-0 overflow-y-auto overscroll-contain' : ''}`}
                             tabIndex={activeView === 'register' ? 0 : undefined}
                             role={activeView === 'register' ? 'region' : undefined}
                             aria-label={activeView === 'register' ? 'Account registration' : undefined}
