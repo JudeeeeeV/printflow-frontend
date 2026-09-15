@@ -211,89 +211,154 @@ export const NewOrderPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-carbon-gray-10 py-10 px-4 sm:px-6 lg:px-8 font-sans">
-            <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-end mb-8 border-b border-[#e0e0e0] pb-0">
-                <div>
-                    <h1 className="text-3xl font-black text-carbon-gray-100 tracking-tight mt-2">PrintFlow Dashboard</h1>
-                    <div className="flex space-x-8 mt-6">
-                        <button
-                            onClick={() => handleTabChange('new')}
-                            className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'new' ? 'border-black text-carbon-gray-100' : 'border-transparent text-gray-500 hover:text-carbon-gray-100'}`}
-                        >
-                            Create New Order
-                        </button>
-                        <button
-                            onClick={() => handleTabChange('drafts')}
-                            className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'drafts' ? 'border-black text-carbon-gray-100' : 'border-transparent text-gray-500 hover:text-carbon-gray-100'}`}
-                        >
-                            Drafts
-                        </button>
-                        <button
-                            onClick={() => handleTabChange('orders')}
-                            className={`pb-4 text-sm font-bold border-b-4 transition-colors ${activeTab === 'orders' ? 'border-black text-carbon-gray-100' : 'border-transparent text-gray-500 hover:text-carbon-gray-100'}`}
-                        >
-                            My Orders
-                        </button>
-                    </div>
-                </div>
-                <div className="flex flex-row items-center space-x-4 mb-4 md:mb-2">
-                    <button
-                        onClick={() => setIsChangePasswordOpen(true)}
-                        className="text-sm font-bold text-gray-500 hover:text-carbon-gray-100 transition-colors flex items-center"
-                    >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Account Settings
-                    </button>
-                    <button
-                        onClick={handleLogout}
-                        className="bg-white border-2 border-black text-carbon-gray-100 font-bold py-1.5 px-6 hover:bg-gray-100 transition-colors"
-                    >
-                        Logout
-                    </button>
-                </div>
+        <div className="relative isolate min-h-screen overflow-x-clip bg-carbon-gray-10 font-sans text-carbon-gray-100">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[26rem] overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-44 bg-carbon-gray-100" />
+                <div className="absolute right-0 top-0 h-44 w-1/3 bg-carbon-blue-60 opacity-10" />
+                <div className="absolute right-[12%] top-24 h-28 w-28 border-[24px] border-carbon-blue-60 opacity-10" />
             </div>
 
-            <div key={activeTab} className="animate-slide-fade">
-                {activeTab === 'new' && (
-                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2 space-y-8">
-                            <div className="bg-white p-6 border border-gray-100">
-                                <ShopSelector
-                                    shops={shops}
-                                    selectedShopId={selectedShopId}
-                                    onSelect={handleShopSelect}
-                                />
+            <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+                <header className="mb-6 border border-gray-200 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:mb-8">
+                    <div className="relative overflow-hidden bg-carbon-gray-100 px-5 py-6 text-white sm:px-8 sm:py-8">
+                        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-80 sm:block">
+                            <div className="absolute -right-16 -top-24 h-64 w-64 border-[44px] border-carbon-blue-60 opacity-30" />
+                            <div className="absolute bottom-0 right-0 h-14 w-44 bg-carbon-blue-60" />
+                            <div className="absolute bottom-0 right-44 h-14 w-14 border border-white/30" />
+                        </div>
 
-                                <div ref={uploadSectionRef} className={`scroll-mt-6 transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                                    <FileUploadZone
-                                        onFileSelect={handleFileSelect}
-                                        isValidating={isValidating}
-                                        validationResult={validationResult}
-                                    />
+                        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                            <div className="max-w-2xl">
+                                <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-carbon-blue-60">Print workspace</p>
+                                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">PrintFlow Dashboard</h1>
+                                <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-300 sm:text-base">
+                                    Prepare your files, choose a print partner, and keep every order moving from one workspace.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <button
+                                    onClick={() => setIsChangePasswordOpen(true)}
+                                    className="flex min-h-11 items-center justify-center border border-white/30 bg-white/5 px-4 text-sm font-bold text-white transition-colors hover:border-white/60 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+                                >
+                                    <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Account Settings
+                                </button>
+                                <button
+                                    onClick={handleLogout}
+                                    className="min-h-11 border-2 border-white bg-white px-6 text-sm font-bold text-carbon-gray-100 transition-colors hover:border-gray-100 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <nav aria-label="Order workspace" className="overflow-x-auto border-b-4 border-carbon-blue-60 bg-white">
+                        <div className="flex min-w-max">
+                            <button
+                                onClick={() => handleTabChange('new')}
+                                className={`min-h-12 border-r border-gray-200 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'new' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                            >
+                                Create New Order
+                            </button>
+                            <button
+                                onClick={() => handleTabChange('drafts')}
+                                className={`min-h-12 border-r border-gray-200 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'drafts' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                            >
+                                Drafts
+                            </button>
+                            <button
+                                onClick={() => handleTabChange('orders')}
+                                className={`min-h-12 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'orders' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                            >
+                                My Orders
+                            </button>
+                        </div>
+                    </nav>
+                </header>
+
+                <div key={activeTab} className="animate-slide-fade pb-10">
+                {activeTab === 'new' && (
+                    <div className="grid grid-cols-1 items-start gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+                        <section className="min-w-0 border border-gray-200 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
+                            <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-5 sm:flex-row sm:items-end sm:justify-between sm:px-7 lg:px-8">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Order builder</p>
+                                    <h2 className="mt-1 text-2xl font-black tracking-tight text-carbon-gray-100">Create New Order</h2>
+                                </div>
+                                <p className="max-w-sm text-sm leading-relaxed text-gray-500 sm:text-right">
+                                    Select a shop first, then upload your print-ready artwork.
+                                </p>
+                            </div>
+
+                            <div className="p-5 sm:p-7 lg:p-8">
+                                <div className="border-l-4 border-carbon-blue-60 pl-4 sm:pl-5">
+                                    <div className="mb-5 flex items-center gap-3">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-blue-60 text-xs font-black text-white">01</span>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Choose your print partner</p>
+                                    </div>
+                                    <div className="[&>div]:mb-0">
+                                        <ShopSelector
+                                            shops={shops}
+                                            selectedShopId={selectedShopId}
+                                            onSelect={handleShopSelect}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div
+                                    ref={uploadSectionRef}
+                                    className={`mt-8 scroll-mt-6 border-t border-gray-200 pt-8 transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'pointer-events-none opacity-40'}`}
+                                >
+                                    <div className="mb-5 flex items-center gap-3">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-gray-100 text-xs font-black text-white">02</span>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Add your artwork</p>
+                                    </div>
+                                    <div className="[&>div]:mb-0">
+                                        <FileUploadZone
+                                            onFileSelect={handleFileSelect}
+                                            isValidating={isValidating}
+                                            validationResult={validationResult}
+                                        />
+                                    </div>
                                 </div>
 
                                 {file && validationResult?.passed && (
-                                    <div className="mt-8 bg-gray-200 h-[500px] flex items-center justify-center overflow-hidden relative group border border-[#8d8d8d]">
-                                        {file.type.startsWith('image/') ? (
-                                            <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-contain" />
-                                        ) : file.type === 'application/pdf' ? (
-                                            <iframe src={URL.createObjectURL(file)} title="PDF Preview" className="w-full h-full border-none" />
-                                        ) : (
-                                            <span className="text-gray-500 font-bold">Preview not available for this file type</span>
-                                        )}
-                                        <div className="absolute inset-0 bg-transparent flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none">
-                                            <span className="bg-white text-carbon-gray-100 px-6 py-2 font-bold text-sm ">Live Preview Active</span>
+                                    <div className="mt-8 border border-[#8d8d8d] bg-carbon-gray-100 p-2 shadow-[0_8px_20px_rgba(22,22,22,0.12)] sm:p-3">
+                                        <div className="flex min-w-0 items-center justify-between gap-4 border-b border-white/20 px-1 pb-3 text-white sm:px-2">
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <span className="h-2.5 w-2.5 shrink-0 bg-carbon-blue-60" />
+                                                <span className="truncate text-xs font-bold uppercase tracking-[0.16em]">File preview</span>
+                                            </div>
+                                            <span className="max-w-[55%] truncate text-xs text-gray-300">{file.name}</span>
+                                        </div>
+                                        <div className="group relative mt-3 flex h-[340px] items-center justify-center overflow-hidden bg-gray-200 sm:h-[460px] lg:h-[560px]">
+                                            {file.type.startsWith('image/') ? (
+                                                <img src={URL.createObjectURL(file)} alt="Preview" className="h-full w-full object-contain" />
+                                            ) : file.type === 'application/pdf' ? (
+                                                <iframe src={URL.createObjectURL(file)} title="PDF Preview" className="h-full w-full border-none bg-white" />
+                                            ) : (
+                                                <span className="px-6 text-center font-bold text-gray-500">Preview not available for this file type</span>
+                                            )}
+                                            <div className="pointer-events-none absolute right-3 top-3 opacity-100 transition-opacity group-hover:opacity-0 sm:right-4 sm:top-4">
+                                                <span className="border-l-4 border-carbon-blue-60 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-carbon-gray-100 shadow-md">Live Preview Active</span>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </section>
 
-                        <div className="lg:col-span-1">
-                            <div className="sticky top-10">
+                        <aside className="min-w-0 self-stretch">
+                            <div className="sticky top-6">
+                                <div className="border-b-4 border-carbon-blue-60 bg-carbon-gray-100 px-5 py-4 text-white">
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Final step</p>
+                                    <p className="mt-1 text-sm text-gray-300">Review the details and submit when everything looks right.</p>
+                                </div>
                                 <OrderSummary
                                     estimate={estimate}
                                     isSubmitting={isSubmitting}
@@ -307,29 +372,36 @@ export const NewOrderPage: React.FC = () => {
                                     setPrintColorMode={setPrintColorMode}
                                 />
                             </div>
-                        </div>
+                        </aside>
                     </div>
                 )}
 
-                {activeTab === 'orders' && <MyOrdersList />}
+                {activeTab === 'orders' && (
+                    <div className="mx-auto max-w-7xl">
+                        <MyOrdersList />
+                    </div>
+                )}
 
                 {activeTab === 'drafts' && !editingDraft && (
-                    <div className="max-w-6xl mx-auto">
-                        <h2 className="text-2xl font-black text-carbon-gray-100 mb-6">My Drafts</h2>
+                    <div className="mx-auto max-w-7xl border-t-4 border-carbon-blue-60 bg-white p-5 shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:p-7 lg:p-8">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Saved work</p>
+                        <h2 className="mb-6 text-2xl font-black tracking-tight text-carbon-gray-100">My Drafts</h2>
                         <MyDraftsList onEditDraft={setEditingDraft} />
                     </div>
                 )}
 
                 {activeTab === 'drafts' && editingDraft && (
-                    <EditDraftPanel
-                        draft={editingDraft}
-                        shops={shops}
-                        onCancel={() => setEditingDraft(null)}
-                        onSuccess={(orderId) => {
-                            setEditingDraft(null);
-                            navigate(`/checkout/${orderId}`);
-                        }}
-                    />
+                    <div className="mx-auto max-w-7xl">
+                        <EditDraftPanel
+                            draft={editingDraft}
+                            shops={shops}
+                            onCancel={() => setEditingDraft(null)}
+                            onSuccess={(orderId) => {
+                                setEditingDraft(null);
+                                navigate(`/checkout/${orderId}`);
+                            }}
+                        />
+                    </div>
                 )}
 
                 <AlertModal
@@ -346,6 +418,7 @@ export const NewOrderPage: React.FC = () => {
                 {isChangePasswordOpen && (
                     <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
                 )}
+            </div>
             </div>
         </div>
     );
