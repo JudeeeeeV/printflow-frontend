@@ -202,6 +202,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                                     )}
                                     <iframe
                                         src={order.assets[0].file_url}
+                                        sandbox=""
+                                        referrerPolicy="no-referrer"
                                         className="w-full h-full border-none bg-carbon-gray-10 relative z-20"
                                         title="Document Preview"
                                         onLoad={() => setIsAssetLoading(false)}

@@ -173,10 +173,10 @@ export const orderService = {
     });
   },
 
-  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string, total: number, pageCount: number) => {
+  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string) => {
     return await apiClient(`/orders/${draftId}/update-draft`, {
       method: 'PATCH',
-      body: JSON.stringify({ shopId, paperSize, printColorMode, total, pageCount }),
+      body: JSON.stringify({ shopId, paperSize, printColorMode }),
     });
   },
 

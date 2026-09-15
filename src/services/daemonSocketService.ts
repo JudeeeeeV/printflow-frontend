@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { API_URL } from '../config/runtime';
 
 export type DaemonStatus = 'CONNECTED' | 'OFFLINE' | 'RECONNECTING';
 
@@ -9,16 +10,17 @@ class DaemonSocketService {
  private printersListeners: ((printers: string[]) => void)[] = [];
  
  // Update this to match your backend URL
- private readonly BACKEND_URL = 'https://printflow-backend-wen3.onrender.com/daemon'; 
+ private readonly BACKEND_URL = `${API_URL}/daemon`;
 
  connect(shopId: string) {
  if (this.socket) {
  return;
  }
 
- this.socket = io(this.BACKEND_URL, {
- query: { shopId, role: 'clerk' },
- reconnectionAttempts: 5,
+  this.socket = io(this.BACKEND_URL, {
+  query: { shopId, role: 'clerk' },
+  auth: { token: localStorage.getItem('jwt_token') },
+  reconnectionAttempts: 5,
  });
 
  this.socket.on('connect', () => {

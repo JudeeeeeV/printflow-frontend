@@ -7,6 +7,7 @@ import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
 import { AnimatePresence } from 'framer-motion';
 import { daemonSocketService } from '../../services/daemonSocketService';
+import { API_URL } from '../../config/runtime';
 import type { DaemonStatus } from '../../services/daemonSocketService';
 import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
@@ -239,7 +240,7 @@ export const ShopDashboard: React.FC = () => {
  setIsProgressModalOpen(true);
  
  try {
- const response = await fetch(`${import.meta.env.VITE_API_URL || ('https://printflow-backend-wen3.onrender.com')}/edge/batch-execute/${shopData.id}`, {
+  const response = await fetch(`${API_URL}/edge/batch-execute`, {
  method: 'POST',
  headers: {
  'Content-Type': 'application/json',
