@@ -65,10 +65,6 @@ export const AuthPage: React.FC = () => {
                     <p className="mt-4 max-w-sm text-base leading-relaxed text-gray-300">
                         The late-night thesis. The first portfolio.<br className="hidden xl:block" /> Whatever you make, bring it to paper.
                     </p>
-                    <div className="mt-6 flex items-center gap-3 text-xs text-gray-400">
-                        <span className="h-px w-8 bg-carbon-blue-60" />
-                        <span>A little less admin. A lot more making.</span>
-                    </div>
                 </div>
             </aside>
 
