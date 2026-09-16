@@ -13,6 +13,7 @@ import {
   type AgentRelease,
   type DaemonDevice,
 } from "../../services/daemonDeviceService";
+import { PrinterAgentSkeleton } from "./PrinterAgentSkeleton";
 
 const formatDate = (value: string | null) =>
   value
@@ -162,6 +163,17 @@ export const ShopPrinterAgentPage: React.FC = () => {
     : undefined;
   const shouldBlockDownload =
     Boolean(currentVersionDevice) && !allowAdditionalInstall;
+
+  if (isLoading && !release && devices.length === 0) {
+    return (
+      <div
+        className="mx-auto w-full min-w-0 max-w-7xl bg-carbon-gray-10 p-4 font-sans sm:p-6 lg:p-8"
+        aria-busy="true"
+      >
+        <PrinterAgentSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 bg-carbon-gray-10 p-4 font-sans text-carbon-gray-100 sm:space-y-6 sm:p-6 lg:p-8">
@@ -374,31 +386,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div role="status" className="space-y-4 p-4 sm:p-6">
-            <span className="sr-only">
-              Loading registered printing computers
-            </span>
-            {[0, 1].map((placeholder) => (
-              <div
-                key={placeholder}
-                aria-hidden="true"
-                className="border border-gray-200"
-              >
-                <div className="flex items-center gap-3 border-b border-gray-200 bg-carbon-gray-10 p-4">
-                  <div className="h-11 w-11 shrink-0 animate-pulse bg-gray-200 motion-reduce:animate-none" />
-                  <div className="w-full max-w-xs space-y-2">
-                    <div className="h-5 w-3/4 animate-pulse bg-gray-200 motion-reduce:animate-none" />
-                    <div className="h-3 w-full animate-pulse bg-gray-200 motion-reduce:animate-none" />
-                  </div>
-                </div>
-                <div className="space-y-3 p-4">
-                  <div className="h-3 w-32 animate-pulse bg-gray-100 motion-reduce:animate-none" />
-                  <div className="h-16 animate-pulse bg-gray-100 motion-reduce:animate-none" />
-                  <div className="h-16 animate-pulse bg-gray-100 motion-reduce:animate-none" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <PrinterAgentSkeleton variant="computers" />
         ) : activeDevices.length === 0 ? (
           <div className="m-4 flex flex-col items-center border border-dashed border-gray-300 bg-carbon-gray-10 px-4 py-10 text-center sm:m-6">
             <span className="mb-4 flex h-14 w-14 items-center justify-center border border-gray-300 bg-white text-carbon-blue-60">
