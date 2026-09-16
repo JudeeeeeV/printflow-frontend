@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Printer, Renew, TrashCan } from "@carbon/icons-react";
 import {
   daemonDeviceService,
@@ -19,12 +19,17 @@ export const ShopPrinterAgentPage: React.FC = () => {
   const [release, setRelease] = useState<AgentRelease | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingDeviceId, setPendingDeviceId] = useState<string | null>(null);
+  const [deviceToRevoke, setDeviceToRevoke] = useState<DaemonDevice | null>(
+    null,
+  );
   const [allowAdditionalInstall, setAllowAdditionalInstall] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
   const isWindows = /Windows/i.test(navigator.userAgent);
+  const revokeDialogRef = useRef<HTMLDivElement>(null);
+  const cancelRevokeRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async (showLoader = false) => {
     if (showLoader) setIsLoading(true);
@@ -57,6 +62,20 @@ export const ShopPrinterAgentPage: React.FC = () => {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (!deviceToRevoke) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    cancelRevokeRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [deviceToRevoke]);
+
   const handleRescan = async (deviceId: string) => {
     setPendingDeviceId(deviceId);
     setMessage(null);
@@ -78,13 +97,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
   };
 
   const handleRevoke = async (device: DaemonDevice) => {
-    if (
-      !window.confirm(
-        `Revoke ${device.name}? It will no longer be allowed to print until it is registered again.`,
-      )
-    ) {
-      return;
-    }
+    setDeviceToRevoke(null);
     setPendingDeviceId(device.id);
     setMessage(null);
     try {
@@ -101,6 +114,33 @@ export const ShopPrinterAgentPage: React.FC = () => {
       });
     } finally {
       setPendingDeviceId(null);
+    }
+  };
+
+  const handleRevokeDialogKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setDeviceToRevoke(null);
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      revokeDialogRef.current?.querySelectorAll<HTMLButtonElement>(
+        "button:not([disabled])",
+      ) || [],
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   };
 
@@ -339,7 +379,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void handleRevoke(device)}
+                      onClick={() => setDeviceToRevoke(device)}
                       disabled={pendingDeviceId === device.id}
                       className="inline-flex min-h-10 items-center border border-gray-500 px-4 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
                     >
@@ -352,6 +392,64 @@ export const ShopPrinterAgentPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {deviceToRevoke && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDeviceToRevoke(null);
+          }}
+        >
+          <div
+            ref={revokeDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="revoke-agent-title"
+            aria-describedby="revoke-agent-description"
+            onKeyDown={handleRevokeDialogKeyDown}
+            className="w-full max-w-md border-t-4 border-carbon-blue-60 bg-white shadow-2xl"
+          >
+            <div className="p-6 sm:p-7">
+              <span className="mb-5 flex h-11 w-11 items-center justify-center bg-carbon-gray-100 text-white">
+                <TrashCan className="h-5 w-5" />
+              </span>
+              <h2
+                id="revoke-agent-title"
+                className="text-xl font-black tracking-tight text-carbon-gray-100"
+              >
+                Revoke printer agent?
+              </h2>
+              <p
+                id="revoke-agent-description"
+                className="mt-3 text-sm leading-relaxed text-gray-600"
+              >
+                <span className="font-bold text-carbon-gray-100">
+                  {deviceToRevoke.name}
+                </span>{" "}
+                will be disconnected and removed from this shop. The computer
+                must be registered again before it can receive print jobs.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 border-t border-gray-200">
+              <button
+                ref={cancelRevokeRef}
+                type="button"
+                onClick={() => setDeviceToRevoke(null)}
+                className="min-h-12 border-r border-gray-200 bg-white px-4 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60"
+              >
+                Keep connected
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRevoke(deviceToRevoke)}
+                className="min-h-12 bg-carbon-gray-100 px-4 text-sm font-bold text-white transition-colors hover:bg-black focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60"
+              >
+                Revoke agent
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
