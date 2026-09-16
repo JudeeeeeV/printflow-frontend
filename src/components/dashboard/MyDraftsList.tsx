@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Document, TrashCan, Edit } from '@carbon/icons-react';
 import { orderService } from '../../services/orderService';
 import { TableSkeleton } from '../common/TableSkeleton';
 import { Pagination } from '../common/Pagination';
 import { AlertModal } from '../common/AlertModal';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 export interface DraftOrder {
  id: string;
@@ -28,17 +29,14 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
  const [currentPage, setCurrentPage] = useState(1);
  const [totalPages, setTotalPages] = useState(1);
+ const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
 
  const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'}>({ isOpen: false, message: '' });
  const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string) => {
  setAlertState({ isOpen: true, message, type, title });
  };
 
- useEffect(() => {
- fetchDrafts();
- }, [currentPage]);
-
- const fetchDrafts = async () => {
+ const fetchDrafts = useCallback(async () => {
  setIsLoading(true);
  try {
  const res = await orderService.getDrafts(currentPage, 10);
@@ -49,18 +47,23 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  } finally {
  setIsLoading(false);
  }
- };
+ }, [currentPage]);
+
+ useEffect(() => {
+ const timer = window.setTimeout(() => void fetchDrafts(), 0);
+ return () => window.clearTimeout(timer);
+ }, [fetchDrafts]);
 
  const handleDeleteDraft = async (draftId: string) => {
- if (!window.confirm('Are you sure you want to delete this draft?')) return;
  setIsActionLoading(draftId);
  try {
  await orderService.deleteDraft(draftId);
  setDrafts(prev => prev.filter(draft => draft.id !== draftId));
- } catch (error) {
+ } catch {
  showAlert('Failed to delete draft.', 'error', 'Delete Failed');
  } finally {
  setIsActionLoading(null);
+ setDraftToDelete(null);
  }
  };
 
@@ -85,7 +88,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  <h4 className="font-bold text-carbon-gray-100 mt-3 text-lg">{draft.shopName}</h4>
  </div>
  <button 
- onClick={() => handleDeleteDraft(draft.id)}
+ onClick={() => setDraftToDelete(draft.id)}
  disabled={isActionLoading === draft.id}
  className="text-gray-400 hover:text-carbon-gray-100 transition-colors disabled:opacity-50"
  >
@@ -136,6 +139,18 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  title={alertState.title}
  type={alertState.type}
  onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+ />
+ <ConfirmModal
+ isOpen={Boolean(draftToDelete)}
+ title="Delete this draft?"
+ message="This draft will be permanently removed and cannot be recovered."
+ confirmLabel="Delete draft"
+ cancelLabel="Keep draft"
+ isBusy={Boolean(draftToDelete && isActionLoading === draftToDelete)}
+ onCancel={() => setDraftToDelete(null)}
+ onConfirm={() => {
+ if (draftToDelete) void handleDeleteDraft(draftToDelete);
+ }}
  />
  </>
  );
