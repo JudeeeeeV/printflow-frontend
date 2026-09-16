@@ -248,7 +248,7 @@ export const NewOrderPage: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={handleLogout}
-                                    className="min-h-11 border-2 border-white bg-white px-6 text-sm font-bold text-carbon-gray-100 transition-colors hover:border-gray-100 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+                                    className="min-h-11 border-2 border-carbon-blue-60 bg-carbon-blue-60 px-6 text-sm font-bold text-white transition-colors hover:border-carbon-blue-70 hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
                                 >
                                     Logout
                                 </button>
@@ -290,7 +290,7 @@ export const NewOrderPage: React.FC = () => {
                                     <h2 className="mt-1 text-2xl font-black tracking-tight text-carbon-gray-100">Create New Order</h2>
                                 </div>
                                 <p className="max-w-sm text-sm leading-relaxed text-gray-500 sm:text-right">
-                                    Select a shop first, then upload your print-ready artwork.
+                                    Select a shop first, then upload your print-ready work.
                                 </p>
                             </div>
 
@@ -315,7 +315,7 @@ export const NewOrderPage: React.FC = () => {
                                 >
                                     <div className="mb-5 flex items-center gap-3">
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-gray-100 text-xs font-black text-white">02</span>
-                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Add your artwork</p>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Upload your work</p>
                                     </div>
                                     <div className="[&>div]:mb-0">
                                         <FileUploadZone
