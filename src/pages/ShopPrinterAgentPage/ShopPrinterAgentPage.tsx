@@ -341,7 +341,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                       type="button"
                       onClick={() => void handleRevoke(device)}
                       disabled={pendingDeviceId === device.id}
-                      className="inline-flex min-h-10 items-center border border-red-600 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex min-h-10 items-center border border-gray-500 px-4 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
                     >
                       <TrashCan className="mr-2 h-4 w-4" /> Revoke
                     </button>
