@@ -312,8 +312,8 @@ export const ShopDashboard: React.FC = () => {
 
  return (
  <div className="flex h-full min-h-0 flex-col overflow-hidden bg-carbon-gray-10 font-sans">
- <div className="z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white px-4 py-4 sm:px-6 lg:px-8">
- <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-6">
+ <div className="z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-gray-300 border-t- bg-white px-4 py-4 sm:px-6 lg:px-8">
+ <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4 sm:gap-6">
  <div className="flex min-w-0 items-center gap-3">
  <span className="h-10 w-1 shrink-0 bg-carbon-blue-60" aria-hidden="true" />
  <div className="min-w-0">
@@ -323,7 +323,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  
  {/* Daemon Status Badge */}
- <div className="flex min-h-10 items-center gap-3 border border-gray-300 bg-carbon-gray-10 px-3 py-2 sm:px-4">
+ <div className="ml-auto flex min-h-10 items-center gap-3 border border-gray-300 bg-carbon-gray-10 px-3 py-2 sm:px-4">
  <span className={`relative flex h-2.5 w-2.5 shrink-0`}>
  {daemonStatus === 'CONNECTED' && (
  <span className="relative inline-flex h-2.5 w-2.5 bg-green-500"></span>
