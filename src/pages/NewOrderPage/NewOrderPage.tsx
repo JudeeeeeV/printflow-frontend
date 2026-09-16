@@ -229,7 +229,6 @@ export const NewOrderPage: React.FC = () => {
 
                         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                             <div className="max-w-2xl">
-                                <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-carbon-blue-60">Print workspace</p>
                                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">PrintFlow Dashboard</h1>
                                 <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-300 sm:text-base">
                                     Prepare your files, choose a print partner, and keep every order moving from one workspace.
