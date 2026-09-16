@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile } from '@carbon/icons-react';
+import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 
@@ -18,7 +18,7 @@ export const ShopLayout: React.FC = () => {
     useEffect(() => {
         const fetchShop = async () => {
             try {
-                const data = await apiClient<any>('/shops/me', { method: 'GET' });
+                const data = await apiClient<{ name?: string }>('/shops/me', { method: 'GET' });
                 if (data && data.name) {
                     setShopName(data.name);
                 }
@@ -42,6 +42,7 @@ export const ShopLayout: React.FC = () => {
     const navItems = [
         { name: 'Live Queue', path: '/shop-dashboard', icon: List, exact: true },
         { name: 'Analytics', path: '/shop-dashboard/analytics', icon: ChartBar },
+        { name: 'Printer Agent', path: '/shop-dashboard/printer-agent', icon: Printer },
         { name: 'Settings', path: '/shop-dashboard/settings', icon: Settings },
     ];
 

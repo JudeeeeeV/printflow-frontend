@@ -13,6 +13,7 @@ import { ShopArchivedPage } from './pages/ShopArchivedPage/ShopArchivedPage';
 import { ShopOrdersPage } from './pages/ShopOrdersPage/ShopOrdersPage';
 import { ShopInventoryPage } from './pages/ShopInventoryPage/ShopInventoryPage';
 import { ShopSettingsPage } from './pages/ShopSettingsPage/ShopSettingsPage';
+import { ShopPrinterAgentPage } from './pages/ShopPrinterAgentPage/ShopPrinterAgentPage';
 
 export const App: React.FC = () => {
  return (
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
  <Route path="overview" element={<ShopOverviewPage />} />
  <Route path="archived" element={<ShopArchivedPage />} />
  <Route path="analytics" element={<ShopAnalyticsPage />} />
+ <Route path="printer-agent" element={<ShopPrinterAgentPage />} />
  <Route path="orders" element={<ShopOrdersPage />} />
  <Route path="inventory" element={<ShopInventoryPage />} />
  <Route path="settings" element={<ShopSettingsPage />} />
