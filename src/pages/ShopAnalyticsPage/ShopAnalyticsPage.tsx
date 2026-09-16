@@ -19,6 +19,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  type TooltipContentProps,
 } from 'recharts';
 import { apiClient } from '../../services/apiClient';
 import { orderService } from '../../services/orderService';
@@ -79,7 +80,7 @@ const KPICard = ({
 
 // ── Status Badge ──
 const StatusBadge = ({ state }: { state: string }) => {
-  let label = state;
+  let label: string;
   let cls = 'border border-gray-300 bg-gray-100 text-gray-800';
   switch (state) {
     case 'COMPLETED':
@@ -133,6 +134,47 @@ const StatusBadge = ({ state }: { state: string }) => {
 // ── Date Presets ──
 type DatePreset = 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL' | 'CUSTOM';
 
+interface AnalyticsOrder {
+  id: string;
+  fileName: string;
+  state: string;
+  total: number;
+  pageCount: number;
+  clientId: string | null;
+  createdAt: string;
+}
+
+interface AnalyticsData {
+  totalRevenue: string;
+  pendingRevenue: string;
+  totalPagesPrinted: number;
+  averageOrderValue: string;
+  activeQueueCount: number;
+  uniqueCustomers: number;
+  completedOrdersCount: number;
+  colorSplit: {
+    color: number;
+    bw: number;
+  };
+  paperSplit: Record<string, number>;
+  printVolumeOverTime: Array<{
+    date: string;
+    revenue: number;
+    pages: number;
+  }>;
+  recentOrders: AnalyticsOrder[];
+}
+
+interface ShopOrderExport {
+  id: string;
+  client_id?: string | null;
+  state: string;
+  total: number | string | null;
+  page_count?: number | null;
+  created_at: string;
+  assets?: Array<{ file_url?: string | null }> | null;
+}
+
 const getDateRange = (
   preset: DatePreset,
 ): { startDate?: string; endDate?: string } => {
@@ -168,17 +210,41 @@ const getDateRange = (
   }
 };
 
+const requestAnalytics = async (
+  preset: DatePreset,
+  customStart?: string,
+  customEnd?: string,
+): Promise<AnalyticsData> => {
+  let params = '';
+  if (preset === 'CUSTOM' && customStart && customEnd) {
+    const startISO = new Date(customStart).toISOString();
+    const endISO = new Date(`${customEnd}T23:59:59`).toISOString();
+    params = `?startDate=${startISO}&endDate=${endISO}`;
+  } else if (preset !== 'ALL') {
+    const { startDate, endDate } = getDateRange(preset);
+    if (startDate && endDate) {
+      params = `?startDate=${startDate}&endDate=${endDate}`;
+    }
+  }
+
+  return apiClient<AnalyticsData>(`/analytics${params}`, { method: 'GET' });
+};
+
 // ── Chart Colors ──
 const COLOR_PALETTE = ['#0f62fe', '#161616']; // Carbon blue (Color), Carbon gray (B&W)
 const PAPER_PALETTE = ['#8d8d8d', '#0f62fe', '#161616']; // Gray (Short), blue (A4), black (Long)
 
 // ── Custom Tooltip ──
-const ComboTooltip = ({ active, payload, label }: any) => {
+type ComboTooltipProps = Partial<
+  Pick<TooltipContentProps<number, string>, 'active' | 'payload' | 'label'>
+>;
+
+const ComboTooltip = ({ active, payload, label }: ComboTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white px-4 py-3 text-sm shadow-[0_8px_20px_rgba(22,22,22,0.12)]">
       <p className="mb-2 font-black text-carbon-gray-100">{label}</p>
-      {payload.map((entry: any, i: number) => (
+      {payload.map((entry, i) => (
         <p key={i} className="flex items-center text-gray-600">
           <span
             className="mr-2 inline-block h-2 w-2"
@@ -209,7 +275,9 @@ const renderCenterLabel = (total: number, label: string) => (
 );
 
 export const ShopAnalyticsPage: React.FC = () => {
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -235,26 +303,11 @@ export const ShopAnalyticsPage: React.FC = () => {
 
   const fetchAnalytics = useCallback(
     async (preset: DatePreset, cStart?: string, cEnd?: string) => {
-      setIsLoading(true);
-      setError(null);
       try {
-        let params = '';
-        if (preset === 'CUSTOM' && cStart && cEnd) {
-          const startISO = new Date(cStart).toISOString();
-          const endISO = new Date(cEnd + 'T23:59:59').toISOString();
-          params = `?startDate=${startISO}&endDate=${endISO}`;
-        } else if (preset !== 'ALL') {
-          const { startDate, endDate } = getDateRange(preset);
-          if (startDate && endDate) {
-            params = `?startDate=${startDate}&endDate=${endDate}`;
-          }
-        }
-        const data = await apiClient<any>(`/analytics${params}`, {
-          method: 'GET',
-        });
+        const data = await requestAnalytics(preset, cStart, cEnd);
         setAnalyticsData(data);
-      } catch (err: any) {
-        setError(err.message || 'An error occurred');
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setIsLoading(false);
       }
@@ -263,26 +316,47 @@ export const ShopAnalyticsPage: React.FC = () => {
   );
 
   useEffect(() => {
-    fetchAnalytics('ALL');
-  }, [fetchAnalytics]);
+    let isCurrent = true;
+
+    void requestAnalytics('ALL')
+      .then((data) => {
+        if (isCurrent) setAnalyticsData(data);
+      })
+      .catch((err: unknown) => {
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   const handlePresetChange = (preset: DatePreset) => {
     setDatePreset(preset);
     if (preset !== 'CUSTOM') {
-      fetchAnalytics(preset);
+      setIsLoading(true);
+      setError(null);
+      void fetchAnalytics(preset);
     }
   };
 
   const handleCustomApply = () => {
     if (customStart && customEnd) {
-      fetchAnalytics('CUSTOM', customStart, customEnd);
+      setIsLoading(true);
+      setError(null);
+      void fetchAnalytics('CUSTOM', customStart, customEnd);
     }
   };
 
   const handleExportCSV = async () => {
     setIsExporting(true);
     try {
-      const orders = await orderService.getShopOrders();
+      const orders = (await orderService.getShopOrders()) as ShopOrderExport[];
       const headers = [
         'Order ID',
         'Client ID',
@@ -292,11 +366,11 @@ export const ShopAnalyticsPage: React.FC = () => {
         'Date Created',
         'File Name',
       ];
-      const rows = orders.map((o: any) => {
+      const rows = orders.map((o) => {
         let fileName = 'No File';
         if (o.assets && o.assets.length > 0 && o.assets[0].file_url) {
           const urlParts = o.assets[0].file_url.split('/');
-          let rawName = decodeURIComponent(urlParts[urlParts.length - 1]);
+          const rawName = decodeURIComponent(urlParts[urlParts.length - 1]);
           const match = rawName.match(/-\d{13}-(.+)$/);
           fileName = match ? match[1] : rawName;
         }
@@ -349,6 +423,7 @@ export const ShopAnalyticsPage: React.FC = () => {
       ]
     : [];
   const paperTotal = paperSplitData.reduce((s, d) => s + d.value, 0);
+  const printVolumeData = analyticsData?.printVolumeOverTime ?? [];
 
   const presets: { key: DatePreset; label: string }[] = [
     { key: 'TODAY', label: 'Today' },
@@ -582,15 +657,15 @@ export const ShopAnalyticsPage: React.FC = () => {
             </div>
           </div>
           <div className="h-72 w-full p-3 sm:h-80 sm:p-6">
-            {(analyticsData?.printVolumeOverTime?.length || 0) > 0 &&
+            {printVolumeData.length > 0 &&
             !(
-              analyticsData.printVolumeOverTime.length === 1 &&
-              analyticsData.printVolumeOverTime[0].date === 'Today' &&
-              analyticsData.printVolumeOverTime[0].pages === 0
+              printVolumeData.length === 1 &&
+              printVolumeData[0].date === 'Today' &&
+              printVolumeData[0].pages === 0
             ) ? (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
-                  data={analyticsData.printVolumeOverTime}
+                  data={printVolumeData}
                   margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                 >
                   <defs>
@@ -710,10 +785,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: any, name: any) => [
-                        `${value} orders`,
-                        name,
-                      ]}
+                      formatter={(value, name) => [`${value} orders`, name]}
                     />
                     <Legend
                       verticalAlign="bottom"
@@ -776,10 +848,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: any, name: any) => [
-                        `${value} orders`,
-                        name,
-                      ]}
+                      formatter={(value, name) => [`${value} orders`, name]}
                     />
                     <Legend
                       verticalAlign="bottom"
@@ -884,7 +953,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paginatedOrders.length > 0 ? (
-                      paginatedOrders.map((order: any) => (
+                      paginatedOrders.map((order) => (
                         <tr
                           key={order.id}
                           className="transition-colors hover:bg-blue-50/50 motion-reduce:transition-none"
