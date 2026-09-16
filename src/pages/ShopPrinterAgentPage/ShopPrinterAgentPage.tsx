@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Printer, Renew, TrashCan } from "@carbon/icons-react";
+import {
+  Checkmark,
+  Download,
+  Printer,
+  Renew,
+  Screen,
+  TrashCan,
+  WarningAlt,
+} from "@carbon/icons-react";
 import {
   daemonDeviceService,
   type AgentRelease,
@@ -156,63 +164,79 @@ export const ShopPrinterAgentPage: React.FC = () => {
     Boolean(currentVersionDevice) && !allowAdditionalInstall;
 
   return (
-    <div className="w-full max-w-6xl p-5 font-sans sm:p-8">
-      <div className="mb-7">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-carbon-blue-60">
+    <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 bg-carbon-gray-10 p-4 font-sans text-carbon-gray-100 sm:space-y-6 sm:p-6 lg:p-8">
+      <header className="border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-carbon-gray-100 px-4 py-3 text-white shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:px-6 sm:py-4">
+        <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
           Local printing
         </p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight text-carbon-gray-100">
+        <h1 className="text-xl font-black tracking-tight sm:text-2xl">
           Printer Agent
         </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
-          Install the PrintFlow Printer Agent once on the Windows computer
-          connected to your printers. It starts automatically and securely
-          receives approved print jobs.
+        <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-gray-300">
+          Connect your printing computer, detect printers, and receive approved
+          print jobs automatically.
         </p>
-      </div>
+      </header>
 
       {message && (
         <div
-          role="status"
-          className={`mb-6 border-l-4 px-4 py-3 text-sm font-semibold ${
-            message.type === "success"
-              ? "border-green-600 bg-green-50 text-green-800"
-              : "border-red-600 bg-red-50 text-red-800"
-          }`}
+          role={message.type === "error" ? "alert" : "status"}
+          className={`flex items-start gap-3 border border-l-4 px-4 py-3 text-sm font-semibold [overflow-wrap:anywhere] ${message.type === "success" ? "border-green-300 border-l-green-600 bg-green-50 text-green-800" : "border-red-300 border-l-red-600 bg-red-50 text-red-800"}`}
         >
-          {message.text}
+          {message.type === "success" ? (
+            <Checkmark className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+          ) : (
+            <WarningAlt
+              className="mt-0.5 h-5 w-5 shrink-0"
+              aria-hidden="true"
+            />
+          )}
+          <span>{message.text}</span>
         </div>
       )}
 
-      <section className="mb-7 border border-gray-200 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
-        <div className="flex flex-col gap-5 border-b border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div className="flex items-start gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center bg-carbon-blue-60 text-white">
-              <Download className="h-6 w-6" />
+      <section
+        aria-labelledby="agent-install-title"
+        className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]"
+      >
+        <div className="flex flex-col gap-4 border-b border-gray-300 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-carbon-gray-100 text-white">
+              <Download className="h-5 w-5" aria-hidden="true" />
             </span>
-            <div>
-              <h2 className="text-lg font-black text-carbon-gray-100">
+            <div className="min-w-0">
+              <h2
+                id="agent-install-title"
+                className="text-lg font-black tracking-tight"
+              >
                 Install on this printing computer
               </h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Version {release?.version || "—"} for Windows
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                One-time setup. Starts automatically with Windows.
+              </p>
+              <p className="mt-2 inline-flex max-w-full flex-wrap items-center gap-x-2 border border-gray-300 bg-carbon-gray-10 px-2 py-1 text-xs font-semibold text-gray-700 [overflow-wrap:anywhere]">
+                <span>Windows</span>
+                <span aria-hidden="true" className="text-gray-400">
+                  /
+                </span>
+                <span>Version {release?.version || "—"}</span>
               </p>
             </div>
           </div>
           {shouldBlockDownload ? (
-            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <div className="flex shrink-0 flex-col items-stretch gap-1 lg:items-end">
               <button
                 type="button"
                 disabled
-                className="inline-flex min-h-11 cursor-not-allowed items-center justify-center bg-green-100 px-5 text-sm font-bold text-green-800"
+                className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 border border-green-300 bg-green-50 px-5 py-2 text-sm font-bold text-green-800"
               >
-                <Printer className="mr-2 h-5 w-5" />
+                <Checkmark className="h-5 w-5 shrink-0" aria-hidden="true" />
                 Already installed
               </button>
               <button
                 type="button"
                 onClick={() => setAllowAdditionalInstall(true)}
-                className="text-xs font-bold text-carbon-blue-60 underline-offset-2 hover:underline"
+                className="min-h-11 px-2 py-2 text-sm font-bold text-carbon-blue-60 underline-offset-4 transition-colors hover:bg-blue-50 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
               >
                 Install on another computer
               </button>
@@ -220,18 +244,18 @@ export const ShopPrinterAgentPage: React.FC = () => {
           ) : release?.available && release.downloadUrl && isWindows ? (
             <a
               href={release.downloadUrl}
-              className="inline-flex min-h-11 items-center justify-center bg-carbon-blue-60 px-5 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 bg-carbon-blue-60 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
             >
-              <Download className="mr-2 h-5 w-5" />
+              <Download className="h-5 w-5 shrink-0" aria-hidden="true" />
               Download for Windows
             </a>
           ) : (
             <button
               type="button"
               disabled
-              className="inline-flex min-h-11 cursor-not-allowed items-center justify-center bg-gray-300 px-5 text-sm font-bold text-gray-600"
+              className="inline-flex min-h-11 shrink-0 cursor-not-allowed items-center justify-center gap-2 border border-gray-300 bg-carbon-gray-10 px-5 py-3 text-sm font-bold text-gray-600"
             >
-              <Download className="mr-2 h-5 w-5" />
+              <Download className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!isWindows
                 ? "Windows computer required"
                 : "Installer not published yet"}
@@ -239,130 +263,205 @@ export const ShopPrinterAgentPage: React.FC = () => {
           )}
         </div>
         {currentVersionDevice && (
-          <div className="border-b border-gray-200 bg-green-50 px-5 py-3 text-sm text-green-800 sm:px-6">
-            <span className="font-bold">{currentVersionDevice.name}</span> is
-            connected with Printer Agent {release?.version}.
+          <div className="flex flex-col gap-2 border-b border-gray-300 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-carbon-blue-70 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <p className="min-w-0 [overflow-wrap:anywhere]">
+              <span className="font-bold">{currentVersionDevice.name}</span> is
+              connected with Printer Agent {release?.version}.
+            </p>
             {allowAdditionalInstall && (
               <button
                 type="button"
                 onClick={() => setAllowAdditionalInstall(false)}
-                className="ml-2 font-bold text-carbon-blue-60 underline-offset-2 hover:underline"
+                className="min-h-11 shrink-0 px-2 py-2 text-sm font-bold text-carbon-blue-60 underline-offset-4 transition-colors hover:bg-blue-100 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
               >
                 Cancel additional install
               </button>
             )}
           </div>
         )}
-        <div className="grid gap-5 p-5 text-sm text-gray-700 sm:grid-cols-3 sm:p-6">
-          <div>
-            <span className="mb-2 block font-black text-carbon-blue-60">
-              01
-            </span>
-            Download and run the installer on the computer physically connected
-            to the printer.
-          </div>
-          <div>
-            <span className="mb-2 block font-black text-carbon-blue-60">
-              02
-            </span>
-            Sign in once with this verified print-shop account when the setup
-            page opens.
-          </div>
-          <div>
-            <span className="mb-2 block font-black text-carbon-blue-60">
-              03
-            </span>
-            Approve Windows startup. No terminal is required after setup.
-          </div>
+        <div className="p-4 sm:p-6">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-gray-600">
+            Get started in three steps
+          </p>
+          <ol className="grid list-none gap-3 lg:grid-cols-3">
+            <li className="border border-gray-300 bg-carbon-gray-10 p-4">
+              <span
+                aria-hidden="true"
+                className="mb-4 flex h-9 w-9 items-center justify-center bg-carbon-blue-60 text-sm font-bold tabular-nums text-white"
+              >
+                01
+              </span>
+              <h3 className="text-base font-bold">Install the agent</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                Download and run the installer on the Windows computer
+                physically connected to your printer.
+              </p>
+            </li>
+            <li className="border border-gray-300 bg-carbon-gray-10 p-4">
+              <span
+                aria-hidden="true"
+                className="mb-4 flex h-9 w-9 items-center justify-center bg-carbon-blue-60 text-sm font-bold tabular-nums text-white"
+              >
+                02
+              </span>
+              <h3 className="text-base font-bold">Connect your shop</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                Sign in once with this verified print-shop account when the
+                setup page opens.
+              </p>
+            </li>
+            <li className="border border-gray-300 bg-carbon-gray-10 p-4">
+              <span
+                aria-hidden="true"
+                className="mb-4 flex h-9 w-9 items-center justify-center bg-carbon-blue-60 text-sm font-bold tabular-nums text-white"
+              >
+                03
+              </span>
+              <h3 className="text-base font-bold">Enable startup</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                Approve Windows startup. The agent starts automatically; no
+                terminal is required after setup.
+              </p>
+            </li>
+          </ol>
         </div>
         {release?.sha256 && (
-          <div className="border-t border-gray-200 bg-gray-50 px-5 py-3 text-xs text-gray-600 sm:px-6">
-            SHA-256:{" "}
-            <code className="break-all font-mono">{release.sha256}</code>
+          <div className="flex min-w-0 flex-col gap-2 border-t border-gray-300 bg-carbon-gray-10 px-4 py-3 text-xs text-gray-600 sm:px-6">
+            <span className="font-bold uppercase tracking-[0.12em]">
+              Installer verification · SHA-256
+            </span>
+            <code className="break-all font-mono leading-relaxed">
+              {release.sha256}
+            </code>
           </div>
         )}
       </section>
 
-      <section className="border border-gray-200 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
-        <div className="flex items-center justify-between border-b border-gray-200 p-5 sm:p-6">
-          <div>
-            <h2 className="text-lg font-black text-carbon-gray-100">
-              Registered printing computers
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
+      <section
+        aria-labelledby="registered-computers-title"
+        aria-busy={isLoading}
+        className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-300 p-4 sm:p-6">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2
+                id="registered-computers-title"
+                className="text-lg font-black tracking-tight"
+              >
+                Registered printing computers
+              </h2>
+              {!isLoading && (
+                <span className="border border-gray-300 bg-carbon-gray-10 px-2 py-1 text-xs font-bold tabular-nums text-gray-700">
+                  {activeDevices.length}{" "}
+                  {activeDevices.length === 1 ? "computer" : "computers"}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-sm leading-relaxed text-gray-600">
               Only one computer is used for live dispatch at a time.
             </p>
           </div>
           <button
             type="button"
             onClick={() => void load(true)}
-            className="p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-carbon-gray-100"
+            className="inline-flex min-h-11 items-center justify-center gap-2 border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
             aria-label="Refresh printer agents"
           >
-            <Renew className="h-5 w-5" />
+            <Renew className="h-5 w-5" aria-hidden="true" />
+            Refresh
           </button>
         </div>
 
         {isLoading ? (
-          <div className="space-y-3 p-6">
-            <div className="h-24 animate-pulse bg-gray-100" />
-            <div className="h-24 animate-pulse bg-gray-100" />
+          <div role="status" className="space-y-4 p-4 sm:p-6">
+            <span className="sr-only">
+              Loading registered printing computers
+            </span>
+            {[0, 1].map((placeholder) => (
+              <div
+                key={placeholder}
+                aria-hidden="true"
+                className="border border-gray-200"
+              >
+                <div className="flex items-center gap-3 border-b border-gray-200 bg-carbon-gray-10 p-4">
+                  <div className="h-11 w-11 shrink-0 animate-pulse bg-gray-200 motion-reduce:animate-none" />
+                  <div className="w-full max-w-xs space-y-2">
+                    <div className="h-5 w-3/4 animate-pulse bg-gray-200 motion-reduce:animate-none" />
+                    <div className="h-3 w-full animate-pulse bg-gray-200 motion-reduce:animate-none" />
+                  </div>
+                </div>
+                <div className="space-y-3 p-4">
+                  <div className="h-3 w-32 animate-pulse bg-gray-100 motion-reduce:animate-none" />
+                  <div className="h-16 animate-pulse bg-gray-100 motion-reduce:animate-none" />
+                  <div className="h-16 animate-pulse bg-gray-100 motion-reduce:animate-none" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : activeDevices.length === 0 ? (
-          <div className="flex flex-col items-center px-6 py-12 text-center">
-            <Printer className="mb-4 h-12 w-12 text-gray-300" />
-            <h3 className="font-black text-carbon-gray-100">
-              No printer agent registered
-            </h3>
-            <p className="mt-2 max-w-md text-sm text-gray-500">
+          <div className="m-4 flex flex-col items-center border border-dashed border-gray-300 bg-carbon-gray-10 px-4 py-10 text-center sm:m-6">
+            <span className="mb-4 flex h-14 w-14 items-center justify-center border border-gray-300 bg-white text-carbon-blue-60">
+              <Screen className="h-7 w-7" aria-hidden="true" />
+            </span>
+            <h3 className="text-lg font-bold">No printer agent registered</h3>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-600">
               Download the installer above and complete the one-time sign-in on
               your printing computer.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="space-y-4 p-4 sm:p-6">
             {activeDevices.map((device) => (
-              <article key={device.id} className="p-5 sm:p-6">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-black text-carbon-gray-100">
-                        {device.name}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider ${device.status === "CONNECTED" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"}`}
-                      >
-                        {device.status === "CONNECTED"
-                          ? "Connected"
-                          : "Offline"}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500">
-                      <span>
-                        Agent {device.agent_version || "Unknown version"}
-                      </span>
-                      <span>Last seen {formatDate(device.last_seen_at)}</span>
-                    </div>
-                    <div className="mt-4">
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Detected printers
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {device.printers.length > 0 ? (
-                          device.printers.map((printer) => (
-                            <span
-                              key={printer}
-                              className="border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700"
-                            >
-                              {printer}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm italic text-gray-400">
-                            No printers reported
-                          </span>
-                        )}
+              <article
+                key={device.id}
+                aria-labelledby={`device-${device.id}-title`}
+                aria-busy={pendingDeviceId === device.id}
+                className="min-w-0 border border-gray-300"
+              >
+                <div
+                  className={`flex min-w-0 flex-col gap-4 border-b border-gray-300 border-l-4 p-4 sm:p-5 xl:flex-row xl:items-start xl:justify-between ${device.status === "CONNECTED" ? "border-l-carbon-blue-60 bg-blue-50" : "border-l-gray-300 bg-carbon-gray-10"}`}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center ${device.status === "CONNECTED" ? "bg-carbon-blue-60 text-white" : "border border-gray-300 bg-white text-gray-600"}`}
+                    >
+                      <Screen className="h-6 w-6" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3
+                          id={`device-${device.id}-title`}
+                          className={`min-w-0 text-lg font-black tracking-tight [overflow-wrap:anywhere] ${device.status === "CONNECTED" ? "text-carbon-blue-70 sm:text-xl" : "text-carbon-gray-100"}`}
+                        >
+                          {device.name}
+                        </h3>
+                        <span
+                          className={`inline-flex items-center gap-1.5 border px-2 py-1 text-xs font-bold ${device.status === "CONNECTED" ? "border-green-300 bg-green-50 text-green-800" : "border-gray-300 bg-white text-gray-600"}`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`h-1.5 w-1.5 rounded-full ${device.status === "CONNECTED" ? "bg-green-600" : "bg-gray-400"}`}
+                          />
+                          {device.status === "CONNECTED"
+                            ? "Connected"
+                            : "Offline"}
+                        </span>
                       </div>
+                      <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs leading-relaxed text-gray-600">
+                        <div className="min-w-0 [overflow-wrap:anywhere]">
+                          <dt className="inline font-semibold">Agent </dt>
+                          <dd className="inline">
+                            {device.agent_version || "Unknown version"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="inline font-semibold">Last seen </dt>
+                          <dd className="inline">
+                            {formatDate(device.last_seen_at)}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
@@ -373,19 +472,57 @@ export const ShopPrinterAgentPage: React.FC = () => {
                         device.status !== "CONNECTED" ||
                         pendingDeviceId === device.id
                       }
-                      className="inline-flex min-h-10 items-center border border-carbon-blue-60 px-4 text-sm font-bold text-carbon-blue-60 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 border border-carbon-blue-60 bg-white px-4 py-2 text-sm font-bold text-carbon-blue-60 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-carbon-gray-10 disabled:text-gray-500 motion-reduce:transition-none sm:flex-none"
                     >
-                      <Renew className="mr-2 h-4 w-4" /> Rescan
+                      <Renew className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      Rescan
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeviceToRevoke(device)}
                       disabled={pendingDeviceId === device.id}
-                      className="inline-flex min-h-10 items-center border border-gray-500 px-4 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 border border-gray-400 bg-white px-4 py-2 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-carbon-gray-10 disabled:text-gray-500 motion-reduce:transition-none sm:flex-none"
                     >
-                      <TrashCan className="mr-2 h-4 w-4" /> Revoke
+                      <TrashCan
+                        className="h-4 w-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                      Revoke
                     </button>
                   </div>
+                </div>
+                <div className="p-4 sm:p-5">
+                  <h4 className="mb-3 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-600">
+                    Detected printers
+                    <span className="border border-gray-300 bg-carbon-gray-10 px-2 py-0.5 tracking-normal tabular-nums">
+                      {device.printers.length}
+                    </span>
+                  </h4>
+                  {device.printers.length > 0 ? (
+                    <ul className="divide-y divide-gray-200 border border-gray-300">
+                      {device.printers.map((printer) => (
+                        <li
+                          key={printer}
+                          className="flex min-w-0 items-center gap-3 px-3 py-4 sm:gap-4 sm:px-4"
+                        >
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-gray-200 bg-carbon-gray-10 text-gray-600">
+                            <Printer className="h-6 w-6" aria-hidden="true" />
+                          </span>
+                          <span className="min-w-0 text-sm font-semibold leading-relaxed text-carbon-gray-100 [overflow-wrap:anywhere]">
+                            {printer}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="flex items-center gap-3 border border-dashed border-gray-300 bg-carbon-gray-10 p-4 text-sm text-gray-600">
+                      <Printer
+                        className="h-5 w-5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <p>No printers reported</p>
+                    </div>
+                  )}
                 </div>
               </article>
             ))}
@@ -395,7 +532,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
 
       {deviceToRevoke && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 !mt-0 flex items-center justify-center bg-black/50 p-4"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setDeviceToRevoke(null);
           }}
@@ -411,7 +548,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
           >
             <div className="p-6 sm:p-7">
               <span className="mb-5 flex h-11 w-11 items-center justify-center bg-carbon-gray-100 text-white">
-                <TrashCan className="h-5 w-5" />
+                <TrashCan className="h-5 w-5" aria-hidden="true" />
               </span>
               <h2
                 id="revoke-agent-title"
@@ -423,7 +560,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 id="revoke-agent-description"
                 className="mt-3 text-sm leading-relaxed text-gray-600"
               >
-                <span className="font-bold text-carbon-gray-100">
+                <span className="font-bold text-carbon-gray-100 [overflow-wrap:anywhere]">
                   {deviceToRevoke.name}
                 </span>{" "}
                 will be disconnected and removed from this shop. The computer
@@ -435,14 +572,14 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 ref={cancelRevokeRef}
                 type="button"
                 onClick={() => setDeviceToRevoke(null)}
-                className="min-h-12 border-r border-gray-200 bg-white px-4 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60"
+                className="min-h-12 border-r border-gray-200 bg-white px-4 text-sm font-bold text-carbon-gray-100 transition-colors motion-reduce:transition-none hover:bg-carbon-gray-10 focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60"
               >
                 Keep connected
               </button>
               <button
                 type="button"
                 onClick={() => void handleRevoke(deviceToRevoke)}
-                className="min-h-12 bg-carbon-gray-100 px-4 text-sm font-bold text-white transition-colors hover:bg-black focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60"
+                className="min-h-12 bg-carbon-gray-100 px-4 text-sm font-bold text-white transition-colors motion-reduce:transition-none hover:bg-black focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60"
               >
                 Revoke agent
               </button>
