@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { View, ViewOff, Close, Checkmark } from '@carbon/icons-react';
 import { SubmitButton } from './SubmitButton/SubmitButton';
 import { authService } from '../../services/authService';
@@ -54,9 +55,16 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full max-w-md p-6 shadow-xl relative animate-fade-in-up" style={{ animationDuration: '300ms' }} onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="relative w-full max-w-md bg-white p-6 shadow-xl animate-fade-in-up"
+        style={{ animationDuration: '300ms' }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="change-password-title"
+      >
         
         {success ? (
           <div className="flex flex-col text-center py-6">
@@ -78,7 +86,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
         ) : (
           <>
             <div className="flex justify-between items-center border-b border-[#e0e0e0] pb-4 mb-6">
-              <h3 className="text-xl font-bold text-carbon-gray-100">Change Password</h3>
+              <h3 id="change-password-title" className="text-xl font-bold text-carbon-gray-100">Change Password</h3>
               <button onClick={onClose} className="text-gray-400 hover:text-carbon-gray-100 transition-colors">
                 <Close className="w-6 h-6" />
               </button>
@@ -170,6 +178,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
