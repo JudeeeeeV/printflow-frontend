@@ -142,7 +142,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  } else {
  // They changed settings but didn't upload a new file, update draft first then submit.
  if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, estimate.total, estimate.pageCount);
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode);
  }
  await orderService.submitDraft(draft.id);
  onSuccess(draft.id);
@@ -170,7 +170,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
  if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, estimate.total, estimate.pageCount);
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode);
  showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
  showAlert('No changes were made to the draft.', 'info', 'No Changes', () => onCancel());

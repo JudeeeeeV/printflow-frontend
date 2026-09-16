@@ -10,6 +10,7 @@ interface OrderCardProps {
 
 export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isAssetLoading, setIsAssetLoading] = useState(true);
     const isPaymentPending = order.state === 'AWAITING_PAYMENT_VERIFICATION';
 
@@ -107,6 +108,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                         onClick={(e) => {
                             e.stopPropagation();
                             setIsAssetLoading(true);
+                            setPreviewUrl(order.assets[0].file_url);
                             setIsPreviewOpen(true);
                         }}
                         className="text-gray-600 hover:text-carbon-gray-100 font-bold flex items-center gap-1 transition-colors"
@@ -162,7 +164,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                             </button>
                         </div>
                         <div className="flex-1 relative flex flex-col overflow-hidden bg-gray-50">
-                            {order.assets[0]?.file_url?.match(/\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i) ? (
+                            {previewUrl?.match(/\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i) ? (
                                 <div
                                     className="w-full h-full flex items-center justify-center p-4 sm:p-8 overflow-auto relative"
                                     style={{
@@ -182,7 +184,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                         animate={{ opacity: isAssetLoading ? 0 : 1, scale: isAssetLoading ? 0.95 : 1, y: isAssetLoading ? 10 : 0 }}
                                         transition={{ duration: 0.4, ease: "easeOut" }}
-                                        src={order.assets[0].file_url}
+                                        src={previewUrl}
                                         alt="Document Preview"
                                         onLoad={() => setIsAssetLoading(false)}
                                         className={`w-full h-full object-contain bg-white shadow-2xl border border-gray-200 ring-1 ring-black/5 ${isAssetLoading ? 'pointer-events-none' : ''}`}
@@ -201,7 +203,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
                                         </div>
                                     )}
                                     <iframe
-                                        src={order.assets[0].file_url}
+                                        src={previewUrl}
+                                        referrerPolicy="no-referrer"
                                         className="w-full h-full border-none bg-carbon-gray-10 relative z-20"
                                         title="Document Preview"
                                         onLoad={() => setIsAssetLoading(false)}
