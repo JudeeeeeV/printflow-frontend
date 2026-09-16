@@ -12,8 +12,11 @@ import { AlertModal } from '../../components/common/AlertModal';
 
 // ── Inline Loading Overlay ──
 const InlineLoader = () => (
- <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
- <Renew className="w-5 h-5 text-gray-400 animate-spin" />
+ <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-[2px]" role="status" aria-label="Refreshing analytics data">
+ <div className="flex min-h-11 items-center gap-3 border border-gray-300 border-l-4 border-l-carbon-blue-60 bg-white px-4 py-2 shadow-[0_8px_20px_rgba(22,22,22,0.08)]">
+ <Renew className="h-5 w-5 animate-spin text-carbon-blue-60 motion-reduce:animate-none" aria-hidden="true" />
+ <span className="text-xs font-bold uppercase tracking-[0.12em] text-carbon-gray-100">Refreshing data</span>
+ </div>
  </div>
 );
 
@@ -21,16 +24,16 @@ const InlineLoader = () => (
 const KPICard = ({ icon: Icon, title, value, subtext, subtextColor = 'text-gray-500' }: {
  icon: React.ElementType; title: string; value: string; subtext: string; subtextColor?: string;
 }) => (
- <div className="bg-white border border-[#e0e0e0] p-5 flex-1 min-w-0">
- <div className="flex items-center gap-2 mb-3">
- <div className="p-2 bg-gray-100 ">
- <Icon className="w-4 h-4 text-gray-600" />
+ <div className="min-w-0 flex-1 border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-5 shadow-[0_8px_20px_rgba(22,22,22,0.05)]">
+ <div className="mb-4 flex items-center gap-3">
+ <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-carbon-gray-100 text-white">
+ <Icon className="h-5 w-5" aria-hidden="true" />
  </div>
- <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
+ <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-600">{title}</h3>
  </div>
- <div className="flex items-baseline gap-2 flex-wrap">
- <span className="text-2xl font-black text-carbon-gray-100">{value}</span>
- <span className={`text-xs font-medium ${subtextColor}`}>{subtext}</span>
+ <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+ <span className="text-3xl font-black tracking-tight text-carbon-gray-100 tabular-nums">{value}</span>
+ <span className={`text-xs font-semibold ${subtextColor}`}>{subtext}</span>
  </div>
  </div>
 );
@@ -38,20 +41,20 @@ const KPICard = ({ icon: Icon, title, value, subtext, subtextColor = 'text-gray-
 // ── Status Badge ──
 const StatusBadge = ({ state }: { state: string }) => {
  let label = state;
- let cls = 'bg-gray-100 text-gray-800';
+ let cls = 'border border-gray-300 bg-gray-100 text-gray-800';
  switch (state) {
- case 'COMPLETED': label = 'Completed'; cls = 'bg-gray-100 text-gray-800'; break;
- case 'PRINTED': label = 'Printed'; cls = 'bg-gray-100 text-gray-800'; break;
- case 'READY_FOR_PICKUP': label = 'Ready'; cls = 'bg-green-100 text-green-800'; break;
- case 'IN_PRODUCTION': label = 'In Production'; cls = 'bg-purple-100 text-purple-800'; break;
- case 'AWAITING_PAYMENT': label = 'Awaiting Pay'; cls = 'bg-gray-200 text-carbon-gray-100'; break;
- case 'AWAITING_PAYMENT_VERIFICATION': label = 'Pay Review'; cls = 'bg-yellow-100 text-yellow-800 border border-yellow-300'; break;
- case 'OPEN_INQUIRY': label = 'Pending'; cls = 'bg-blue-100 text-blue-800'; break;
- case 'PROOF_APPROVED': label = 'Approved'; cls = 'bg-indigo-100 text-indigo-800'; break;
- case 'ESCALATED_DISPUTE': label = 'Disputed'; cls = 'bg-blue-100 text-blue-800 border border-blue-300'; break;
+ case 'COMPLETED': label = 'Completed'; cls = 'border border-gray-300 bg-gray-100 text-gray-700'; break;
+ case 'PRINTED': label = 'Printed'; cls = 'border border-carbon-gray-100 bg-carbon-gray-100 text-white'; break;
+ case 'READY_FOR_PICKUP': label = 'Ready'; cls = 'border border-green-300 bg-green-50 text-green-800'; break;
+ case 'IN_PRODUCTION': label = 'In Production'; cls = 'border border-blue-200 bg-blue-50 text-carbon-blue-70'; break;
+ case 'AWAITING_PAYMENT': label = 'Awaiting Pay'; cls = 'border border-gray-300 bg-gray-100 text-carbon-gray-100'; break;
+ case 'AWAITING_PAYMENT_VERIFICATION': label = 'Pay Review'; cls = 'border border-yellow-300 bg-yellow-50 text-yellow-800'; break;
+ case 'OPEN_INQUIRY': label = 'Pending'; cls = 'border border-blue-200 bg-blue-50 text-carbon-blue-70'; break;
+ case 'PROOF_APPROVED': label = 'Approved'; cls = 'border border-blue-300 bg-blue-100 text-carbon-blue-70'; break;
+ case 'ESCALATED_DISPUTE': label = 'Disputed'; cls = 'border border-gray-500 bg-gray-200 text-carbon-gray-100'; break;
  default: label = state.replace(/_/g, ' ');
  }
- return <span className={`px-2 py-0.5 text-[10px] font-bold ${cls}`}>{label}</span>;
+ return <span className={`inline-flex min-h-6 items-center px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${cls}`}>{label}</span>;
 };
 
 // ── Date Presets ──
@@ -87,18 +90,18 @@ const getDateRange = (preset: DatePreset): { startDate?: string; endDate?: strin
 };
 
 // ── Chart Colors ──
-const COLOR_PALETTE = ['#6366f1', '#111827']; // indigo-500 (Color), black (B&W)
-const PAPER_PALETTE = ['#64748b', '#a78bfa', '#2dd4bf']; // slate-500 (Short), violet-400 (A4), teal-400 (Long)
+const COLOR_PALETTE = ['#0f62fe', '#161616']; // Carbon blue (Color), Carbon gray (B&W)
+const PAPER_PALETTE = ['#8d8d8d', '#0f62fe', '#161616']; // Gray (Short), blue (A4), black (Long)
 
 // ── Custom Tooltip ──
 const ComboTooltip = ({ active, payload, label }: any) => {
  if (!active || !payload?.length) return null;
  return (
- <div className="bg-white border border-[#e0e0e0] px-4 py-3 text-sm">
- <p className="font-bold text-carbon-gray-100 mb-1">{label}</p>
+ <div className="border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white px-4 py-3 text-sm shadow-[0_8px_20px_rgba(22,22,22,0.12)]">
+ <p className="mb-2 font-black text-carbon-gray-100">{label}</p>
  {payload.map((entry: any, i: number) => (
- <p key={i} className="text-gray-600">
- <span className="inline-block w-2 h-2 mr-2" style={{ backgroundColor: entry.color }} />
+ <p key={i} className="flex items-center text-gray-600">
+ <span className="mr-2 inline-block h-2 w-2" style={{ backgroundColor: entry.color }} />
  {entry.name}: {entry.name === 'Revenue' ? `₱${entry.value}` : entry.value}
  </p>
  ))}
@@ -109,8 +112,8 @@ const ComboTooltip = ({ active, payload, label }: any) => {
 // ── Donut Center Label ──
 const renderCenterLabel = (total: number, label: string) => (
  <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
- <tspan x="50%" dy="-6" className="text-lg font-black fill-gray-900">{total}</tspan>
- <tspan x="50%" dy="18" className="text-[10px] font-medium fill-gray-500">{label}</tspan>
+ <tspan x="50%" dy="-6" className="text-xl font-black fill-carbon-gray-100">{total}</tspan>
+ <tspan x="50%" dy="18" className="text-[10px] font-bold uppercase tracking-wider fill-gray-500">{label}</tspan>
  </text>
 );
 
@@ -228,52 +231,97 @@ export const ShopAnalyticsPage: React.FC = () => {
  ];
 
  if (isLoading && !analyticsData) return (
-    <div className="p-4 lg:p-8 font-sans h-full flex flex-col bg-carbon-gray-10 overflow-y-auto">
+    <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden bg-carbon-gray-10 p-4 font-sans sm:p-6 lg:p-8" aria-busy="true">
       <AnalyticsSkeleton />
     </div>
   );
- if (error && !analyticsData) return <div className="p-8 font-sans text-carbon-gray-100">Error: {error}</div>;
+ if (error && !analyticsData) return (
+ <div className="flex min-h-full items-center justify-center bg-carbon-gray-10 p-4 font-sans sm:p-8">
+ <div className="w-full max-w-xl border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-6 shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:p-8" role="alert">
+ <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-carbon-blue-60">Analytics unavailable</p>
+ <h1 className="text-2xl font-black tracking-tight text-carbon-gray-100">Unable to load performance data</h1>
+ <p className="mt-3 border-l-4 border-gray-300 bg-carbon-gray-10 px-4 py-3 text-sm leading-relaxed text-gray-700">{error}</p>
+ </div>
+ </div>
+ );
 
  return (
- <div className="flex-1 overflow-y-auto p-6 font-sans">
- <div className="max-w-7xl mx-auto space-y-6">
+ <div className="relative isolate flex-1 overflow-y-auto overflow-x-hidden bg-carbon-gray-10 font-sans text-carbon-gray-100" aria-busy={isLoading}>
+ <div className="mx-auto w-full max-w-7xl space-y-5 p-4 sm:space-y-6 sm:p-6 lg:p-8">
+
+ {/* ── Page Header ── */}
+ <header className="border border-gray-300 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)]">
+ <div className="border-t-4 border-t-carbon-blue-60 bg-carbon-gray-100 px-4 py-3 text-white sm:px-6 sm:py-4">
+ <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+ <div className="max-w-2xl">
+ <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-carbon-blue-60">Analytics workspace</p>
+ <h1 className="text-xl font-black tracking-tight sm:text-2xl">Shop performance</h1>
+ <p className="mt-1.5 max-w-xl text-[11px] leading-relaxed text-gray-300 sm:text-xs">
+ Track revenue, production volume, order preferences, and recent shop activity from one operational view.
+ </p>
+ </div>
+ <div className="flex min-h-9 items-center gap-2 border border-white/20 bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white">
+ <Calendar className="h-3.5 w-3.5 shrink-0 text-carbon-blue-60" aria-hidden="true" />
+ <span>Performance overview</span>
+ </div>
+ </div>
+ </div>
+ </header>
 
  {/* ── Date Range Controls ── */}
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
- <div className="flex flex-wrap items-center gap-2">
- <Calendar className="w-4 h-4 text-gray-400" />
+ <section className="border border-gray-300 bg-white p-4 shadow-[0_8px_24px_rgba(22,22,22,0.05)] sm:p-5" aria-label="Analytics controls">
+ <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+ <div className="min-w-0 flex-1">
+ <div className="mb-3 flex items-center gap-3">
+ <span className="h-6 w-1 bg-carbon-blue-60" aria-hidden="true" />
+ <div>
+ <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Reporting range</p>
+ <p className="mt-0.5 text-sm font-semibold text-carbon-gray-100">Choose which period to analyze</p>
+ </div>
+ </div>
+ <div className="inline-flex w-fit max-w-full flex-wrap border-l border-t border-gray-300 bg-white" role="group" aria-label="Date range presets">
  {presets.map(p => (
  <button
  key={p.key}
  onClick={() => handlePresetChange(p.key)}
- className={`px-3 py-1.5 text-xs font-bold border transition-colors ${
+ aria-pressed={datePreset === p.key}
+ className={`min-h-11 flex-1 whitespace-nowrap border-b border-r border-gray-300 px-3 py-2 text-xs font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 motion-reduce:transition-none sm:flex-none sm:px-4 ${
  datePreset === p.key
- ? 'bg-gray-900 text-white border-gray-900'
- : 'bg-white text-gray-700 border-[#8d8d8d] hover:bg-carbon-gray-10'
+ ? 'bg-carbon-blue-60 text-white'
+ : 'bg-white text-gray-700 hover:bg-carbon-gray-10 hover:text-carbon-gray-100'
  }`}
  >
  {p.label}
  </button>
  ))}
+ </div>
  {datePreset === 'CUSTOM' && (
- <div className="flex items-center gap-2 ml-2">
+ <div className="mt-4 grid grid-cols-1 gap-3 border border-gray-300 border-l-4 border-l-carbon-blue-60 bg-carbon-gray-10 p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-end">
+ <label className="min-w-0" htmlFor="analytics-start-date">
+ <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-gray-600">Start date</span>
  <input
+ id="analytics-start-date"
  type="date"
  value={customStart}
  onChange={e => setCustomStart(e.target.value)}
- className="text-xs border border-[#8d8d8d] px-2 py-1.5 font-medium text-gray-700 focus:outline-carbon-blue-60 focus:border-black"
+ className="min-h-11 w-full border border-gray-500 bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
  />
- <span className="text-xs text-gray-400">to</span>
+ </label>
+ <span className="hidden min-h-11 items-center text-xs font-bold uppercase tracking-wider text-gray-500 sm:flex">to</span>
+ <label className="min-w-0" htmlFor="analytics-end-date">
+ <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-gray-600">End date</span>
  <input
+ id="analytics-end-date"
  type="date"
  value={customEnd}
  onChange={e => setCustomEnd(e.target.value)}
- className="text-xs border border-[#8d8d8d] px-2 py-1.5 font-medium text-gray-700 focus:outline-carbon-blue-60 focus:border-black"
+ className="min-h-11 w-full border border-gray-500 bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
  />
+ </label>
  <button
  onClick={handleCustomApply}
  disabled={!customStart || !customEnd}
- className="px-3 py-1.5 text-xs font-bold bg-gray-900 text-white disabled:opacity-40 transition-colors"
+ className="min-h-11 bg-carbon-gray-100 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
  >
  Apply
  </button>
@@ -284,15 +332,17 @@ export const ShopAnalyticsPage: React.FC = () => {
  <button
  onClick={handleExportCSV}
  disabled={isExporting}
- className="flex items-center justify-center gap-2 bg-gray-900 disabled:opacity-70 text-white px-4 py-2 text-sm font-bold transition-colors "
+ aria-busy={isExporting}
+ className="flex min-h-12 w-full shrink-0 items-center justify-center gap-2 bg-carbon-blue-60 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none xl:w-auto"
  >
- <Download className="w-4 h-4" />
+ <Download className="h-5 w-5" aria-hidden="true" />
  <span>{isExporting ? 'Exporting...' : 'Export CSV'}</span>
  </button>
  </div>
+ </section>
 
  {/* ── KPI Cards ── */}
- <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+ <section className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Key performance indicators">
  {isLoading && analyticsData && <InlineLoader />}
  <KPICard
  icon={ChartLine}
@@ -321,60 +371,66 @@ export const ShopAnalyticsPage: React.FC = () => {
  subtext="orders in progress"
  subtextColor="text-gray-500"
  />
- </div>
+ </section>
 
  {/* ── Main Combo Chart: Revenue (Line) + Pages (Bar) ── */}
- <div className="relative bg-white border border-[#e0e0e0] p-6 ">
+ <section className="relative border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]" aria-labelledby="revenue-volume-title">
  {isLoading && analyticsData && <InlineLoader />}
- <div className="flex justify-between items-center mb-6">
- <h3 className="text-sm font-bold text-carbon-gray-100">Revenue & Print Volume</h3>
- <div className="flex items-center gap-4">
- <div className="flex items-center gap-1.5">
- <span className="w-3 h-3 bg-gray-400" />
- <span className="text-xs font-medium text-gray-500">Pages</span>
+ <div className="flex flex-col gap-4 border-b border-gray-300 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+ <div>
+ <p className="text-xs font-bold uppercase tracking-[0.16em] text-carbon-blue-60">Performance trend</p>
+ <h2 id="revenue-volume-title" className="mt-1 text-lg font-black tracking-tight text-carbon-gray-100">Revenue &amp; Print Volume</h2>
  </div>
- <div className="flex items-center gap-1.5">
- <span className="w-3 h-1 bg-gray-900 " />
- <span className="text-xs font-medium text-gray-500">Revenue</span>
+ <div className="flex flex-wrap items-center gap-4 border border-gray-200 bg-carbon-gray-10 px-3 py-2">
+ <div className="flex items-center gap-2">
+ <span className="h-3 w-3 bg-carbon-blue-60" aria-hidden="true" />
+ <span className="text-xs font-semibold text-gray-600">Pages</span>
+ </div>
+ <div className="flex items-center gap-2">
+ <span className="h-1 w-4 bg-carbon-gray-100" aria-hidden="true" />
+ <span className="text-xs font-semibold text-gray-600">Revenue</span>
  </div>
  </div>
  </div>
- <div className="h-80 w-full">
+ <div className="h-72 w-full p-3 sm:h-80 sm:p-6">
  {(analyticsData?.printVolumeOverTime?.length || 0) > 0 &&
  !(analyticsData.printVolumeOverTime.length === 1 && analyticsData.printVolumeOverTime[0].date === 'Today' && analyticsData.printVolumeOverTime[0].pages === 0) ? (
  <ResponsiveContainer width="100%" height="100%">
  <ComposedChart data={analyticsData.printVolumeOverTime} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
  <defs>
  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
- <stop offset="0%" stopColor="#374151" stopOpacity={0.9} />
- <stop offset="100%" stopColor="#9CA3AF" stopOpacity={0.4} />
+ <stop offset="0%" stopColor="#0f62fe" stopOpacity={0.95} />
+ <stop offset="100%" stopColor="#0f62fe" stopOpacity={0.45} />
  </linearGradient>
  </defs>
- <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+ <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D1D5DB" />
  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} />
  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v: number) => `₱${v}`} />
  <Tooltip content={<ComboTooltip />} />
- <Bar yAxisId="left" dataKey="pages" name="Pages" fill="url(#barGradient)" radius={[4, 4, 0, 0]} barSize={28} />
- <Line yAxisId="right" dataKey="revenue" name="Revenue" type="monotone" stroke="#111827" strokeWidth={2.5} dot={{ r: 3, fill: '#111827' }} activeDot={{ r: 5 }} />
+ <Bar yAxisId="left" dataKey="pages" name="Pages" fill="url(#barGradient)" barSize={28} />
+ <Line yAxisId="right" dataKey="revenue" name="Revenue" type="monotone" stroke="#161616" strokeWidth={2.5} dot={{ r: 3, fill: '#161616' }} activeDot={{ r: 5 }} />
  </ComposedChart>
  </ResponsiveContainer>
  ) : (
- <div className="h-full flex items-center justify-center">
- <p className="text-gray-400 font-medium text-sm">No data for this period.</p>
+ <div className="flex h-full items-center justify-center border border-dashed border-gray-300 bg-carbon-gray-10 px-6 text-center">
+ <p className="text-sm font-semibold text-gray-500">No data for this period.</p>
  </div>
  )}
  </div>
- </div>
+ </section>
 
  {/* ── Distribution Donut Charts ── */}
- <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+ <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
  {/* Color Mode Split */}
- <div className="relative bg-white border border-[#e0e0e0] p-6 ">
+ <section className="relative border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]" aria-labelledby="color-distribution-title">
  {isLoading && analyticsData && <InlineLoader />}
- <h3 className="text-sm font-bold text-carbon-gray-100 mb-4">Color Mode Distribution</h3>
+ <div className="border-b border-gray-300 px-5 py-4">
+ <p className="text-xs font-bold uppercase tracking-[0.16em] text-carbon-blue-60">Order mix</p>
+ <h2 id="color-distribution-title" className="mt-1 text-lg font-black tracking-tight text-carbon-gray-100">Color Mode Distribution</h2>
+ </div>
  {colorTotal > 0 ? (
- <div className="h-56 w-full">
+ <div className="h-64 w-full p-3 sm:p-5">
  <ResponsiveContainer width="100%" height="100%">
  <PieChart>
  <Pie
@@ -396,18 +452,21 @@ export const ShopAnalyticsPage: React.FC = () => {
  </ResponsiveContainer>
  </div>
  ) : (
- <div className="h-56 flex items-center justify-center">
- <p className="text-gray-400 font-medium text-sm">No order data yet.</p>
+ <div className="m-5 flex h-52 items-center justify-center border border-dashed border-gray-300 bg-carbon-gray-10 px-6 text-center">
+ <p className="text-sm font-semibold text-gray-500">No order data yet.</p>
  </div>
  )}
- </div>
+ </section>
 
  {/* Paper Size Split */}
- <div className="relative bg-white border border-[#e0e0e0] p-6 ">
+ <section className="relative border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]" aria-labelledby="paper-distribution-title">
  {isLoading && analyticsData && <InlineLoader />}
- <h3 className="text-sm font-bold text-carbon-gray-100 mb-4">Paper Size Distribution</h3>
+ <div className="border-b border-gray-300 px-5 py-4">
+ <p className="text-xs font-bold uppercase tracking-[0.16em] text-carbon-blue-60">Production profile</p>
+ <h2 id="paper-distribution-title" className="mt-1 text-lg font-black tracking-tight text-carbon-gray-100">Paper Size Distribution</h2>
+ </div>
  {paperTotal > 0 ? (
- <div className="h-56 w-full">
+ <div className="h-64 w-full p-3 sm:p-5">
  <ResponsiveContainer width="100%" height="100%">
  <PieChart>
  <Pie
@@ -429,11 +488,11 @@ export const ShopAnalyticsPage: React.FC = () => {
  </ResponsiveContainer>
  </div>
  ) : (
- <div className="h-56 flex items-center justify-center">
- <p className="text-gray-400 font-medium text-sm">No order data yet.</p>
+ <div className="m-5 flex h-52 items-center justify-center border border-dashed border-gray-300 bg-carbon-gray-10 px-6 text-center">
+ <p className="text-sm font-semibold text-gray-500">No order data yet.</p>
  </div>
  )}
- </div>
+ </section>
  </div>
 
  {/* ── Recent Activity Data Table ── */}
@@ -443,38 +502,42 @@ export const ShopAnalyticsPage: React.FC = () => {
  const paginatedOrders = allRecentOrders.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
 
  return (
- <div className="bg-white border border-[#e0e0e0] overflow-hidden">
- <div className="px-6 py-4 border-b border-[#e0e0e0] flex justify-between items-center">
- <h3 className="text-sm font-bold text-carbon-gray-100">Recent Activity</h3>
- <span className="text-xs font-medium text-gray-500">{allRecentOrders.length} orders</span>
+ <section className="overflow-hidden border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]" aria-labelledby="recent-activity-title">
+ <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 px-4 py-4 sm:px-6">
+ <div>
+ <p className="text-xs font-bold uppercase tracking-[0.16em] text-carbon-blue-60">Operational record</p>
+ <h2 id="recent-activity-title" className="mt-1 text-lg font-black tracking-tight text-carbon-gray-100">Recent Activity</h2>
+ </div>
+ <span className="border border-gray-300 bg-carbon-gray-10 px-3 py-1.5 text-xs font-bold tabular-nums text-gray-700">{allRecentOrders.length} orders</span>
  </div>
  <div className="overflow-x-auto">
- <table className="w-full text-sm">
+ <table className="w-full min-w-[760px] text-sm">
+ <caption className="sr-only">Recent shop orders for the selected reporting period</caption>
  <thead>
- <tr className="bg-carbon-gray-10 border-b border-[#e0e0e0]">
- <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
- <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Client ID</th>
- <th className="text-right px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Pages</th>
- <th className="text-right px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Total</th>
- <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
- <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+ <tr className="border-b border-carbon-gray-100 bg-carbon-gray-100 text-white">
+ <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-[0.12em]">Order ID</th>
+ <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-[0.12em]">Client ID</th>
+ <th scope="col" className="px-6 py-3.5 text-right text-xs font-bold uppercase tracking-[0.12em]">Pages</th>
+ <th scope="col" className="px-6 py-3.5 text-right text-xs font-bold uppercase tracking-[0.12em]">Total</th>
+ <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-[0.12em]">Date</th>
+ <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-[0.12em]">Status</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-gray-100">
+ <tbody className="divide-y divide-gray-200">
  {paginatedOrders.length > 0 ? (
  paginatedOrders.map((order: any) => (
- <tr key={order.id} className="hover:bg-carbon-gray-10 transition-colors">
- <td className="px-6 py-3 font-bold text-carbon-gray-100 whitespace-nowrap">#{order.id.slice(0, 8)}</td>
- <td className="px-6 py-3 text-gray-600 font-medium whitespace-nowrap">{order.clientId?.slice(0, 8) || '—'}</td>
- <td className="px-6 py-3 text-right text-gray-700 font-medium">{order.pageCount}</td>
- <td className="px-6 py-3 text-right font-bold text-carbon-gray-100">₱{Number(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
- <td className="px-6 py-3 text-gray-600 font-medium whitespace-nowrap">{new Date(order.createdAt).toLocaleDateString()}</td>
- <td className="px-6 py-3"><StatusBadge state={order.state} /></td>
+ <tr key={order.id} className="transition-colors hover:bg-blue-50/50 motion-reduce:transition-none">
+ <td className="whitespace-nowrap border-l-4 border-l-transparent px-6 py-4 font-black text-carbon-gray-100">#{order.id.slice(0, 8)}</td>
+ <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-600">{order.clientId?.slice(0, 8) || '—'}</td>
+ <td className="px-6 py-4 text-right font-semibold tabular-nums text-gray-700">{order.pageCount}</td>
+ <td className="px-6 py-4 text-right font-black tabular-nums text-carbon-gray-100">₱{Number(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+ <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</td>
+ <td className="px-6 py-4"><StatusBadge state={order.state} /></td>
  </tr>
  ))
  ) : (
  <tr>
- <td colSpan={6} className="px-6 py-8 text-center text-gray-400 font-medium">No orders found for this period.</td>
+ <td colSpan={6} className="px-6 py-12 text-center font-semibold text-gray-500">No orders found for this period.</td>
  </tr>
  )}
  </tbody>
@@ -482,13 +545,13 @@ export const ShopAnalyticsPage: React.FC = () => {
  </div>
  {/* Pagination Controls */}
  {totalTablePages > 1 && (
- <div className="px-6 py-3 border-t border-[#e0e0e0] flex items-center justify-between">
- <span className="text-xs font-medium text-gray-500">Page {tablePage} of {totalTablePages}</span>
- <div className="flex items-center gap-1">
+ <div className="flex flex-col gap-3 border-t border-gray-300 bg-carbon-gray-10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+ <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-600">Page {tablePage} of {totalTablePages}</span>
+ <div className="flex flex-wrap items-center gap-1" aria-label="Recent activity pagination">
  <button
  onClick={() => setTablePage(p => Math.max(1, p - 1))}
  disabled={tablePage === 1}
- className="px-3 py-1.5 text-xs font-bold border border-[#8d8d8d] bg-white text-gray-700 hover:bg-carbon-gray-10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+ className="min-h-11 border border-gray-500 bg-white px-4 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
  >
  Prev
  </button>
@@ -496,10 +559,11 @@ export const ShopAnalyticsPage: React.FC = () => {
  <button
  key={page}
  onClick={() => setTablePage(page)}
- className={`px-3 py-1.5 text-xs font-bold border transition-colors ${
+ aria-current={tablePage === page ? 'page' : undefined}
+ className={`min-h-11 min-w-11 border px-3 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${
  tablePage === page
- ? 'bg-gray-900 text-white border-gray-900'
- : 'bg-white text-gray-700 border-[#8d8d8d] hover:bg-carbon-gray-10'
+ ? 'border-carbon-blue-60 bg-carbon-blue-60 text-white'
+ : 'border-gray-500 bg-white text-gray-700 hover:bg-gray-200'
  }`}
  >
  {page}
@@ -508,19 +572,19 @@ export const ShopAnalyticsPage: React.FC = () => {
  <button
  onClick={() => setTablePage(p => Math.min(totalTablePages, p + 1))}
  disabled={tablePage === totalTablePages}
- className="px-3 py-1.5 text-xs font-bold border border-[#8d8d8d] bg-white text-gray-700 hover:bg-carbon-gray-10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+ className="min-h-11 border border-gray-500 bg-white px-4 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
  >
  Next
  </button>
  </div>
  </div>
  )}
- </div>
+ </section>
  );
  })()}
 
  {/* Bottom spacer */}
- <div className="h-6" />
+ <div className="h-2" aria-hidden="true" />
  <AlertModal 
  isOpen={alertState.isOpen}
  message={alertState.message}

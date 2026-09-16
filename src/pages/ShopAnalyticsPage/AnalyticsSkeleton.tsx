@@ -3,117 +3,120 @@ import { Calendar, ChartLine, Document, Layers, Activity } from '@carbon/icons-r
 
 export const AnalyticsSkeleton: React.FC = () => {
   return (
-    <div className="max-w-7xl mx-auto space-y-6 w-full">
-      
-      {/* Date Range Controls & Export Button Skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          {/* Preset Buttons Skeleton */}
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="px-3 py-1.5 h-7 w-20 border border-[#e0e0e0] bg-gray-100 animate-pulse">
+    <div className="mx-auto w-full max-w-7xl" role="status" aria-label="Loading shop analytics">
+      <span className="sr-only">Loading shop analytics</span>
+      <div className="space-y-5 animate-pulse motion-reduce:animate-none sm:space-y-6" aria-hidden="true">
+        {/* Page Header Skeleton */}
+        <div className="border border-gray-300 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)]">
+          <div className="border-t-4 border-t-carbon-blue-60 bg-carbon-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-1.5">
+                <div className="h-2 w-24 bg-carbon-blue-60/70" />
+                <div className="h-6 w-40 bg-white/20 sm:w-56" />
+                <div className="h-2.5 w-full max-w-lg bg-white/10" />
+              </div>
+              <div className="flex min-h-9 w-44 items-center gap-2 border border-white/20 bg-white/5 px-3">
+                <Calendar className="h-3.5 w-3.5 text-carbon-blue-60/70" />
+                <div className="h-2.5 w-24 bg-white/15" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Controls Skeleton */}
+        <div className="border border-gray-300 bg-white p-4 shadow-[0_8px_24px_rgba(22,22,22,0.05)] sm:p-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="h-6 w-1 bg-carbon-blue-60/60" />
+                <div className="space-y-2">
+                  <div className="h-3 w-28 bg-gray-300" />
+                  <div className="h-3 w-48 bg-gray-200" />
+                </div>
+              </div>
+              <div className="inline-flex w-fit max-w-full flex-wrap border-l border-t border-gray-300 bg-white">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="h-11 flex-1 border-b border-r border-gray-300 bg-gray-100 sm:w-20 sm:flex-none" />
+                ))}
+              </div>
+            </div>
+            <div className="h-12 w-full bg-carbon-blue-60/40 xl:w-36" />
+          </div>
+        </div>
+
+        {/* KPI Cards Skeleton */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[ChartLine, Layers, Document, Activity].map((Icon, i) => (
+            <div key={i} className="min-w-0 border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-5 shadow-[0_8px_20px_rgba(22,22,22,0.05)]">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center bg-carbon-gray-100/20">
+                  <Icon className="h-5 w-5 text-gray-400" />
+                </div>
+                <div className="h-3 w-24 bg-gray-200" />
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="h-8 w-28 bg-gray-200" />
+                <div className="h-3 w-16 bg-gray-100" />
+              </div>
             </div>
           ))}
         </div>
-        
-        {/* Export Button Skeleton */}
-        <div className="flex items-center justify-center gap-2 bg-gray-200 h-9 w-32 animate-pulse border border-[#e0e0e0]">
-        </div>
-      </div>
 
-      {/* KPI Cards Skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: ChartLine, title: 'Total Revenue' },
-          { icon: Layers, title: 'Avg Order Value' },
-          { icon: Document, title: 'Total Pages Printed' },
-          { icon: Activity, title: 'Active Queue' }
-        ].map((_, i) => (
-          <div key={i} className="bg-white border border-[#e0e0e0] p-5 flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 bg-gray-100 h-8 w-8 animate-pulse"></div>
-              <div className="h-3 w-20 bg-gray-200 animate-pulse rounded-sm"></div>
+        {/* Main Chart Skeleton */}
+        <div className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
+          <div className="flex flex-col gap-4 border-b border-gray-300 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="space-y-2">
+              <div className="h-3 w-28 bg-carbon-blue-60/30" />
+              <div className="h-5 w-52 bg-gray-200" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <div className="h-8 w-24 bg-gray-200 animate-pulse rounded-sm"></div>
-              <div className="h-3 w-16 bg-gray-100 animate-pulse rounded-sm"></div>
-            </div>
+            <div className="h-9 w-44 border border-gray-200 bg-gray-100" />
           </div>
-        ))}
-      </div>
-
-      {/* Main Combo Chart Skeleton */}
-      <div className="bg-white border border-[#e0e0e0] p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="h-4 w-48 bg-gray-200 animate-pulse"></div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-gray-200 animate-pulse" />
-              <div className="h-3 w-10 bg-gray-200 animate-pulse"></div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-1 bg-gray-200 animate-pulse" />
-              <div className="h-3 w-16 bg-gray-200 animate-pulse"></div>
-            </div>
+          <div className="flex h-72 items-end justify-between gap-2 p-6 sm:h-80">
+            {[30, 50, 40, 70, 60, 80, 45, 55, 90, 65, 35, 75].map((height, i) => (
+              <div key={i} className="mx-auto w-full max-w-[30px] flex-1 bg-blue-100" style={{ height: `${height}%` }} />
+            ))}
           </div>
         </div>
-        <div className="h-80 w-full bg-gray-50 flex items-end justify-between gap-2 p-4 pb-8 animate-pulse border border-gray-100">
-           {/* fake bars */}
-           {[30, 50, 40, 70, 60, 80, 45, 55, 90, 65, 35, 75].map((height, i) => (
-             <div key={i} className="flex-1 bg-gray-200 w-full max-w-[30px] mx-auto rounded-t-sm" style={{ height: `${height}%` }}></div>
-           ))}
-        </div>
-      </div>
 
-      {/* Donut Charts Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[
-          { title: 'Color Mode Distribution' },
-          { title: 'Paper Size Distribution' }
-        ].map((_, i) => (
-          <div key={i} className="bg-white border border-[#e0e0e0] p-6">
-            <div className="h-4 w-48 bg-gray-200 animate-pulse mb-4"></div>
-            <div className="h-56 w-full flex items-center justify-center animate-pulse">
-               <div className="w-40 h-40 rounded-full border-[16px] border-gray-100"></div>
+        {/* Distribution Skeletons */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+          {[1, 2].map((i) => (
+            <div key={i} className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
+              <div className="space-y-2 border-b border-gray-300 px-5 py-4">
+                <div className="h-3 w-24 bg-carbon-blue-60/30" />
+                <div className="h-5 w-48 bg-gray-200" />
+              </div>
+              <div className="flex h-64 items-center justify-center">
+                <div className="h-40 w-40 rounded-full border-[16px] border-gray-100" />
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="overflow-hidden border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
+          <div className="flex items-center justify-between border-b border-gray-300 px-4 py-4 sm:px-6">
+            <div className="space-y-2">
+              <div className="h-3 w-28 bg-carbon-blue-60/30" />
+              <div className="h-5 w-36 bg-gray-200" />
+            </div>
+            <div className="h-8 w-20 bg-gray-100" />
           </div>
-        ))}
-      </div>
-
-      {/* Table Skeleton */}
-      <div className="bg-white border border-[#e0e0e0] overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#e0e0e0] flex justify-between items-center">
-           <div className="h-4 w-32 bg-gray-200 animate-pulse"></div>
-           <div className="h-3 w-16 bg-gray-200 animate-pulse"></div>
-        </div>
-        <div className="w-full">
-           <table className="w-full text-sm">
-             <thead>
-               <tr className="bg-carbon-gray-10 border-b border-[#e0e0e0] h-10">
-                 <th className="px-6"></th>
-                 <th className="px-6"></th>
-                 <th className="px-6"></th>
-                 <th className="px-6"></th>
-                 <th className="px-6"></th>
-                 <th className="px-6"></th>
-               </tr>
-             </thead>
-             <tbody className="divide-y divide-gray-100">
-               {[1, 2, 3, 4, 5].map((i) => (
-                 <tr key={i} className="animate-pulse">
-                   <td className="px-6 py-4"><div className="h-3 w-20 bg-gray-200 rounded-sm"></div></td>
-                   <td className="px-6 py-4"><div className="h-3 w-20 bg-gray-200 rounded-sm"></div></td>
-                   <td className="px-6 py-4 flex justify-end"><div className="h-3 w-8 bg-gray-200 rounded-sm"></div></td>
-                   <td className="px-6 py-4"><div className="h-3 w-16 bg-gray-200 rounded-sm ml-auto"></div></td>
-                   <td className="px-6 py-4"><div className="h-3 w-24 bg-gray-200 rounded-sm"></div></td>
-                   <td className="px-6 py-4"><div className="h-5 w-20 bg-gray-200 rounded-full"></div></td>
-                 </tr>
-               ))}
-             </tbody>
-           </table>
+          <div className="overflow-hidden">
+            <div className="h-11 bg-carbon-gray-100" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="grid h-14 grid-cols-6 items-center gap-4 border-b border-gray-200 px-6">
+                <div className="h-3 bg-gray-200" />
+                <div className="h-3 bg-gray-100" />
+                <div className="h-3 bg-gray-100" />
+                <div className="h-3 bg-gray-200" />
+                <div className="h-3 bg-gray-100" />
+                <div className="h-6 bg-gray-200" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-
     </div>
   );
 };
