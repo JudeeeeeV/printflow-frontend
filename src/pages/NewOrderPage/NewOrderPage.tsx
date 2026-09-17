@@ -15,6 +15,7 @@ import { AlertModal } from '../../components/common/AlertModal';
 import { PDFDocument } from 'pdf-lib';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
 import { apiClient } from '../../services/apiClient';
+import printflowLogoDark from '../../assets/printflow-logo-dark.png';
 
 const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -232,13 +233,19 @@ export const NewOrderPage: React.FC = () => {
                     <div className="relative overflow-hidden bg-carbon-gray-100 px-5 py-6 text-white sm:px-8 sm:py-8">
                         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-80 sm:block">
                             <div className="absolute -right-16 -top-24 h-64 w-64 border-[44px] border-carbon-blue-60 opacity-30" />
-                            <div className="absolute bottom-0 right-0 h-14 w-44 bg-carbon-blue-60" />
+                            <div className="absolute bottom-0 right-0 h-14 w-44 bg-[#393939]" />
                             <div className="absolute bottom-0 right-44 h-14 w-14 border border-white/30" />
                         </div>
 
                         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                             <div className="max-w-2xl">
-                                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">PrintFlow Dashboard</h1>
+                                <img
+                                    src={printflowLogoDark}
+                                    alt="PrintFlow Dashboard"
+                                    width={1532}
+                                    height={312}
+                                    className="h-auto w-48 sm:w-56"
+                                />
                                 <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-300 sm:text-base">
                                     Prepare your files, choose a print partner, and keep every order moving from one workspace.
                                 </p>
@@ -257,7 +264,7 @@ export const NewOrderPage: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={handleLogout}
-                                    className="min-h-11 border-2 border-carbon-blue-60 bg-carbon-blue-60 px-6 text-sm font-bold text-white transition-colors hover:border-carbon-blue-70 hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+                                    className="min-h-11 border-2 bg-carbon-blue-60 px-6 text-sm font-bold text-white transition-colors hover:border-white/70 hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
                                 >
                                     Logout
                                 </button>
@@ -364,7 +371,7 @@ export const NewOrderPage: React.FC = () => {
                         <aside className="min-w-0 self-stretch">
                             <div className="sticky top-6">
                                 <div className="border-b-4 border-carbon-blue-60 bg-carbon-gray-100 px-5 py-4 text-white">
-                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Final step</p>
+                                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#87B0FE]">Final step</p>
                                     <p className="mt-1 text-sm text-gray-300">Review the details and submit when everything looks right.</p>
                                 </div>
                                 <OrderSummary
