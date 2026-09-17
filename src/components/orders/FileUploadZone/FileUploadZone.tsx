@@ -6,11 +6,12 @@ const ALLOWED_TYPES = [
  'image/png',
  'image/jpeg',
  'image/webp',
+ 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
+const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.docx'];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 interface FileUploadZoneProps {
  onFileSelect: (file: File) => void;
@@ -28,17 +29,17 @@ const isValidFile = (file: File): { valid: boolean; error: string } => {
 
  // Check extension
  if (!ALLOWED_EXTENSIONS.includes(ext)) {
- return { valid: false, error: `Invalid file format "${ext}". Accepted: PDF, PNG, JPG, WEBP.` };
+ return { valid: false, error: `Invalid file format "${ext}". Accepted: PDF, DOCX, PNG, JPG, WEBP.` };
  }
 
  // Check MIME type (also catches renamed files in most cases)
  if (!ALLOWED_TYPES.includes(file.type) && file.type !== '') {
- return { valid: false, error: `Invalid file type "${file.type}". Accepted: PDF, PNG, JPG, WEBP.` };
+ return { valid: false, error: `Invalid file type "${file.type}". Accepted: PDF, DOCX, PNG, JPG, WEBP.` };
  }
 
  // Check file size
  if (file.size > MAX_FILE_SIZE) {
- return { valid: false, error: `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: 50MB.` };
+ return { valid: false, error: `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: 20MB.` };
  }
 
  // Check empty/zero-byte files
@@ -84,13 +85,13 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
  onDrop={handleDrop}
  >
  <CloudUpload className="w-12 h-12 text-gray-400 mb-4" />
- <p className="font-bold text-carbon-gray-100 mb-1">Upload PDF / Images</p>
- <p className="text-xs text-gray-500 mb-1">Accepted formats: PDF, PNG, JPG, WEBP</p>
- <p className="text-xs text-gray-500 mb-4">Maximum file size: 50MB</p>
+ <p className="font-bold text-carbon-gray-100 mb-1">Upload PDF, DOCX, or Images</p>
+ <p className="text-xs text-gray-500 mb-1">Accepted formats: PDF, DOCX, PNG, JPG, WEBP</p>
+ <p className="text-xs text-gray-500 mb-4">Maximum file size: 20MB</p>
 
  <input
  type="file"
- accept=".pdf,image/png,image/jpeg,image/webp"
+ accept=".pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp"
  className="hidden"
  ref={fileInputRef}
  // Added click handler to reset the input value, allowing the exact same file to be selected twice if needed

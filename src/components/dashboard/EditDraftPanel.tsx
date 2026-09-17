@@ -8,6 +8,8 @@ import { orderService } from '../../services/orderService';
 import type { PrintShop, OrderEstimate } from '../../services/orderService';
 import type { DraftOrder } from './MyDraftsList';
 
+const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
 interface EditDraftPanelProps {
  draft: DraftOrder;
  shops: PrintShop[];
@@ -113,7 +115,12 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
 
  try {
  await new Promise(resolve => setTimeout(resolve, 1500));
- setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });
+ setValidationResult({
+ passed: true,
+ message: selectedFile.type === DOCX_MIME_TYPE
+ ? 'DOCX accepted. It will be converted, resized to the selected paper, and priced using its final page count.'
+ : 'Validation passed. The file will be resized to the selected paper and normalized to PDF.',
+ });
  // The useEffect will automatically update the estimate now when pageCount or validationResult changes
  } catch (err) {
  setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
@@ -207,8 +214,10 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  {newFile ? (
  newFile.type.startsWith('image/') ? (
  <img src={URL.createObjectURL(newFile)} alt="Preview" className="w-full h-full object-contain" />
- ) : (
+ ) : newFile.type === 'application/pdf' ? (
  <iframe src={URL.createObjectURL(newFile)} title="PDF Preview" className="w-full h-full border-none" />
+ ) : (
+ <span className="px-6 text-center font-bold text-gray-500">DOCX preview will be available after PDF conversion.</span>
  )
  ) : (
  <iframe src={draft.fileUrl} title="Draft Preview" className="w-full h-full border-none" />

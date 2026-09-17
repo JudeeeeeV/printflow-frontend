@@ -15,6 +15,8 @@ import { AlertModal } from '../../components/common/AlertModal';
 import { PDFDocument } from 'pdf-lib';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
 
+const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -161,7 +163,12 @@ export const NewOrderPage: React.FC = () => {
 
         try {
             await new Promise(resolve => setTimeout(resolve, 1500));
-            setValidationResult({ passed: true, message: 'Validation Passed: 300 DPI, CMYK' });
+            setValidationResult({
+                passed: true,
+                message: selectedFile.type === DOCX_MIME_TYPE
+                    ? 'DOCX accepted. It will be converted, resized to the selected paper, and priced using its final page count.'
+                    : 'Validation passed. The file will be resized to the selected paper and normalized to PDF.',
+            });
             updateEstimate(selectedShopId, detectedSize, printColorMode, detectedPageCount);
         } catch (err) {
             setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
