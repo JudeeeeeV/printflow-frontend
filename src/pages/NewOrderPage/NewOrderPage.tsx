@@ -43,6 +43,10 @@ export const NewOrderPage: React.FC = () => {
     const [shops, setShops] = useState<PrintShop[]>([]);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
     const uploadSectionRef = useRef<HTMLDivElement>(null);
+    const uploadButtonRef = useRef<HTMLButtonElement>(null);
+    const imagePreviewRef = useRef<HTMLImageElement>(null);
+    const pdfPreviewRef = useRef<HTMLIFrameElement>(null);
+    const shouldFocusUploadRef = useRef(false);
 
     const handleShopSelect = (shopId: string) => {
         setSelectedShopId(shopId);
@@ -59,6 +63,8 @@ export const NewOrderPage: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [isValidating, setIsValidating] = useState(false);
     const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>(null);
+    const isFileValidated = validationResult?.passed === true;
+    const canPreviewFile = !!file && isFileValidated && (file.type.startsWith('image/') || file.type === 'application/pdf');
 
     const [estimate, setEstimate] = useState<OrderEstimate | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +79,33 @@ export const NewOrderPage: React.FC = () => {
             .then(data => setShops(data))
             .catch(err => console.error("Failed to fetch shops:", err));
     }, []);
+
+    useEffect(() => {
+        if (!file || !isFileValidated) return;
+
+        const previewElement = file.type.startsWith('image/')
+            ? imagePreviewRef.current
+            : file.type === 'application/pdf'
+                ? pdfPreviewRef.current
+                : null;
+
+        if (!previewElement) return;
+
+        const objectUrl = URL.createObjectURL(file);
+        previewElement.src = objectUrl;
+
+        return () => {
+            previewElement.removeAttribute('src');
+            URL.revokeObjectURL(objectUrl);
+        };
+    }, [file, isFileValidated]);
+
+    useEffect(() => {
+        if (!file && shouldFocusUploadRef.current) {
+            shouldFocusUploadRef.current = false;
+            uploadButtonRef.current?.focus();
+        }
+    }, [file]);
 
     const updateEstimate = (shopId: string, size: string, mode: string, pCount: number) => {
         const shop = shops.find(s => s.id === shopId);
@@ -179,6 +212,17 @@ export const NewOrderPage: React.FC = () => {
         } finally {
             setIsValidating(false);
         }
+    };
+
+    const handleRemoveFile = () => {
+        if (isSubmitting) return;
+
+        shouldFocusUploadRef.current = true;
+        setFile(null);
+        setValidationResult(null);
+        setEstimate(null);
+        setPageCount(1);
+        setIsValidating(false);
     };
 
     const handleSubmitOrder = async () => {
@@ -334,37 +378,54 @@ export const NewOrderPage: React.FC = () => {
                                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-black">Upload your work</p>
                                     </div>
                                     <div className="[&>div]:mb-0">
-                                        <FileUploadZone
-                                            onFileSelect={handleFileSelect}
-                                            isValidating={isValidating}
-                                            validationResult={validationResult}
-                                        />
+                                        {file && isFileValidated ? (
+                                            <div className="border border-[#8d8d8d] bg-carbon-gray-100 p-2 shadow-[0_8px_20px_rgba(22,22,22,0.12)] sm:p-3">
+                                                <div className="flex min-w-0 items-center justify-between gap-4 border-b border-white/20 px-1 pb-3 text-white sm:px-2">
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <span className="h-2.5 w-2.5 shrink-0 bg-carbon-blue-60" />
+                                                        <span className="truncate text-xs font-bold uppercase tracking-[0.16em]">File preview</span>
+                                                    </div>
+                                                    <span className="max-w-[55%] truncate text-xs text-gray-300" title={file.name}>{file.name}</span>
+                                                </div>
+                                                <div className="group relative mt-3 flex h-[340px] items-center justify-center overflow-hidden bg-gray-200 sm:h-[460px] lg:h-[560px]">
+                                                    {file.type.startsWith('image/') ? (
+                                                        <img ref={imagePreviewRef} alt={`Preview of ${file.name}`} className="h-full w-full object-contain" />
+                                                    ) : file.type === 'application/pdf' ? (
+                                                        <iframe ref={pdfPreviewRef} title={`Preview of ${file.name}`} className="h-full w-full border-none bg-white" />
+                                                    ) : (
+                                                        <span className="px-6 text-center font-bold text-gray-500">Preview not available for this file type</span>
+                                                    )}
+                                                    {canPreviewFile && (
+                                                        <div className="pointer-events-none absolute right-3 top-3 opacity-100 transition-opacity group-hover:opacity-0 sm:right-4 sm:top-4">
+                                                            <span className="border-l-4 border-carbon-blue-60 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-carbon-gray-100 shadow-md">Live Preview Active</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col gap-3 border-t border-white/20 px-1 pt-3 sm:flex-row sm:items-center sm:justify-between sm:px-2">
+                                                    <div className="flex min-w-0 items-start gap-2 text-xs font-semibold leading-relaxed text-gray-200" role="status">
+                                                        <span className="mt-1 h-2 w-2 shrink-0 bg-green-500" />
+                                                        <span>{validationResult.message}</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveFile}
+                                                        disabled={isSubmitting}
+                                                        className="min-h-11 shrink-0 self-end bg-red-700 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none sm:self-auto"
+                                                    >
+                                                        Remove file
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <FileUploadZone
+                                                onFileSelect={handleFileSelect}
+                                                isValidating={isValidating}
+                                                validationResult={validationResult}
+                                                uploadButtonRef={uploadButtonRef}
+                                            />
+                                        )}
                                     </div>
                                 </div>
-
-                                {file && validationResult?.passed && (
-                                    <div className="mt-8 border border-[#8d8d8d] bg-carbon-gray-100 p-2 shadow-[0_8px_20px_rgba(22,22,22,0.12)] sm:p-3">
-                                        <div className="flex min-w-0 items-center justify-between gap-4 border-b border-white/20 px-1 pb-3 text-white sm:px-2">
-                                            <div className="flex min-w-0 items-center gap-3">
-                                                <span className="h-2.5 w-2.5 shrink-0 bg-carbon-blue-60" />
-                                                <span className="truncate text-xs font-bold uppercase tracking-[0.16em]">File preview</span>
-                                            </div>
-                                            <span className="max-w-[55%] truncate text-xs text-gray-300">{file.name}</span>
-                                        </div>
-                                        <div className="group relative mt-3 flex h-[340px] items-center justify-center overflow-hidden bg-gray-200 sm:h-[460px] lg:h-[560px]">
-                                            {file.type.startsWith('image/') ? (
-                                                <img src={URL.createObjectURL(file)} alt="Preview" className="h-full w-full object-contain" />
-                                            ) : file.type === 'application/pdf' ? (
-                                                <iframe src={URL.createObjectURL(file)} title="PDF Preview" className="h-full w-full border-none bg-white" />
-                                            ) : (
-                                                <span className="px-6 text-center font-bold text-gray-500">Preview not available for this file type</span>
-                                            )}
-                                            <div className="pointer-events-none absolute right-3 top-3 opacity-100 transition-opacity group-hover:opacity-0 sm:right-4 sm:top-4">
-                                                <span className="border-l-4 border-carbon-blue-60 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-carbon-gray-100 shadow-md">Live Preview Active</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </section>
 

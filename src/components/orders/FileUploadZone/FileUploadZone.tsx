@@ -17,6 +17,7 @@ interface FileUploadZoneProps {
  onFileSelect: (file: File) => void;
  isValidating: boolean;
  validationResult: { passed: boolean; message: string } | null;
+ uploadButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
 const getFileExtension = (name: string): string => {
@@ -50,7 +51,7 @@ const isValidFile = (file: File): { valid: boolean; error: string } => {
  return { valid: true, error: '' };
 };
 
-export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, isValidating, validationResult }) => {
+export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, isValidating, validationResult, uploadButtonRef }) => {
  const [isDragging, setIsDragging] = useState(false);
  const [fileError, setFileError] = useState<string | null>(null);
  const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,6 +108,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
  />
 
  <button
+ ref={uploadButtonRef}
  type="button"
  onClick={() => fileInputRef.current?.click()}
  disabled={isValidating}
