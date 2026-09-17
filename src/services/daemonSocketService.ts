@@ -19,7 +19,7 @@ class DaemonSocketService {
 
   this.socket = io(this.BACKEND_URL, {
   query: { shopId, role: 'clerk' },
-  auth: { token: localStorage.getItem('jwt_token') },
+  withCredentials: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1_000,
   reconnectionDelayMax: 30_000,

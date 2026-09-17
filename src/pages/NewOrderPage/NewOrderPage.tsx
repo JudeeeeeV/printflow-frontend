@@ -14,6 +14,7 @@ import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
 import { AlertModal } from '../../components/common/AlertModal';
 import { PDFDocument } from 'pdf-lib';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
+import { apiClient } from '../../services/apiClient';
 
 const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -23,8 +24,9 @@ export const NewOrderPage: React.FC = () => {
     const tabParam = searchParams.get('tab') as 'new' | 'orders' | 'drafts' | null;
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
-    const handleLogout = () => {
-        localStorage.removeItem('jwt_token');
+    const handleLogout = async () => {
+        await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
+        localStorage.removeItem('user_role');
         navigate('/auth');
     };
 

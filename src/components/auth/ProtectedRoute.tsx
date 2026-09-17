@@ -7,11 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
- const token = localStorage.getItem('jwt_token');
  const role = localStorage.getItem('user_role'); // e.g. 'Print Shop' or 'Student'
  const location = useLocation();
 
- if (!token) {
+ if (!role) {
  // Redirect them to the /auth page, but save the current location they were
  // trying to go to if you want to implement redirect-after-login later.
  return <Navigate to="/auth" state={{ from: location }} replace />;

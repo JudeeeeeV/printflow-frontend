@@ -41,7 +41,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
  };
 
  const response = await authService.login(payload);
- localStorage.setItem('jwt_token', response.token);
  localStorage.setItem('user_role', response.user.roleTag);
  
  if (response.user.roleTag === 'Print Shop') {
