@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { RegistrationForm } from '../../components/auth/RegistrationForm/RegistrationForm';
 import { LoginForm } from '../../components/auth/LoginForm/LoginForm';
 import { ForgotPasswordForm } from '../../components/auth/ForgotPasswordForm/ForgotPasswordForm';
+import printflowLogo from '../../assets/printflow-logo-dark.png';
 import styles from './AuthPage.module.css';
 
 type AuthView = 'login' | 'register' | 'forgot-password';
@@ -31,7 +32,7 @@ export const AuthPage: React.FC = () => {
                 : 'relative min-h-screen overflow-x-clip lg:h-screen lg:overflow-hidden'}`}>
             <aside className={styles.brandPanel}>
                 <div className="flex items-center justify-between gap-4">
-                    <h1 className="text-2xl font-bold tracking-tight">PrintFlow<span className="text-carbon-blue-60">.</span></h1>
+                    <img src={printflowLogo} alt="PrintFlow Logo" className="h-9 pl-3" />
                     <span className="text-xs tracking-[0.16em] text-gray-400">FROM PIXEL TO PAPER</span>
                 </div>
 

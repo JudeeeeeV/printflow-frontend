@@ -3,7 +3,7 @@ import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-d
 import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer, Menu } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
-import printflowLogo from '../../assets/printflowLogo.png';
+import printflowLogo from '../../assets/printflow-logo-light.png';
 
 export const ShopLayout: React.FC = () => {
     const location = useLocation();
