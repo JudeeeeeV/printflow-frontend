@@ -155,6 +155,7 @@ export const ShopLayout: React.FC = () => {
         if (target) setTooltip({ label: target.dataset.navLabel || '', top: target.getBoundingClientRect().top });
     };
     const controlClass = `flex min-h-11 w-full items-center text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`;
+    const labelClass = `whitespace-nowrap overflow-hidden transition-[opacity] duration-200 ease-out motion-reduce:transition-none ${collapsed ? 'w-0 opacity-0' : 'opacity-100'}`;
 
     return (
         <div className="flex h-screen supports-[height:100dvh]:h-dvh flex-col overflow-hidden bg-carbon-gray-10 font-sans text-gray-800">
@@ -170,22 +171,22 @@ export const ShopLayout: React.FC = () => {
                 <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="block h-auto w-40 sm:w-44" />
             </header>
             <div className="flex min-h-0 min-w-0 flex-1">
-            <div aria-hidden="true" onClick={closeDrawer} className={`fixed inset-0 z-30 bg-black/50 transition-opacity duration-200 motion-reduce:transition-none lg:hidden ${isDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} />
+            <div aria-hidden="true" onClick={closeDrawer} className={`fixed inset-0 z-30 bg-black/50 transition-opacity duration-[250ms] ease-out motion-reduce:transition-none lg:hidden ${isDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} />
             {/* Sidebar */}
-            <aside ref={sidebarRef} id="shop-navigation" role={isDesktop ? undefined : 'dialog'} aria-modal={isDrawerOpen || undefined} aria-label="Shop navigation" inert={(!isDesktop && !isDrawerOpen) || isAccountModalOpen} onFocusCapture={showTooltip} onMouseOver={showTooltip} onBlurCapture={() => setTooltip(null)} onMouseLeave={() => setTooltip(null)} onScroll={() => setTooltip(null)} className={`fixed inset-y-0 left-0 z-40 flex max-w-[85vw] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-[#e0e0e0] bg-[#F8F9FA] transition-[transform,opacity] duration-200 motion-reduce:transition-none lg:static lg:translate-x-0 lg:pointer-events-auto lg:opacity-100 lg:transition-none ${collapsed ? 'w-[72px]' : 'w-64'} ${isDrawerOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-full opacity-0'}`}>
+            <aside ref={sidebarRef} id="shop-navigation" role={isDesktop ? undefined : 'dialog'} aria-modal={isDrawerOpen || undefined} aria-label="Shop navigation" inert={(!isDesktop && !isDrawerOpen) || isAccountModalOpen} onFocusCapture={showTooltip} onMouseOver={showTooltip} onBlurCapture={() => setTooltip(null)} onMouseLeave={() => setTooltip(null)} onScroll={() => setTooltip(null)} className={`fixed inset-y-0 left-0 z-40 flex max-w-[85vw] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-[#e0e0e0] bg-[#F8F9FA] transition-[transform,opacity] duration-[250ms] ease-out motion-reduce:transition-none lg:static lg:translate-x-0 lg:pointer-events-auto lg:opacity-100 lg:transition-[width] lg:duration-[250ms] lg:ease-out ${collapsed ? 'w-[72px]' : 'w-64'} ${isDrawerOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-full opacity-0'}`}>
                 <div className="flex h-16 shrink-0 items-center gap-2 border-b border-[#e0e0e0] px-3 lg:hidden">
                     <button type="button" onClick={closeDrawer} aria-label="Close navigation" className="flex h-11 w-11 shrink-0 items-center justify-center hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60"><Close className="h-6 w-6" aria-hidden="true" /></button>
                     <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="h-auto w-40 min-w-0" />
                 </div>
 
                 {/* Profile Section */}
-                <div className={collapsed ? 'sr-only' : 'flex min-h-20 shrink-0 flex-col justify-center border-b border-[#e0e0e0] px-6 py-3'}>
+                <div className={`shrink-0 border-b border-[#e0e0e0] overflow-hidden transition-[max-height,opacity,padding] duration-[250ms] ease-out motion-reduce:transition-none ${collapsed ? 'max-h-0 opacity-0 py-0' : 'max-h-24 opacity-100 px-6 py-3'}`}>
                     <h2 className="text-lg font-bold text-carbon-gray-100 truncate">{shopName}</h2>
                     <p className="text-sm text-gray-500">Shop Dashboard</p>
                 </div>
 
                 <nav aria-label="Shop pages" className={`flex-1 space-y-1 py-4 ${collapsed ? 'px-2' : 'px-4'}`}>
-                    <p className={collapsed ? 'sr-only' : 'mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-black'}>Menu</p>
+                    <p className={`overflow-hidden transition-[max-height,opacity] duration-[250ms] ease-out motion-reduce:transition-none ${collapsed ? 'max-h-0 opacity-0' : 'max-h-8 opacity-100 mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-black'}`}>Menu</p>
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
@@ -206,7 +207,7 @@ export const ShopLayout: React.FC = () => {
                                     }`}
                             >
                                 <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${isActive ? 'text-blue-600' : 'text-black'}`} />
-                                <span className={collapsed ? 'sr-only' : ''}>{item.name}</span>
+                                <span className={labelClass}>{item.name}</span>
                             </Link>
                         );
                     })}
@@ -215,19 +216,19 @@ export const ShopLayout: React.FC = () => {
                 <div className={`shrink-0 space-y-2 border-t border-[#e0e0e0] py-4 ${collapsed ? 'px-2' : 'px-4'}`}>
                     <button data-nav-label="Account Settings" onClick={event => openAccountModal(event, () => setIsChangePasswordOpen(true))} className={`${controlClass} py-2 text-black hover:bg-gray-100`}>
                         <UserProfile aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
-                        <span className={collapsed ? 'sr-only' : ''}>Account Settings</span>
+                        <span className={labelClass}>Account Settings</span>
                     </button>
                     <button data-nav-label="Help" onClick={event => openAccountModal(event, () => setIsHelpOpen(true))} className={`${controlClass} py-2 text-black hover:bg-gray-100`}>
                         <Help aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
-                        <span className={collapsed ? 'sr-only' : ''}>Help</span>
+                        <span className={labelClass}>Help</span>
                     </button>
                     <button data-nav-label="Support" onClick={event => openAccountModal(event, () => setIsSupportOpen(true))} className={`${controlClass} py-2 text-black hover:bg-gray-100`}>
                         <HelpDesk aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
-                        <span className={collapsed ? 'sr-only' : ''}>Support</span>
+                        <span className={labelClass}>Support</span>
                     </button>
                     <button data-nav-label="Logout" onClick={handleLogout} className={`${controlClass} mt-4 justify-center bg-carbon-blue-60 py-2.5 font-bold text-white hover:bg-carbon-blue-70`}>
                         <Logout aria-hidden="true" className="h-5 w-5 shrink-0" />
-                        <span className={collapsed ? 'sr-only' : ''}>Logout</span>
+                        <span className={labelClass}>Logout</span>
                     </button>
                 </div>
             </aside>
