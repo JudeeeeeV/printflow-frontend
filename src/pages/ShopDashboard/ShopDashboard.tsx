@@ -56,7 +56,10 @@ export const ShopDashboard: React.FC = () => {
  shopService.getMyShop()
  .then(data => {
  setShopData(data);
+ if (data.verification_status === 'VERIFIED' || data.verification_status === 'OPEN') {
  return orderService.getShopOrders();
+ }
+ return [];
  })
  .then(orders => {
  setShopOrders(orders);
@@ -70,15 +73,18 @@ export const ShopDashboard: React.FC = () => {
 
  useEffect(() => {
  loadShopData();
- 
- // Optional polling to keep the Kanban board alive
+ }, []);
+
+ useEffect(() => {
+ if (shopData?.verification_status === 'VERIFIED' || shopData?.verification_status === 'OPEN') {
  const timer = setInterval(() => {
  orderService.getShopOrders()
  .then(orders => setShopOrders(orders))
  .catch(console.error);
  }, 10000);
  return () => clearInterval(timer);
- }, []);
+ }
+ }, [shopData?.verification_status]);
 
  useEffect(() => {
  if (shopData?.id) {
