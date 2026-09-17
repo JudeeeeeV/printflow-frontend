@@ -64,7 +64,7 @@ export const AuthPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className={styles.brandCopy}>
+                <div className={`${styles.brandCopy} hidden lg:block`}>
                     <h2 className={styles.headline}>Good ideas.<br /><span className="text-gray-400">Great prints.</span></h2>
                     <p className="mt-4 max-w-sm text-base leading-relaxed text-gray-300">
                         The late-night thesis. The first portfolio.<br className="hidden xl:block" /> Whatever you make, bring it to paper.
