@@ -300,14 +300,14 @@ export const NewOrderPage: React.FC = () => {
                 {activeTab === 'new' && (
                     <div className="grid grid-cols-1 items-start gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
                         <section className="min-w-0 border border-gray-200 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
-                            <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-5 sm:flex-row sm:items-end sm:justify-between sm:px-7 lg:px-8">
+                            <div className="border-b border-gray-200 px-5 py-5 sm:px-7 lg:px-8">
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Order builder</p>
                                     <h2 className="mt-1 text-2xl font-black tracking-tight text-carbon-gray-100">Create New Order</h2>
+                                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-500">
+                                        Select a shop first, then upload your print-ready work.
+                                    </p>
                                 </div>
-                                <p className="max-w-sm text-sm leading-relaxed text-gray-500 sm:text-right">
-                                    Select a shop first, then upload your print-ready work.
-                                </p>
                             </div>
 
                             <div className="p-5 sm:p-7 lg:p-8">

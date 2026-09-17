@@ -34,18 +34,18 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
  </div>
  <div>
  <label className="block text-sm font-bold text-gray-700 mb-2">Color Mode</label>
- <div className="flex bg-gray-100 p-1 ">
+ <div className="flex bg-gray-200 p-1 ">
  <button
  onClick={() => setPrintColorMode('BLACK_AND_WHITE')}
  disabled={isSubmitting}
- className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === 'BLACK_AND_WHITE' ? 'bg-white text-carbon-gray-100 ' : 'text-gray-500 hover:text-gray-700'}`}
+ className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === 'BLACK_AND_WHITE' ? 'bg-black/90 text-white ' : 'text-gray-500 hover:text-gray-700'}`}
  >
  B&W
  </button>
  <button
  onClick={() => setPrintColorMode('COLOR')}
  disabled={isSubmitting}
- className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === 'COLOR' ? 'bg-white text-carbon-gray-100 ' : 'text-gray-500 hover:text-gray-700'}`}
+ className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === 'COLOR' ? 'bg-black/90 text-white ' : 'text-gray-500 hover:text-gray-700'}`}
  >
  Color
  </button>
@@ -95,8 +95,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
  </button>
 
  <div className="mt-6 text-xs text-gray-500 flex flex-col gap-2 font-medium">
-                    <p>PrintFlow Quality Guarantee</p>
-                    <p>Secure Payment Processing</p>
+                    <p className="text-center">PrintFlow Quality Guarantee</p>
+                    <p className="text-center">Secure Payment Processing</p>
  </div>
  </div>
  </div>
