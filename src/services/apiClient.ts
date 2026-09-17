@@ -5,6 +5,23 @@
  */
 import { API_URL as BASE_URL } from '../config/runtime';
 
+let refreshPromise: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+ if (!refreshPromise) {
+ refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+ method: 'POST',
+ credentials: 'include',
+ })
+ .then(response => response.ok)
+ .catch(() => false)
+ .finally(() => {
+ refreshPromise = null;
+ });
+ }
+ return refreshPromise;
+}
+
 export class ApiError extends Error {
  status: number;
  data: unknown;
@@ -29,17 +46,23 @@ export async function apiClient<T>(
  headers.set('Content-Type', 'application/json');
  }
 
- // Retrieve token from storage and attach to headers for protected routes
- const token = localStorage.getItem('jwt_token');
- if (token) headers.set('Authorization', `Bearer ${token}`);
-
  const config: RequestInit = {
  ...options,
  headers,
+ credentials: 'include',
  };
 
  try {
- const response = await fetch(url, config);
+ let response = await fetch(url, config);
+
+ if (response.status === 401 && !endpoint.startsWith('/auth')) {
+ if (await refreshSession()) {
+ response = await fetch(url, config);
+ } else {
+ localStorage.removeItem('user_role');
+ window.location.href = '/auth';
+ }
+ }
 
  // Attempt to parse JSON response
  let data;
@@ -51,10 +74,6 @@ export async function apiClient<T>(
  }
 
  if (!response.ok) {
- if (response.status === 401 && !endpoint.startsWith('/auth')) {
- localStorage.removeItem('jwt_token');
- window.location.href = '/auth';
- }
  throw new ApiError(
  data?.message || 'An error occurred during the request.',
  response.status,

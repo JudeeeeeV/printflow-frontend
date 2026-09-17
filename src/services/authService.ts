@@ -1,5 +1,6 @@
 // src/services/authService.ts
 import { supabase } from '../lib/supabaseClient';
+import { apiClient } from './apiClient';
 
 export interface RegisterPayload {
  email: string;
@@ -14,7 +15,6 @@ export interface LoginPayload {
 }
 
 export interface AuthResponse {
- token: string;
  user: {
    id: string;
    email: string;
@@ -61,40 +61,10 @@ export const authService = {
  },
 
  async login(payload: LoginPayload): Promise<AuthResponse> {
-   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-     email: payload.email,
-     password: payload.passwordHash,
+   return apiClient<AuthResponse>('/auth/login', {
+     method: 'POST',
+     body: JSON.stringify({ email: payload.email, password: payload.passwordHash }),
    });
-   
-   if (authError) throw new Error(authError.message);
-   
-   if (!authData.session) {
-     throw new Error('Verify your email before signing in.');
-   }
-   
-   // Fetch user's role from the public.users table
-   const { data: userProfile, error: profileError } = await supabase
-     .from('users')
-     .select('role')
-     .eq('id', authData.user.id)
-     .single();
-     
-   if (profileError || !userProfile) {
-     // Trigger might still be running or hasn't finished provisioning
-     // Or they didn't get their profile created properly
-     throw new Error('User profile not found. Please try logging in again in a few seconds.');
-   }
-   
-   const roleTag = userProfile.role === 'CLERK' || userProfile.role === 'MANAGER' ? 'Print Shop' : 'Student';
-   
-   return {
-     token: authData.session.access_token,
-     user: {
-       id: authData.user.id,
-       email: authData.user.email || '',
-       roleTag
-     }
-   };
  },
 
  async sendPasswordReset(email: string): Promise<{ message: string }> {
@@ -132,24 +102,9 @@ export const authService = {
      throw new Error('Your new password cannot be the same as your old password.');
    }
    
-   const { data: { user } } = await supabase.auth.getUser();
-   if (!user?.email) throw new Error("User not found");
-   
-   // Verify current password by signing in again
-   const { error: signInError } = await supabase.auth.signInWithPassword({
-     email: user.email,
-     password: currentPassword
+   return apiClient('/auth/change-password', {
+     method: 'POST',
+     body: JSON.stringify({ currentPassword, newPassword }),
    });
-   
-   if (signInError) throw new Error('Incorrect current password.');
-   
-   // Update to new password
-   const { error: updateError } = await supabase.auth.updateUser({
-     password: newPassword
-   });
-   
-   if (updateError) throw new Error('Failed to update password.');
-   
-   return { success: true, message: 'Password updated successfully.' };
  }
 };

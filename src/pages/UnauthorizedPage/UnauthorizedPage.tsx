@@ -24,7 +24,6 @@ export const UnauthorizedPage: React.FC = () => {
  } else if (role === 'Student') {
  navigate('/new-order');
  } else {
- localStorage.removeItem('jwt_token');
  localStorage.removeItem('user_role');
  navigate('/auth');
  }

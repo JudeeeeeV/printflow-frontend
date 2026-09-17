@@ -105,7 +105,6 @@ export const ShopLayout: React.FC = () => {
         };
     }, [isAccountModalOpen]);
 
-    const token = localStorage.getItem('jwt_token');
     const role = localStorage.getItem('user_role');
 
     useEffect(() => {
@@ -122,12 +121,12 @@ export const ShopLayout: React.FC = () => {
         fetchShop();
     }, []);
 
-    if (!token || role !== 'Print Shop') {
+    if (role !== 'Print Shop') {
         return <Navigate to="/auth" replace />;
     }
 
-    const handleLogout = () => {
-        localStorage.removeItem('jwt_token');
+    const handleLogout = async () => {
+        await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
         localStorage.removeItem('user_role');
         navigate('/auth');
     };

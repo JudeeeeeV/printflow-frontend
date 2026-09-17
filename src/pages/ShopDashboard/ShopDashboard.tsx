@@ -12,6 +12,7 @@ import type { DaemonStatus } from '../../services/daemonSocketService';
 import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 import { AlertModal } from '../../components/common/AlertModal';
+import { apiClient } from '../../services/apiClient';
 
 export const ShopDashboard: React.FC = () => {
  const navigate = useNavigate();
@@ -118,8 +119,8 @@ export const ShopDashboard: React.FC = () => {
  }
  }, [shopData?.id]);
 
- const handleLogout = () => {
- localStorage.removeItem('jwt_token');
+ const handleLogout = async () => {
+ await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
  localStorage.removeItem('user_role');
  navigate('/auth');
  };
@@ -212,7 +213,7 @@ export const ShopDashboard: React.FC = () => {
  window.URL.revokeObjectURL(objectUrl);
  } catch (err) {
  console.error('Failed to force download, falling back to new tab:', err);
- window.open(assetUrl, '_blank');
+ window.open(assetUrl, '_blank', 'noopener,noreferrer');
  }
  downloadCount++;
  try {
@@ -242,9 +243,9 @@ export const ShopDashboard: React.FC = () => {
  try {
   const response = await fetch(`${API_URL}/edge/batch-execute`, {
  method: 'POST',
+ credentials: 'include',
  headers: {
- 'Content-Type': 'application/json',
- 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+ 'Content-Type': 'application/json'
  },
  body: JSON.stringify({ 
  orderIds: selectedReadyOrders,
