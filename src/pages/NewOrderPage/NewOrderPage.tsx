@@ -311,10 +311,10 @@ export const NewOrderPage: React.FC = () => {
                             </div>
 
                             <div className="p-5 sm:p-7 lg:p-8">
-                                <div className="border-l-4 border-carbon-blue-60 pl-4 sm:pl-5">
+                                <div className="h-[27rem]">
                                     <div className="mb-5 flex items-center gap-3">
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-blue-60 text-xs font-black text-white">01</span>
-                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Choose your print partner</p>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-black">Choose your print partner</p>
                                     </div>
                                     <div className="[&>div]:mb-0">
                                         <ShopSelector
@@ -331,7 +331,7 @@ export const NewOrderPage: React.FC = () => {
                                 >
                                     <div className="mb-5 flex items-center gap-3">
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-gray-100 text-xs font-black text-white">02</span>
-                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Upload your work</p>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-black">Upload your work</p>
                                     </div>
                                     <div className="[&>div]:mb-0">
                                         <FileUploadZone
