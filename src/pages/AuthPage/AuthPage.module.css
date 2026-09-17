@@ -1,7 +1,7 @@
 .brandPanel {
     @apply relative flex flex-col overflow-hidden bg-carbon-gray-100 text-white;
-    padding: 24px;
-    gap: 24px;
+    padding: 16px;
+    gap: 16px;
 }
 
 .specimen {

@@ -50,49 +50,52 @@ export const ShopSettingsPage: React.FC = () => {
  };
 
  return (
- <div className="p-8 font-sans max-w-2xl">
+ <div className="mx-auto w-full min-w-0 max-w-2xl p-4 font-sans sm:p-6 lg:p-8">
  <h1 className="text-2xl font-bold text-carbon-gray-100 mb-6">Shop Settings</h1>
  
  {message && (
- <div className={`mb-4 p-4 text-sm font-medium ${message.includes('success') ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-carbon-gray-100'}`}>
+ <div role="status" className={`mb-4 p-4 text-sm font-medium ${message.includes('success') ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-carbon-gray-100'}`}>
  {message}
  </div>
  )}
 
- <form onSubmit={handleSave} className="bg-white border border-[#e0e0e0] p-6 space-y-6">
+ <form onSubmit={handleSave} className="bg-white border border-[#e0e0e0] p-4 space-y-6 sm:p-6">
  <div>
- <label className="block text-sm font-medium text-gray-700 mb-1">Print Shop Name</label>
+ <label htmlFor="settings-shop-name" className="block text-sm font-medium text-gray-700 mb-1">Print Shop Name</label>
  <input 
  type="text" 
+ id="settings-shop-name"
  value={shopName}
  onChange={(e) => setShopName(e.target.value)}
- className="w-full border border-[#8d8d8d] px-3 py-2 text-sm focus:outline-none focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60" 
+ className="min-h-11 w-full border border-[#8d8d8d] px-3 py-2 text-base focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm"
  required
  />
  </div>
  
  <div>
- <label className="block text-sm font-medium text-gray-700 mb-1">Location / Address</label>
+ <label htmlFor="settings-location" className="block text-sm font-medium text-gray-700 mb-1">Location / Address</label>
  <input 
  type="text" 
+ id="settings-location"
  value={address}
  onChange={(e) => setAddress(e.target.value)}
- className="w-full border border-[#8d8d8d] px-3 py-2 text-sm focus:outline-none focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60" 
+ className="min-h-11 w-full border border-[#8d8d8d] px-3 py-2 text-base focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm"
  />
  </div>
  
  <div>
- <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+ <label htmlFor="settings-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
  <textarea 
+ id="settings-description"
  rows={4}
  value={description}
  onChange={(e) => setDescription(e.target.value)}
- className="w-full border border-[#8d8d8d] px-3 py-2 text-sm focus:outline-none focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60" 
+ className="min-h-11 w-full border border-[#8d8d8d] px-3 py-2 text-base focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm"
  />
  </div>
 
  <div className="pt-4 flex justify-end">
- <button disabled={isSaving} type="submit" className="flex items-center space-x-2 bg-carbon-blue-60 hover:bg-carbon-blue-70 text-white px-4 py-2 font-medium text-sm transition-colors disabled:opacity-50">
+ <button disabled={isSaving} type="submit" className="flex min-h-11 w-full items-center justify-center space-x-2 bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:opacity-50 motion-reduce:transition-none sm:w-auto">
  <Save className="w-4 h-4" />
  <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
  </button>

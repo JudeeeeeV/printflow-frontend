@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { RegistrationForm } from '../../components/auth/RegistrationForm/RegistrationForm';
 import { LoginForm } from '../../components/auth/LoginForm/LoginForm';
 import { ForgotPasswordForm } from '../../components/auth/ForgotPasswordForm/ForgotPasswordForm';
+import printflowLogo from '../../assets/printflow-logo-dark.png';
 import styles from './AuthPage.module.css';
 
 type AuthView = 'login' | 'register' | 'forgot-password';
@@ -30,7 +31,7 @@ export const AuthPage: React.FC = () => {
                 : 'relative min-h-screen overflow-x-clip lg:h-screen lg:overflow-hidden'}`}>
             <aside className={styles.brandPanel}>
                 <div className="flex items-center justify-between gap-4">
-                    <h1 className="text-2xl font-bold tracking-tight">PrintFlow<span className="text-carbon-blue-60">.</span></h1>
+                    <img src={printflowLogo} alt="PrintFlow Logo" className="h-9 pl-3" />
                     <span className="text-xs tracking-[0.16em] text-gray-400">FROM PIXEL TO PAPER</span>
                 </div>
 
@@ -63,7 +64,7 @@ export const AuthPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className={styles.brandCopy}>
+                <div className={`${styles.brandCopy} hidden lg:block`}>
                     <h2 className={styles.headline}>Good ideas.<br /><span className="text-gray-400">Great prints.</span></h2>
                     <p className="mt-4 max-w-sm text-base leading-relaxed text-gray-300">
                         The late-night thesis. The first portfolio.<br className="hidden xl:block" /> Whatever you make, bring it to paper.

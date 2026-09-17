@@ -532,7 +532,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
             aria-labelledby="revoke-agent-title"
             aria-describedby="revoke-agent-description"
             onKeyDown={handleRevokeDialogKeyDown}
-            className="w-full max-w-md border-t-4 border-carbon-blue-60 bg-white shadow-2xl"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto border-t-4 border-carbon-blue-60 bg-white shadow-2xl"
           >
             <div className="p-6 sm:p-7">
               <span className="mb-5 flex h-11 w-11 items-center justify-center bg-carbon-gray-100 text-white">

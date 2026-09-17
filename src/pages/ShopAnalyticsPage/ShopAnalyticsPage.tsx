@@ -437,7 +437,7 @@ export const ShopAnalyticsPage: React.FC = () => {
   if (isLoading && !analyticsData)
     return (
       <div
-        className="flex h-full flex-col overflow-y-auto overflow-x-hidden bg-carbon-gray-10 p-4 font-sans sm:p-6 lg:p-8"
+        className="min-h-full min-w-0 bg-carbon-gray-10 p-4 font-sans sm:p-6 lg:p-8"
         aria-busy="true"
       >
         <AnalyticsSkeleton />
@@ -465,7 +465,7 @@ export const ShopAnalyticsPage: React.FC = () => {
 
   return (
     <div
-      className="relative isolate flex-1 overflow-y-auto overflow-x-hidden bg-carbon-gray-10 font-sans text-carbon-gray-100"
+      className="relative min-h-full min-w-0 bg-carbon-gray-10 font-sans text-carbon-gray-100"
       aria-busy={isLoading}
     >
       <div className="mx-auto w-full max-w-7xl space-y-5 p-4 sm:space-y-6 sm:p-6 lg:p-8">
