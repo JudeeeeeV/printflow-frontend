@@ -153,18 +153,18 @@ export const ShopLayout: React.FC = () => {
         const target = (event.target as HTMLElement).closest<HTMLElement>('[data-nav-label]');
         if (target) setTooltip({ label: target.dataset.navLabel || '', top: target.getBoundingClientRect().top });
     };
-    const controlClass = `flex min-h-11 w-full items-center text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`;
-    const labelClass = `whitespace-nowrap overflow-hidden transition-[opacity] duration-200 ease-out motion-reduce:transition-none ${collapsed ? 'w-0 opacity-0' : 'opacity-100'}`;
+    const controlClass = 'flex min-h-11 w-full items-center text-left text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60';
+    const labelClass = `truncate whitespace-nowrap pr-2 transition-[opacity] duration-200 ease-out motion-reduce:transition-none ${collapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`;
 
     return (
         <div className="flex h-screen supports-[height:100dvh]:h-dvh flex-col overflow-hidden bg-carbon-gray-10 font-sans text-gray-800">
             <a href="#shop-main-content" onClick={() => mainRef.current?.focus()} className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[110] focus:bg-carbon-blue-60 focus:px-4 focus:py-3 focus:text-white">Skip to content</a>
-            <header inert={isDrawerOpen || isAccountModalOpen} className="z-20 flex h-16 shrink-0 items-center gap-2 border-b border-[#e0e0e0] bg-[#F8F9FA] px-3 sm:px-4">
+            <header inert={isDrawerOpen || isAccountModalOpen} className="z-20 flex h-16 shrink-0 items-center gap-2 border-b border-[#e0e0e0] bg-[#F8F9FA] px-3">
                 <button ref={hamburgerRef} type="button" onClick={() => {
                     setTooltip(null);
                     if (isDesktop) setIsDesktopCollapsed(value => !value);
                     else setDrawerRoute(location.key);
-                }} aria-label={isDesktop ? (collapsed ? 'Expand navigation' : 'Collapse navigation') : 'Open navigation'} aria-expanded={isDesktop ? !collapsed : isDrawerOpen} aria-controls="shop-navigation" className="flex h-11 w-11 shrink-0 items-center justify-center text-black transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none">
+                }} aria-label={isDesktop ? (collapsed ? 'Expand navigation' : 'Collapse navigation') : 'Open navigation'} aria-expanded={isDesktop ? !collapsed : isDrawerOpen} aria-controls="shop-navigation" className="flex h-11 w-12 shrink-0 items-center justify-center text-black transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none">
                     <Menu className="h-6 w-6" aria-hidden="true" />
                 </button>
                 <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="block h-auto w-40 sm:w-44" />
@@ -174,7 +174,7 @@ export const ShopLayout: React.FC = () => {
             {/* Sidebar */}
             <aside ref={sidebarRef} id="shop-navigation" role={isDesktop ? undefined : 'dialog'} aria-modal={isDrawerOpen || undefined} aria-label="Shop navigation" inert={(!isDesktop && !isDrawerOpen) || isAccountModalOpen} onFocusCapture={showTooltip} onMouseOver={showTooltip} onBlurCapture={() => setTooltip(null)} onMouseLeave={() => setTooltip(null)} onScroll={() => setTooltip(null)} className={`fixed inset-y-0 left-0 z-40 flex max-w-[85vw] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-[#e0e0e0] bg-[#F8F9FA] transition-[transform,opacity] duration-[250ms] ease-out motion-reduce:transition-none lg:static lg:translate-x-0 lg:pointer-events-auto lg:opacity-100 lg:transition-[width] lg:duration-[250ms] lg:ease-out ${collapsed ? 'w-[72px]' : 'w-64'} ${isDrawerOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-full opacity-0'}`}>
                 <div className="flex h-16 shrink-0 items-center gap-2 border-b border-[#e0e0e0] px-3 lg:hidden">
-                    <button type="button" onClick={closeDrawer} aria-label="Close navigation" className="flex h-11 w-11 shrink-0 items-center justify-center hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60"><Close className="h-6 w-6" aria-hidden="true" /></button>
+                    <button type="button" onClick={closeDrawer} aria-label="Close navigation" className="flex h-11 w-12 shrink-0 items-center justify-center hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60"><Close className="h-6 w-6" aria-hidden="true" /></button>
                     <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="h-auto w-40 min-w-0" />
                 </div>
 
@@ -184,8 +184,10 @@ export const ShopLayout: React.FC = () => {
                     <p className="text-sm text-gray-500">Shop Dashboard</p>
                 </div>
 
-                <nav aria-label="Shop pages" className={`flex-1 space-y-1 py-4 ${collapsed ? 'px-2' : 'px-4'}`}>
-                    <p className={`overflow-hidden transition-[max-height,opacity] duration-[250ms] ease-out motion-reduce:transition-none ${collapsed ? 'max-h-0 opacity-0' : 'max-h-8 opacity-100 mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-black'}`}>Menu</p>
+                <nav aria-label="Shop pages" className="flex-1 space-y-1 py-4 px-3 overflow-hidden">
+                    <div className={`overflow-hidden transition-[max-height,opacity] duration-[250ms] ease-out motion-reduce:transition-none ${collapsed ? 'max-h-0 opacity-0' : 'max-h-8 opacity-100'}`}>
+                        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-black">Menu</p>
+                    </div>
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
@@ -200,33 +202,43 @@ export const ShopLayout: React.FC = () => {
                                     setTooltip(null);
                                     if (!isDesktop) requestAnimationFrame(() => mainRef.current?.focus());
                                 }}
-                                className={`${controlClass} py-2.5 ${isActive
+                                className={`${controlClass} ${isActive
                                     ? 'bg-blue-100 text-blue-600'
                                     : 'text-black hover:bg-gray-100'
                                     }`}
                             >
-                                <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${isActive ? 'text-blue-600' : 'text-black'}`} />
+                                <span className="flex h-11 w-12 shrink-0 items-center justify-center">
+                                    <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${isActive ? 'text-blue-600' : 'text-black'}`} />
+                                </span>
                                 <span className={labelClass}>{item.name}</span>
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className={`shrink-0 space-y-2 border-t border-[#e0e0e0] py-4 ${collapsed ? 'px-2' : 'px-4'}`}>
-                    <button data-nav-label="Account Settings" onClick={event => openAccountModal(event, () => setIsChangePasswordOpen(true))} className={`${controlClass} py-2 text-black hover:bg-gray-100`}>
-                        <UserProfile aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
+                <div className="shrink-0 space-y-2 border-t border-[#e0e0e0] py-4 px-3 overflow-hidden">
+                    <button data-nav-label="Account Settings" onClick={event => openAccountModal(event, () => setIsChangePasswordOpen(true))} className={`${controlClass} text-black hover:bg-gray-100`}>
+                        <span className="flex h-11 w-12 shrink-0 items-center justify-center">
+                            <UserProfile aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
+                        </span>
                         <span className={labelClass}>Account Settings</span>
                     </button>
-                    <button data-nav-label="Help" onClick={event => openAccountModal(event, () => setIsHelpOpen(true))} className={`${controlClass} py-2 text-black hover:bg-gray-100`}>
-                        <Help aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
+                    <button data-nav-label="Help" onClick={event => openAccountModal(event, () => setIsHelpOpen(true))} className={`${controlClass} text-black hover:bg-gray-100`}>
+                        <span className="flex h-11 w-12 shrink-0 items-center justify-center">
+                            <Help aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
+                        </span>
                         <span className={labelClass}>Help</span>
                     </button>
-                    <button data-nav-label="Support" onClick={event => openAccountModal(event, () => setIsSupportOpen(true))} className={`${controlClass} py-2 text-black hover:bg-gray-100`}>
-                        <HelpDesk aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
+                    <button data-nav-label="Support" onClick={event => openAccountModal(event, () => setIsSupportOpen(true))} className={`${controlClass} text-black hover:bg-gray-100`}>
+                        <span className="flex h-11 w-12 shrink-0 items-center justify-center">
+                            <HelpDesk aria-hidden="true" className="h-5 w-5 shrink-0 text-black" />
+                        </span>
                         <span className={labelClass}>Support</span>
                     </button>
-                    <button data-nav-label="Logout" onClick={handleLogout} className={`${controlClass} mt-4 justify-center bg-carbon-blue-60 py-2.5 font-bold text-white hover:bg-carbon-blue-70`}>
-                        <Logout aria-hidden="true" className="h-5 w-5 shrink-0" />
+                    <button data-nav-label="Logout" onClick={handleLogout} className={`${controlClass} mt-4 bg-carbon-blue-60 font-bold text-white hover:bg-carbon-blue-70`}>
+                        <span className="flex h-11 w-12 shrink-0 items-center justify-center">
+                            <Logout aria-hidden="true" className="h-5 w-5 shrink-0 text-white" />
+                        </span>
                         <span className={labelClass}>Logout</span>
                     </button>
                 </div>
