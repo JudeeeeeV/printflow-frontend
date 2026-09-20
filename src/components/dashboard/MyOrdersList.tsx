@@ -78,7 +78,7 @@ export const MyOrdersList: React.FC = () => {
  };
 
  return (
- <div className="bg-white border border-gray-100 overflow-hidden max-w-6xl mx-auto mt-8">
+ <div className="bg-white border border-black overflow-hidden max-w-6xl mx-auto mt-8">
  <div className="p-4 border-b border-gray-100 bg-carbon-gray-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div className="flex items-center space-x-2">
  <Filter className="w-4 h-4 text-gray-500" />

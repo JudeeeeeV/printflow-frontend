@@ -16,6 +16,7 @@ import { PDFDocument } from 'pdf-lib';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
 import { apiClient } from '../../services/apiClient';
 import printflowLogoDark from '../../assets/printflow-logo-dark.png';
+import styles from './NewOrderPage.module.css';
 
 const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -266,22 +267,25 @@ export const NewOrderPage: React.FC = () => {
 
     return (
         <div className="relative isolate min-h-screen overflow-x-clip bg-carbon-gray-10 font-sans text-carbon-gray-100">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[26rem] overflow-hidden">
-                <div className="absolute inset-x-0 top-0 h-44 bg-carbon-gray-100" />
-                <div className="absolute right-0 top-0 h-44 w-1/3 bg-carbon-blue-60 opacity-10" />
-                <div className="absolute right-[12%] top-24 h-28 w-28 border-[24px] border-carbon-blue-60 opacity-10" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[26rem] overflow-hidden sm:block">
+                <div className="absolute inset-0 bg-gradient-to-b from-black to-carbon-gray-10" />
             </div>
 
             <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-                <header className="mb-6 border border-gray-200 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:mb-8">
-                    <div className="relative overflow-hidden bg-carbon-gray-100 px-5 py-6 text-white sm:px-8 sm:py-8">
-                        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-80 sm:block">
-                            <div className="absolute -right-16 -top-24 h-64 w-64 border-[44px] border-carbon-blue-60 opacity-30" />
-                            <div className="absolute bottom-0 right-0 h-14 w-44 bg-[#393939]" />
-                            <div className="absolute bottom-0 right-44 h-14 w-14 border border-white/30" />
+                <header className="mb-6 border-x border-t border-gray-200 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:mb-8">
+                    <div className="relative isolate overflow-hidden bg-carbon-gray-100 px-5 py-6 text-white sm:px-8 sm:py-8">
+                        <div aria-hidden="true" className={styles.ambientLayer}>
+                            <span className={styles.glow} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleOne}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleTwo}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleThree}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleFour}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleFive}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleSix}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleSeven}`} />
                         </div>
 
-                        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                             <div className="max-w-2xl">
                                 <img
                                     src={printflowLogoDark}
@@ -343,7 +347,7 @@ export const NewOrderPage: React.FC = () => {
                 <div key={activeTab} className="animate-slide-fade pb-10">
                 {activeTab === 'new' && (
                     <div className="grid grid-cols-1 items-start gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-                        <section className="min-w-0 border border-gray-200 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
+                        <section className="min-w-0 border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
                             <div className="border-b border-gray-200 px-5 py-5 sm:px-7 lg:px-8">
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Order builder</p>
@@ -430,7 +434,7 @@ export const NewOrderPage: React.FC = () => {
                         </section>
 
                         <aside className="min-w-0 self-stretch">
-                            <div className="sticky top-6">
+                            <div className="sticky top-6 border border-black">
                                 <div className="border-b-4 border-carbon-blue-60 bg-carbon-gray-100 px-5 py-4 text-white">
                                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#87B0FE]">Final step</p>
                                     <p className="mt-1 text-sm text-gray-300">Review the details and submit when everything looks right.</p>
@@ -459,7 +463,7 @@ export const NewOrderPage: React.FC = () => {
                 )}
 
                 {activeTab === 'drafts' && !editingDraft && (
-                    <div className="mx-auto max-w-7xl border-t-4 border-carbon-blue-60 bg-white p-5 shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:p-7 lg:p-8">
+                    <div className="mx-auto max-w-7xl border border-black bg-white p-5 shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:p-7 lg:p-8">
                         <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Saved work</p>
                         <h2 className="mb-6 text-2xl font-black tracking-tight text-carbon-gray-100">My Drafts</h2>
                         <MyDraftsList onEditDraft={setEditingDraft} />

@@ -1,0 +1,225 @@
+.ambientLayer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.glow {
+    position: absolute;
+    right: -14rem;
+    bottom: -12rem;
+    width: 38rem;
+    height: 26rem;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(15, 98, 254, 0.92) 0%,
+        rgba(15, 98, 254, 0.48) 30%,
+        rgba(20, 44, 91, 0.18) 56%,
+        transparent 74%
+    );
+    filter: blur(24px);
+    mix-blend-mode: screen;
+    opacity: 0.24;
+    transform: translate3d(0, 0, 0) scale(0.96);
+    animation: glowBreathe 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    will-change: opacity, transform;
+}
+
+.floatingRectangle {
+    position: absolute;
+    display: block;
+    transform-origin: center;
+    will-change: transform;
+}
+
+.rectangleOne {
+    left: 4%;
+    top: 18%;
+    width: 5.5rem;
+    height: 0.75rem;
+    background: rgba(20, 44, 91, 0.62);
+    animation: driftOne 17s cubic-bezier(0.45, 0, 0.55, 1) -6s infinite;
+}
+
+.rectangleTwo {
+    left: 29%;
+    bottom: 12%;
+    width: 2.75rem;
+    height: 1.25rem;
+    border: 1px solid rgba(241, 241, 241, 0.18);
+    background: rgba(241, 241, 241, 0.05);
+    animation: driftTwo 21s cubic-bezier(0.45, 0, 0.55, 1) -13s infinite;
+}
+
+.rectangleThree {
+    left: 48%;
+    top: 14%;
+    width: 7.5rem;
+    height: 0.9rem;
+    background: rgba(57, 57, 57, 0.72);
+    animation: driftThree 23s cubic-bezier(0.45, 0, 0.55, 1) -4s infinite;
+}
+
+.rectangleFour {
+    right: 24%;
+    top: 30%;
+    width: 3.5rem;
+    height: 1.1rem;
+    background: rgba(15, 98, 254, 0.22);
+    animation: driftFour 16s cubic-bezier(0.45, 0, 0.55, 1) -10s infinite;
+}
+
+.rectangleFive {
+    right: 10%;
+    top: 12%;
+    width: 4.75rem;
+    height: 0.65rem;
+    background: rgba(0, 0, 0, 0.42);
+    animation: driftOne 19s cubic-bezier(0.45, 0, 0.55, 1) -15s infinite reverse;
+}
+
+.rectangleSix {
+    right: 38%;
+    bottom: 15%;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid rgba(241, 241, 241, 0.14);
+    animation: driftTwo 24s cubic-bezier(0.45, 0, 0.55, 1) -8s infinite reverse;
+}
+
+.rectangleSeven {
+    right: 3%;
+    bottom: 31%;
+    width: 6rem;
+    height: 1rem;
+    background: rgba(20, 44, 91, 0.68);
+    animation: driftThree 20s cubic-bezier(0.45, 0, 0.55, 1) -17s infinite reverse;
+}
+
+@keyframes driftOne {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(-7deg);
+    }
+    24% {
+        transform: translate3d(18px, -9px, 0) rotate(-2deg);
+    }
+    53% {
+        transform: translate3d(-12px, 14px, 0) rotate(-11deg);
+    }
+    78% {
+        transform: translate3d(25px, 8px, 0) rotate(-4deg);
+    }
+}
+
+@keyframes driftTwo {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(8deg);
+    }
+    19% {
+        transform: translate3d(-16px, 11px, 0) rotate(3deg);
+    }
+    47% {
+        transform: translate3d(9px, -16px, 0) rotate(12deg);
+    }
+    73% {
+        transform: translate3d(-22px, -5px, 0) rotate(5deg);
+    }
+}
+
+@keyframes driftThree {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(-2deg);
+    }
+    28% {
+        transform: translate3d(11px, 16px, 0) rotate(4deg);
+    }
+    58% {
+        transform: translate3d(-18px, -7px, 0) rotate(-6deg);
+    }
+    84% {
+        transform: translate3d(20px, -13px, 0) rotate(1deg);
+    }
+}
+
+@keyframes driftFour {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(5deg);
+    }
+    21% {
+        transform: translate3d(17px, 8px, 0) rotate(10deg);
+    }
+    49% {
+        transform: translate3d(-8px, -15px, 0) rotate(2deg);
+    }
+    76% {
+        transform: translate3d(-20px, 10px, 0) rotate(8deg);
+    }
+}
+
+@keyframes glowBreathe {
+    0%, 100% {
+        opacity: 0.24;
+        transform: translate3d(0, 0, 0) scale(0.96);
+    }
+    19% {
+        opacity: 0.43;
+        transform: translate3d(-10px, -5px, 0) scale(1.01);
+    }
+    46% {
+        opacity: 0.68;
+        transform: translate3d(-20px, -12px, 0) scale(1.08);
+    }
+    71% {
+        opacity: 0.35;
+        transform: translate3d(-6px, -18px, 0) scale(1.02);
+    }
+    88% {
+        opacity: 0.56;
+        transform: translate3d(-15px, -7px, 0) scale(1.05);
+    }
+}
+
+@media (max-width: 639px) {
+    .glow {
+        right: -15rem;
+        bottom: -11rem;
+        width: 30rem;
+        height: 23rem;
+    }
+
+    .rectangleThree,
+    .rectangleFive,
+    .rectangleSix {
+        display: none;
+    }
+
+    .rectangleOne {
+        left: -1rem;
+        top: 13%;
+    }
+
+    .rectangleTwo {
+        left: 56%;
+        bottom: 9%;
+    }
+
+    .rectangleFour {
+        right: 8%;
+        top: 46%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .glow,
+    .floatingRectangle {
+        animation: none;
+        will-change: auto;
+    }
+
+    .glow {
+        opacity: 0.34;
+        transform: translate3d(-10px, -8px, 0) scale(1);
+    }
+}
