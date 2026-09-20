@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer, Menu } from '@carbon/icons-react';
+import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
-import printflowLogo from '../../assets/printflow-logo-light.png';
+import printflowLogo from '../../assets/printflow-logo-dark.png';
 
 export const ShopLayout: React.FC = () => {
     const location = useLocation();
@@ -159,13 +159,17 @@ export const ShopLayout: React.FC = () => {
     return (
         <div className="flex h-screen supports-[height:100dvh]:h-dvh flex-col overflow-hidden bg-carbon-gray-10 font-sans text-gray-800">
             <a href="#shop-main-content" onClick={() => mainRef.current?.focus()} className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[110] focus:bg-carbon-blue-60 focus:px-4 focus:py-3 focus:text-white">Skip to content</a>
-            <header inert={isDrawerOpen || isAccountModalOpen} className="z-20 flex h-16 shrink-0 items-center gap-2 border-b border-[#e0e0e0] bg-[#F8F9FA] px-3">
+            <header inert={isDrawerOpen || isAccountModalOpen} className="z-20 flex h-16 shrink-0 items-center gap-2 border-b-4 border-b-[#0F62FE] bg-[#000000] px-3">
                 <button ref={hamburgerRef} type="button" onClick={() => {
                     setTooltip(null);
                     if (isDesktop) setIsDesktopCollapsed(value => !value);
                     else setDrawerRoute(location.key);
-                }} aria-label={isDesktop ? (collapsed ? 'Expand navigation' : 'Collapse navigation') : 'Open navigation'} aria-expanded={isDesktop ? !collapsed : isDrawerOpen} aria-controls="shop-navigation" className="flex h-11 w-12 shrink-0 items-center justify-center text-black transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none">
-                    <Menu className="h-6 w-6" aria-hidden="true" />
+                }} aria-label={isDesktop ? (collapsed ? 'Expand navigation' : 'Collapse navigation') : 'Open navigation'} aria-expanded={isDesktop ? !collapsed : isDrawerOpen} aria-controls="shop-navigation" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#F1F1F1] transition-colors hover:bg-[#3F3F3F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0F62FE] motion-reduce:transition-none">
+                    <span aria-hidden="true" className="flex w-5 flex-col gap-1">
+                        <span className="h-0.5 w-full bg-current" />
+                        <span className="h-0.5 w-full bg-current" />
+                        <span className="h-0.5 w-full bg-current" />
+                    </span>
                 </button>
                 <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="block h-auto w-40 sm:w-44" />
             </header>

@@ -37,8 +37,6 @@ export const AuthPage: React.FC = () => {
 
                 <div className={styles.specimen} aria-hidden="true">
                     <svg className={styles.registrationMarks} viewBox="0 0 440 420" fill="none">
-                        <path d="M28 60H52M40 48V72M388 60H412M400 48V72M28 360H52M40 348V372M388 360H412M400 348V372"
-                            stroke="currentColor" strokeWidth="1" />
                         <path d="M70 30H370M70 390H370" stroke="currentColor" strokeDasharray="2 7" />
                     </svg>
                     <div className={styles.backSheet} />
