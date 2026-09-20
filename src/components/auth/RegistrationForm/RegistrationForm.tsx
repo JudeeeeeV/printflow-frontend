@@ -3,6 +3,7 @@ import { getRetrySeconds, useRetryCountdown } from "../../../hooks/useRetryCount
 import { EmailVerification } from "./EmailVerification";
 import React, { useState } from "react";
 import { View, ViewOff } from "@carbon/icons-react";
+import { AuthErrorMessage } from "../AuthErrorMessage/AuthErrorMessage";
 import { EmailInput } from "../EmailInput/EmailInput";
 import {
   AccountTypeSelector,
@@ -295,14 +296,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
           For security purposes, you can request another code in {retry.seconds} {retry.seconds === 1 ? 'second' : 'seconds'}.
         </p>
       )}
-      {error && (
-        <div
-          role="alert"
-          className="mb-4 p-4 bg-white ring-4 ring-black text-carbon-gray-100 font-bold text-sm animate-shake"
-        >
-          {error}
-        </div>
-      )}
+      <AuthErrorMessage message={error} />
 
       <div className="mt-2">
         <SubmitButton

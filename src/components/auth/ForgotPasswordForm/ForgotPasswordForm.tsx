@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, ViewOff, Checkmark } from '@carbon/icons-react';
+import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService } from '../../../services/authService';
@@ -224,11 +225,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
           </div>
         </div>
 
-        {error && (
-          <div className="mb-4 p-4 bg-white ring-4 ring-black text-carbon-gray-100 font-bold text-sm animate-shake">
-            {error}
-          </div>
-        )}
+        <AuthErrorMessage message={error} />
 
         <div className="mt-6">
           <SubmitButton
@@ -275,11 +272,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         }} />
       </div>
 
-      {error && (
-        <div className="mb-4 p-4 bg-white ring-4 ring-black text-carbon-gray-100 font-bold text-sm animate-shake">
-          {error}
-        </div>
-      )}
+      <AuthErrorMessage message={error} />
 
       {message && (
         <div className="mb-4 p-4 bg-green-50 ring-1 ring-green-500 text-green-900 font-semibold text-sm">

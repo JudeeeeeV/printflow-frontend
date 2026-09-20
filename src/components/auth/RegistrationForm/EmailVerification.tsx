@@ -2,6 +2,7 @@ import { getRetrySeconds, useRetryCountdown } from '../../../hooks/useRetryCount
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { authService, type RegisterPayload } from '../../../services/authService';
+import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 
 export function EmailVerification({ registration, onBack, onSignIn, onVerified }: { registration: RegisterPayload; onBack: () => void; onSignIn: () => void; onVerified: () => void }) {
@@ -87,9 +88,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
           You can request another code in {cooldown} {cooldown === 1 ? 'second' : 'seconds'}.
         </div>}
 
-        {error && <div role="alert" className="p-4 bg-white ring-4 ring-black text-carbon-gray-100 font-bold text-sm animate-shake">
-          {error}
-        </div>}
+        <AuthErrorMessage message={error || null} />
 
         <div className="flex flex-col gap-4 mt-2">
           <SubmitButton label="Verify Email" isLoading={busy} disabled={code.length !== 8 || busy} />

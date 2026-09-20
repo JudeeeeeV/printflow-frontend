@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { View, ViewOff } from '@carbon/icons-react';
+import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService, type LoginPayload } from '../../../services/authService';
@@ -84,7 +85,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
         />
       </div>
 
-      <div className="mb-6">
+      <div>
         <label
           className={`block text-sm mb-2 ${hasPasswordError ? 'font-bold text-carbon-gray-100' : 'font-semibold text-carbon-gray-100'}`}
           htmlFor="login-password"
@@ -129,13 +130,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
         )}
       </div>
 
-      {error && (
-        <div className="mb-4 p-4 bg-white ring-4 ring-black text-carbon-gray-100 font-bold text-sm animate-shake">
-          {error}
-        </div>
-      )}
+      <AuthErrorMessage message={error} />
 
-      <div className="mt-6">
+      <div className="mt-4">
         <SubmitButton
           label="Sign In"
           isLoading={isSubmitting}
