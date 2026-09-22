@@ -3,7 +3,8 @@ import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-d
 import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
-import printflowLogo from '../../assets/printflow-logo-dark.png';
+import printflowLogoDark from '../../assets/printflow-logo-dark.png';
+import printflowLogoLight from '../../assets/printflow-logo-light.png';
 import styles from './ShopLayout.module.css';
 import { daemonSocketService, type DaemonStatus } from '../../services/daemonSocketService';
 
@@ -191,7 +192,7 @@ export const ShopLayout: React.FC = () => {
                         <span className="h-0.5 w-full bg-current" />
                     </span>
                 </button>
-                <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="relative z-10 block h-auto w-40 sm:w-44" />
+                <img src={printflowLogoDark} alt="PrintFlow" width={1669} height={560} className="relative z-10 block h-auto w-40 sm:w-44" />
                 <div
                     role="status"
                     aria-live="polite"
@@ -214,7 +215,7 @@ export const ShopLayout: React.FC = () => {
             <aside ref={sidebarRef} id="shop-navigation" role={isDesktop ? undefined : 'dialog'} aria-modal={isDrawerOpen || undefined} aria-label="Shop navigation" inert={(!isDesktop && !isDrawerOpen) || isAccountModalOpen} onFocusCapture={showTooltip} onMouseOver={showTooltip} onBlurCapture={() => setTooltip(null)} onMouseLeave={() => setTooltip(null)} onScroll={() => setTooltip(null)} className={`fixed inset-y-0 left-0 z-40 flex max-w-[85vw] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-[#e0e0e0] bg-[#F8F9FA] transition-[transform,opacity] duration-[250ms] ease-out motion-reduce:transition-none lg:static lg:translate-x-0 lg:pointer-events-auto lg:opacity-100 lg:transition-[width] lg:duration-[250ms] lg:ease-out ${collapsed ? 'w-[72px]' : 'w-64'} ${isDrawerOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-full opacity-0'}`}>
                 <div className="flex h-16 shrink-0 items-center gap-2 border-b border-[#e0e0e0] px-3 lg:hidden">
                     <button type="button" onClick={closeDrawer} aria-label="Close navigation" className="flex h-11 w-12 shrink-0 items-center justify-center hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60"><Close className="h-6 w-6" aria-hidden="true" /></button>
-                    <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="h-auto w-40 min-w-0" />
+                    <img src={printflowLogoLight} alt="PrintFlow" width={1669} height={560} className="h-auto w-40 min-w-0" />
                 </div>
 
                 {/* Profile Section */}
