@@ -3,17 +3,6 @@ import React from 'react';
 export const DashboardSkeleton: React.FC = () => {
     return (
         <div role="status" aria-label="Loading live queue" className="flex min-h-full w-full min-w-0 flex-col font-sans lg:h-full lg:min-h-0 lg:overflow-hidden motion-reduce:[&_.animate-pulse]:animate-none">
-            {/* Top Bar Skeleton */}
-            <div className="z-10 flex shrink-0 items-center justify-between border-b border-[#e0e0e0] bg-white px-4 py-2 sm:px-6">
-                <div className="flex flex-wrap items-center gap-4">
-                    <div>
-                        <div className="h-6 w-48 bg-gray-200 animate-pulse mb-1"></div>
-                        <div className="h-3 w-24 bg-gray-100 animate-pulse"></div>
-                    </div>
-                    <div className="h-6 w-32 bg-gray-100 animate-pulse border border-[#e0e0e0]"></div>
-                </div>
-            </div>
-
             <div className="flex flex-none flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                 <div className="flex flex-none flex-col bg-gray-100/50 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                     

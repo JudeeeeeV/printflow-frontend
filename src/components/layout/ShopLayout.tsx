@@ -5,11 +5,13 @@ import { apiClient } from '../../services/apiClient';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import printflowLogo from '../../assets/printflow-logo-dark.png';
 import styles from './ShopLayout.module.css';
+import { daemonSocketService, type DaemonStatus } from '../../services/daemonSocketService';
 
 export const ShopLayout: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [shopName, setShopName] = useState<string>('Print Shop');
+    const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>('OFFLINE');
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [isSupportOpen, setIsSupportOpen] = useState(false);
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -39,6 +41,8 @@ export const ShopLayout: React.FC = () => {
         media.addEventListener('change', onChange);
         return () => media.removeEventListener('change', onChange);
     }, []);
+
+    useEffect(() => daemonSocketService.onStatusChange(setDaemonStatus), []);
 
     useEffect(() => {
         if (!isDrawerOpen) return;
@@ -107,6 +111,7 @@ export const ShopLayout: React.FC = () => {
     }, [isAccountModalOpen]);
 
     const role = localStorage.getItem('user_role');
+    const daemonStatusLabel = daemonStatus === 'CONNECTED' ? 'Connected' : daemonStatus === 'RECONNECTING' ? 'Reconnecting' : 'Offline';
 
     useEffect(() => {
         const fetchShop = async () => {
@@ -183,6 +188,21 @@ export const ShopLayout: React.FC = () => {
                     </span>
                 </button>
                 <img src={printflowLogo} alt="PrintFlow" width={1669} height={560} className="relative z-10 block h-auto w-40 sm:w-44" />
+                <div
+                    role="status"
+                    aria-live="polite"
+                    aria-label={`Daemon status: ${daemonStatusLabel}`}
+                    title={`Daemon: ${daemonStatusLabel}`}
+                    className="relative z-10 ml-auto flex min-h-9 shrink-0 items-center gap-2 border border-gray-600 border-l-2 border-l-carbon-blue-60 bg-carbon-gray-100 px-2.5 text-white sm:px-3"
+                >
+                    <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 ${daemonStatus === 'CONNECTED' ? 'bg-green-500' : daemonStatus === 'RECONNECTING' ? 'animate-pulse bg-yellow-500 motion-reduce:animate-none' : 'bg-gray-400'}`} />
+                    <span className="hidden whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.08em] min-[360px]:inline sm:hidden">
+                        {daemonStatus === 'CONNECTED' ? 'Online' : daemonStatus === 'RECONNECTING' ? 'Retrying' : 'Offline'}
+                    </span>
+                    <span className="hidden whitespace-nowrap text-xs font-bold uppercase tracking-[0.08em] sm:inline">
+                        Daemon: {daemonStatusLabel}
+                    </span>
+                </div>
             </header>
             <div className="flex min-h-0 min-w-0 flex-1">
             <div aria-hidden="true" onClick={closeDrawer} className={`fixed inset-0 z-30 bg-black/50 transition-opacity duration-[250ms] ease-out motion-reduce:transition-none lg:hidden ${isDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`} />

@@ -307,7 +307,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  );
 
- const { name, verification_status } = shopData;
+ const { verification_status } = shopData;
 
  // Derived Kanban Data
  const searchLower = searchQuery.toLowerCase();
@@ -385,36 +385,6 @@ export const ShopDashboard: React.FC = () => {
 
  return (
  <div className="flex min-h-full min-w-0 flex-col bg-carbon-gray-10 font-sans lg:h-full lg:min-h-0 lg:overflow-hidden">
- <div className="z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-300 bg-white px-4 py-2 sm:px-6 lg:px-8">
- <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 sm:gap-4">
- <div className="flex min-w-0 items-center gap-3">
- <span className="h-8 w-1 shrink-0 bg-carbon-blue-60" aria-hidden="true" />
- <div className="min-w-0">
- <h2 className="truncate text-lg font-black tracking-tight text-carbon-gray-100 sm:text-xl">{name}</h2>
- <p className="text-[10px] font-bold uppercase leading-none tracking-[0.18em] text-gray-500">Live Queue</p>
- </div>
- </div>
- 
- {/* Daemon Status Badge */}
- <div className="ml-auto flex min-h-9 items-center gap-2 border border-gray-300 bg-carbon-gray-10 px-3 py-1.5">
- <span className={`relative flex h-2.5 w-2.5 shrink-0`}>
- {daemonStatus === 'CONNECTED' && (
- <span className="relative inline-flex h-2.5 w-2.5 bg-green-500"></span>
- )}
- {daemonStatus === 'RECONNECTING' && (
- <span className="relative inline-flex h-2.5 w-2.5 bg-yellow-500 animate-pulse"></span>
- )}
- {daemonStatus === 'OFFLINE' && (
- <span className="relative inline-flex h-2.5 w-2.5 bg-gray-400"></span>
- )}
- </span>
- <span className="whitespace-nowrap text-xs font-bold uppercase tracking-[0.08em] text-gray-700">
- Daemon: {daemonStatus === 'CONNECTED' ? 'Connected' : daemonStatus === 'RECONNECTING' ? 'Reconnecting...' : 'Offline'}
- </span>
- </div>
- </div>
- </div>
-
  <div className="flex flex-none flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
  {verification_status === 'PENDING_REVIEW' ? (
  <div className="p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:p-8">
