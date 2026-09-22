@@ -5,9 +5,11 @@ import { motion } from "framer-motion";
 interface OrderCardProps {
   order: any;
   onClick: () => void;
+  isSelected?: boolean;
+  onToggleSelect?: (orderId: string) => void;
 }
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected = false, onToggleSelect }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
@@ -63,7 +65,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
       transition={{ duration: 0.15, ease: "easeOut" }}
       whileHover={{ scale: 1.01 }}
       onClick={onClick}
-      className={`bg-white border border-[#e0e0e0] p-4 hover:border-[#8d8d8d] hover:shadow-md cursor-pointer transition-all duration-200`}
+      className={`bg-white p-4 cursor-pointer transition-all duration-200 ${isSelected ? 'border-2 border-carbon-blue-60 shadow-md' : 'border border-[#e0e0e0] hover:border-[#8d8d8d] hover:shadow-md'}`}
     >
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -109,8 +111,27 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
         </div>
       </div>
 
-      {order.assets && order.assets.length > 0 && (
-        <div className="mb-4 text-sm flex justify-end">
+      {/* Bottom bar: checkbox (if selectable) + Preview Document button */}
+      <div className="flex items-center justify-between gap-2">
+        {onToggleSelect ? (
+          <label
+            className="flex items-center gap-2 cursor-pointer text-sm font-bold text-carbon-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="checkbox"
+              className="h-5 w-5 cursor-pointer border-gray-500 text-carbon-blue-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+              aria-label={`Select order ${order.id.slice(0, 8)}`}
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleSelect(order.id);
+              }}
+            />
+            <span className="text-xs select-none">{isSelected ? 'Selected' : 'Select'}</span>
+          </label>
+        ) : <div />}
+        {order.assets && order.assets.length > 0 && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -118,7 +139,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
               setPreviewUrl(order.assets[0].file_url);
               setIsPreviewOpen(true);
             }}
-            className="text-gray-600 hover:text-carbon-gray-100 font-bold flex items-center gap-1 transition-colors"
+            className="flex items-center gap-1.5 bg-carbon-gray-100 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-black"
           >
             <svg
               className="w-4 h-4"
@@ -141,8 +162,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
             </svg>
             Preview Document
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {isPaymentPending && (
         <div className="mt-4 pt-3 border-t border-[#e0e0e0]">

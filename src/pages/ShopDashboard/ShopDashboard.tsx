@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { ChevronRight } from '@carbon/icons-react';
 import { shopService } from '../../services/shopService';
 import { DashboardSkeleton } from '../../components/dashboard/DashboardSkeleton';
 import { orderService } from '../../services/orderService';
@@ -16,7 +18,24 @@ import { apiClient } from '../../services/apiClient';
 
 const QUEUE_PAGE_SIZE = 3;
 type QueueKey = 'new' | 'ready' | 'completed';
+type QueueFilterState = {
+ searchQuery: string;
+ paperSize: string;
+ colorMode: string;
+};
+
+const QUEUE_ORDER: QueueKey[] = ['new', 'ready', 'completed'];
 const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', completed: 'Completed' };
+const QUEUE_EMPTY_LABELS: Record<QueueKey, string> = {
+ new: 'No new orders.',
+ ready: 'No orders in production.',
+ completed: 'No completed orders.',
+};
+const INITIAL_QUEUE_FILTERS: Record<QueueKey, QueueFilterState> = {
+ new: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
+ ready: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
+ completed: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
+};
 
 export const ShopDashboard: React.FC = () => {
  const navigate = useNavigate();
@@ -46,16 +65,14 @@ export const ShopDashboard: React.FC = () => {
  const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
  const [selectedPrinter, setSelectedPrinter] = useState<string>('');
 
- // Filter states
- const [searchQuery, setSearchQuery] = useState('');
- const [paperSizeFilter, setPaperSizeFilter] = useState('ALL');
- const [colorModeFilter, setColorModeFilter] = useState('ALL');
-
+ const [activeQueue, setActiveQueue] = useState<QueueKey>('new');
+ const [tabDirection, setTabDirection] = useState(1);
+ const [queueFilters, setQueueFilters] = useState<Record<QueueKey, QueueFilterState>>(INITIAL_QUEUE_FILTERS);
  const [queuePages, setQueuePages] = useState<Record<QueueKey, number>>({ new: 1, ready: 1, completed: 1 });
- const filterKey = JSON.stringify([searchQuery, paperSizeFilter, colorModeFilter]);
- const [previousFilterKey, setPreviousFilterKey] = useState(filterKey);
  const [pageAnnouncement, setPageAnnouncement] = useState('');
  const queueBoardRef = useRef<HTMLDivElement>(null);
+ const queueTabRefs = useRef<Record<QueueKey, HTMLButtonElement | null>>({ new: null, ready: null, completed: null });
+ const prefersReducedMotion = useReducedMotion();
 
  // Prune only orders that left production, not selections hidden by filters or pagination.
  const readyOrderIds = new Set(shopOrders.filter(order => order.state === 'IN_PRODUCTION').map(order => order.id));
@@ -64,14 +81,44 @@ export const ShopDashboard: React.FC = () => {
  setSelectedReadyOrders(validSelectedReadyOrders);
  }
 
- if (previousFilterKey !== filterKey) {
- setPreviousFilterKey(filterKey);
- setQueuePages({ new: 1, ready: 1, completed: 1 });
- }
-
  const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'}>({ isOpen: false, message: '' });
  const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string) => {
  setAlertState({ isOpen: true, message, type, title });
+ };
+
+ const updateQueueFilter = useCallback((queue: QueueKey, field: keyof QueueFilterState, value: string) => {
+ setQueueFilters(previous => ({
+ ...previous,
+ [queue]: { ...previous[queue], [field]: value },
+ }));
+ setQueuePages(previous => ({ ...previous, [queue]: 1 }));
+ }, []);
+
+ const handleActiveSearch = useCallback((query: string) => {
+ updateQueueFilter(activeQueue, 'searchQuery', query);
+ }, [activeQueue, updateQueueFilter]);
+
+ const handleQueueTabChange = (queue: QueueKey) => {
+ if (queue === activeQueue) return;
+ const currentIndex = QUEUE_ORDER.indexOf(activeQueue);
+ const nextIndex = QUEUE_ORDER.indexOf(queue);
+ setTabDirection(nextIndex > currentIndex ? 1 : -1);
+ setActiveQueue(queue);
+ setPageAnnouncement(`${QUEUE_LABELS[queue]} queue selected.`);
+ };
+
+ const handleQueueTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, queue: QueueKey) => {
+ const currentIndex = QUEUE_ORDER.indexOf(queue);
+ let nextIndex: number | null = null;
+ if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % QUEUE_ORDER.length;
+ if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + QUEUE_ORDER.length) % QUEUE_ORDER.length;
+ if (event.key === 'Home') nextIndex = 0;
+ if (event.key === 'End') nextIndex = QUEUE_ORDER.length - 1;
+ if (nextIndex === null) return;
+ event.preventDefault();
+ const nextQueue = QUEUE_ORDER[nextIndex];
+ handleQueueTabChange(nextQueue);
+ requestAnimationFrame(() => queueTabRefs.current[nextQueue]?.focus());
  };
 
  const loadShopData = () => {
@@ -309,52 +356,77 @@ export const ShopDashboard: React.FC = () => {
 
  const { verification_status } = shopData;
 
- // Derived Kanban Data
- const searchLower = searchQuery.toLowerCase();
- const filteredShopOrders = shopOrders.filter(order => {
- const matchSearch = !searchQuery || 
- order.id.slice(0, 8).toLowerCase().includes(searchLower) || 
- (order.client_id || '').slice(0, 8).toLowerCase().includes(searchLower);
- const matchPaper = paperSizeFilter === 'ALL' || order.paper_size === paperSizeFilter;
- const matchColor = colorModeFilter === 'ALL' || order.print_color_mode === colorModeFilter;
- return matchSearch && matchPaper && matchColor;
- });
-
- // New Orders: Pending review, approved proof, awaiting payment, or just open inquiry
- const newOrders = filteredShopOrders
+ // Derived queue data. Counts stay unfiltered while each queue owns its filter state.
+ const unfilteredNewOrders = shopOrders
  .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state))
  .sort((a, b) => {
- // Put AWAITING_PAYMENT_VERIFICATION at the very top
  if (a.state === 'AWAITING_PAYMENT_VERIFICATION' && b.state !== 'AWAITING_PAYMENT_VERIFICATION') return -1;
  if (b.state === 'AWAITING_PAYMENT_VERIFICATION' && a.state !== 'AWAITING_PAYMENT_VERIFICATION') return 1;
  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
  });
 
- const printReadyOrders = filteredShopOrders
+ const unfilteredPrintReadyOrders = shopOrders
  .filter(o => ['IN_PRODUCTION'].includes(o.state))
  .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
- const completedOrders = filteredShopOrders
+ const unfilteredCompletedOrders = shopOrders
  .filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state))
  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+ const unfilteredQueueOrders: Record<QueueKey, typeof shopOrders> = {
+ new: unfilteredNewOrders,
+ ready: unfilteredPrintReadyOrders,
+ completed: unfilteredCompletedOrders,
+ };
+ const filterOrders = (orders: typeof shopOrders, filters: QueueFilterState) => {
+ const searchLower = filters.searchQuery.trim().toLowerCase();
+ return orders.filter(order => {
+ const matchSearch = !searchLower
+ || order.id.slice(0, 8).toLowerCase().includes(searchLower)
+ || (order.client_id || '').slice(0, 8).toLowerCase().includes(searchLower);
+ const matchPaper = filters.paperSize === 'ALL' || order.paper_size === filters.paperSize;
+ const matchColor = filters.colorMode === 'ALL' || order.print_color_mode === filters.colorMode;
+ return matchSearch && matchPaper && matchColor;
+ });
+ };
+ const filteredQueueOrders: Record<QueueKey, typeof shopOrders> = {
+ new: filterOrders(unfilteredNewOrders, queueFilters.new),
+ ready: filterOrders(unfilteredPrintReadyOrders, queueFilters.ready),
+ completed: filterOrders(unfilteredCompletedOrders, queueFilters.completed),
+ };
+ const newOrders = filteredQueueOrders.new;
+ const printReadyOrders = filteredQueueOrders.ready;
+ const completedOrders = filteredQueueOrders.completed;
 
  const pageTotals = {
  new: Math.max(1, Math.ceil(newOrders.length / QUEUE_PAGE_SIZE)),
  ready: Math.max(1, Math.ceil(printReadyOrders.length / QUEUE_PAGE_SIZE)),
  completed: Math.max(1, Math.ceil(completedOrders.length / QUEUE_PAGE_SIZE)),
  };
+
  const pages = {
  new: Math.min(queuePages.new, pageTotals.new),
  ready: Math.min(queuePages.ready, pageTotals.ready),
  completed: Math.min(queuePages.completed, pageTotals.completed),
  };
- // Store the clamp so a later poll cannot restore an obsolete page number.
- if (previousFilterKey === filterKey && (pages.new !== queuePages.new || pages.ready !== queuePages.ready || pages.completed !== queuePages.completed)) {
+ // Store poll-driven clamps so a later refresh cannot restore an obsolete page.
+ if (pages.new !== queuePages.new || pages.ready !== queuePages.ready || pages.completed !== queuePages.completed) {
  setQueuePages(pages);
  }
  const visibleNewOrders = newOrders.slice((pages.new - 1) * QUEUE_PAGE_SIZE, pages.new * QUEUE_PAGE_SIZE);
  const visibleReadyOrders = printReadyOrders.slice((pages.ready - 1) * QUEUE_PAGE_SIZE, pages.ready * QUEUE_PAGE_SIZE);
  const visibleCompletedOrders = completedOrders.slice((pages.completed - 1) * QUEUE_PAGE_SIZE, pages.completed * QUEUE_PAGE_SIZE);
+ const visibleQueueOrders: Record<QueueKey, typeof shopOrders> = {
+ new: visibleNewOrders,
+ ready: visibleReadyOrders,
+ completed: visibleCompletedOrders,
+ };
+ const activeFilters = queueFilters[activeQueue];
+ const activeOrders = filteredQueueOrders[activeQueue];
+ const activeVisibleOrders = visibleQueueOrders[activeQueue];
+ const activeEmptyMessage = unfilteredQueueOrders[activeQueue].length > 0
+ ? 'No orders match your filters.'
+ : QUEUE_EMPTY_LABELS[activeQueue];
  const selectedReadyIds = new Set(selectedReadyOrders);
  const matchingSelectedCount = printReadyOrders.filter(order => selectedReadyIds.has(order.id)).length;
  const allMatchingReadySelected = printReadyOrders.length > 0 && matchingSelectedCount === printReadyOrders.length;
@@ -474,63 +546,66 @@ export const ShopDashboard: React.FC = () => {
  </div>
  </div>
 
- <div className="shrink-0 border-b border-gray-300 bg-carbon-gray-10 px-3 py-2 sm:px-5 lg:px-7">
- <div className="border border-gray-300 bg-white [&>div]:border-b-0">
- <KanbanFilterBar 
- onSearch={setSearchQuery} 
- paperSizeFilter={paperSizeFilter} 
- setPaperSizeFilter={setPaperSizeFilter} 
- colorModeFilter={colorModeFilter} 
- setColorModeFilter={setColorModeFilter} 
+ <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1.5 sm:gap-2 sm:px-2">
+ {QUEUE_ORDER.map(queue => {
+ const isActive = activeQueue === queue;
+ return (
+ <button
+ key={queue}
+ ref={element => { queueTabRefs.current[queue] = element; }}
+ id={`queue-tab-${queue}`}
+ type="button"
+ role="tab"
+ aria-selected={isActive}
+ aria-controls={`queue-panel-${queue}`}
+ tabIndex={isActive ? 0 : -1}
+ onClick={() => handleQueueTabChange(queue)}
+ onKeyDown={event => handleQueueTabKeyDown(event, queue)}
+ className={`group flex min-h-12 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm ${isActive ? 'border-carbon-blue-60 bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'border-gray-300 bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
+ >
+ <span className="truncate">{QUEUE_LABELS[queue]}</span>
+ <span className="min-w-7 shrink-0 border border-black bg-black px-2 py-0.5 text-center text-xs font-black tabular-nums text-white">
+ {unfilteredQueueOrders[queue].length}
+ </span>
+ <ChevronRight aria-hidden="true" className={`hidden h-4 w-4 shrink-0 transition-transform duration-150 sm:block ${isActive ? 'rotate-90 text-white' : 'text-gray-500 group-hover:translate-x-0.5 group-hover:text-carbon-blue-70'} motion-reduce:transform-none motion-reduce:transition-none`} />
+ </button>
+ );
+ })}
+ </div>
+
+ <KanbanFilterBar
+ key={activeQueue}
+ contextLabel={QUEUE_LABELS[activeQueue]}
+ searchQuery={activeFilters.searchQuery}
+ onSearch={handleActiveSearch}
+ paperSizeFilter={activeFilters.paperSize}
+ setPaperSizeFilter={size => updateQueueFilter(activeQueue, 'paperSize', size)}
+ colorModeFilter={activeFilters.colorMode}
+ setColorModeFilter={mode => updateQueueFilter(activeQueue, 'colorMode', mode)}
  />
- </div>
- </div>
 
  <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{pageAnnouncement}</p>
- <div ref={queueBoardRef} data-live-queue className="flex flex-none flex-col gap-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-5 lg:overflow-x-auto lg:overflow-y-hidden lg:p-6">
- 
- {/* Column 1: New Orders */}
- <div className="flex w-full min-w-0 flex-none flex-col border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-gray-100 lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
- <div className="flex shrink-0 items-center justify-between border-b border-gray-300 bg-white px-4 py-3.5">
- <h3 id="queue-new-heading" tabIndex={-1} className="text-lg font-black tracking-tight text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60">New Orders</h3>
- <span className="min-w-8 bg-blue-50 px-2.5 py-1 text-center text-sm font-black tabular-nums text-carbon-blue-70">{newOrders.length}</span>
- </div>
- <div id="queue-new-orders" aria-labelledby="queue-new-heading" className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
- {visibleNewOrders.map(order => (
- <OrderCard 
- key={order.id} 
- order={order} 
- onClick={() => ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? setSelectedPaymentOrder(order) : null} 
- />
- ))}
- {newOrders.length === 0 && (
- <div className="flex lg:h-full min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center">
- <p className="text-sm font-medium leading-relaxed text-gray-500">
- {shopOrders.filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state)).length > 0 
- ? "No orders match your filters." 
- : "No new orders."}
- </p>
- </div>
- )}
- </div>
- <QueuePagination label="New Orders" controlsId="queue-new-orders" page={pages.new} pageSize={QUEUE_PAGE_SIZE} total={newOrders.length} onPageChange={page => handleQueuePageChange('new', page)} />
- </div>
+ <div ref={queueBoardRef} data-live-queue className="flex flex-none flex-col overflow-hidden p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:p-5">
+ <AnimatePresence mode="wait" initial={false}>
+ <motion.section
+ key={activeQueue}
+ id={`queue-panel-${activeQueue}`}
+ role="tabpanel"
+ aria-labelledby={`queue-tab-${activeQueue}`}
+ className="flex w-full min-w-0 flex-col overflow-hidden border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] lg:min-h-0 lg:flex-1"
+ initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: tabDirection * 32 }}
+ animate={{ opacity: 1, x: 0 }}
+ exit={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: tabDirection * -24 }}
+ transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: 'easeOut' }}
+ >
+ <h2 id={`queue-${activeQueue}-heading`} tabIndex={-1} className="sr-only">{QUEUE_LABELS[activeQueue]}</h2>
 
- {/* Column 2: Print Ready */}
- <div className="flex w-full min-w-0 flex-none flex-col border border-carbon-gray-100 border-t-4 border-t-carbon-gray-100 bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
- <div className="flex shrink-0 items-center justify-between border-b border-carbon-gray-100 bg-carbon-gray-100 px-4 py-3.5 text-white">
- <h3 id="queue-ready-heading" tabIndex={-1} className="text-lg font-black tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Print Ready</h3>
- <span className="min-w-8 bg-white px-2.5 py-1 text-center text-sm font-black tabular-nums text-carbon-gray-100">{printReadyOrders.length}</span>
- </div>
- 
- <div id="queue-ready-orders" aria-labelledby="queue-ready-heading" className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
- {/* Batch Controls */}
- {(printReadyOrders.length > 0 || selectedReadyOrders.length > 0) && (
- <div className="z-10 flex shrink-0 flex-col gap-3 border-b border-gray-300 bg-white p-4">
- <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3">
+ {activeQueue === 'ready' && (printReadyOrders.length > 0 || selectedReadyOrders.length > 0) && (
+ <div className="z-10 flex shrink-0 flex-col gap-3 border-b border-gray-300 bg-white p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
+ <div className="flex flex-wrap items-center gap-2 sm:gap-3">
  <label className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-carbon-gray-100">
- <input 
- type="checkbox" 
+ <input
+ type="checkbox"
  className="mr-3 h-5 w-5 cursor-pointer border-gray-500 text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
  checked={allMatchingReadySelected}
  disabled={printReadyOrders.length === 0}
@@ -538,20 +613,23 @@ export const ShopDashboard: React.FC = () => {
  aria-describedby="ready-selection-scope"
  onChange={handleSelectAllReady}
  />
- <span>Select all matching orders<span id="ready-selection-scope" className="block text-xs font-normal text-gray-600">Across all pages</span></span>
+ <span>Select all matching<span id="ready-selection-scope" className="block text-xs font-normal text-gray-600">Across all pages</span></span>
  </label>
- <span className="bg-carbon-gray-10 px-2.5 py-1 text-xs font-bold tabular-nums text-gray-600">{selectedReadyOrders.length} selected{offPageSelectedCount > 0 && <span className="block font-normal">{offPageSelectedCount} not on this page</span>}</span>
+ <span className="bg-carbon-gray-10 px-2.5 py-1 text-xs font-bold tabular-nums text-gray-600">
+ {selectedReadyOrders.length} selected
+ {offPageSelectedCount > 0 && <span className="block font-normal">{offPageSelectedCount} not on this page</span>}
+ </span>
  {selectedReadyOrders.length > 0 && (
  <button type="button" onClick={() => setSelectedReadyOrders([])} className="min-h-11 cursor-pointer px-2 text-sm font-semibold text-carbon-blue-70 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none">Clear selection</button>
  )}
  </div>
- 
+
  {daemonStatus === 'CONNECTED' ? (
- <div className="flex flex-col gap-3">
+ <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:w-full lg:max-w-2xl lg:justify-end">
  {availablePrinters.length > 0 ? (
- <div className="w-full">
- <select 
- className="block min-h-11 w-full cursor-pointer border border-gray-500 bg-carbon-gray-10 p-2.5 text-sm font-semibold text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+ <select
+ aria-label="Printer for selected orders"
+ className="block min-h-11 w-full min-w-0 cursor-pointer border border-gray-500 bg-carbon-gray-10 px-3 py-2 text-sm font-semibold text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 sm:flex-1 lg:min-h-10"
  value={selectedPrinter}
  onChange={(e) => setSelectedPrinter(e.target.value)}
  >
@@ -559,33 +637,32 @@ export const ShopDashboard: React.FC = () => {
  <option key={printer} value={printer}>{printer}</option>
  ))}
  </select>
- </div>
  ) : (
- <span className="border-l-4 border-gray-300 bg-carbon-gray-10 px-3 py-2 text-xs font-medium italic text-gray-500">Fetching printers...</span>
+ <span className="min-h-11 flex-1 border-l-4 border-gray-300 bg-carbon-gray-10 px-3 py-2 text-xs font-medium italic text-gray-500">Fetching printers...</span>
  )}
- <button 
+ <button
  onClick={handleBatchComplete}
  disabled={selectedReadyOrders.length === 0 || isBatchProcessing}
- className="flex min-h-12 w-full items-center justify-center gap-2 bg-carbon-blue-60 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:pointer-events-none disabled:opacity-50"
+ className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-carbon-blue-60 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:pointer-events-none disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
  >
- <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
  </svg>
- Send to Daemon (Batch)
+ Send to Daemon
  </button>
  </div>
  ) : (
- <div className="flex w-full flex-col gap-3 border border-gray-300 border-l-4 border-l-gray-500 bg-carbon-gray-10 p-3">
- <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-carbon-gray-100">
- <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <div className="flex min-w-0 flex-col gap-2 border border-gray-300 border-l-4 border-l-gray-500 bg-carbon-gray-10 p-2 sm:flex-row sm:items-center lg:w-full lg:max-w-xl">
+ <span className="flex min-h-10 flex-1 items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-carbon-gray-100">
+ <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
  </svg>
  Daemon Offline
  </span>
- <button 
+ <button
  onClick={handleManualDownload}
  disabled={selectedReadyOrders.length === 0}
- className="min-h-11 w-full border border-gray-400 bg-white px-3 py-2 text-xs font-bold text-carbon-gray-100 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50"
+ className="min-h-11 shrink-0 border border-gray-400 bg-white px-3 py-2 text-xs font-bold text-carbon-gray-100 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
  >
  Download Assets Manually
  </button>
@@ -594,60 +671,39 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
 
- <div className="space-y-4 p-3 sm:p-4">
- {visibleReadyOrders.map(order => (
- <div key={order.id} className={`group flex items-center gap-3 border-l-4 transition-colors ${selectedReadyOrders.includes(order.id) ? 'border-carbon-blue-60 bg-blue-50' : 'border-transparent'}`}>
- <div className="shrink-0 pl-2">
- <input 
- type="checkbox" 
- className="h-5 w-5 cursor-pointer border-gray-500 text-carbon-blue-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
- aria-label={`Select order ${order.id.slice(0, 8)}`}
- checked={selectedReadyOrders.includes(order.id)}
- onChange={() => handleToggleReadySelection(order.id)}
+ <div id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className="grid grid-cols-1 items-start gap-3 overflow-y-visible p-3 sm:p-4 md:grid-cols-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto xl:grid-cols-3">
+ {activeVisibleOrders.map(order => activeQueue === 'ready' ? (
+ <OrderCard
+ key={order.id}
+ order={order}
+ onClick={() => handleToggleReadySelection(order.id)}
+ isSelected={selectedReadyOrders.includes(order.id)}
+ onToggleSelect={handleToggleReadySelection}
  />
- </div>
- <div className={`min-w-0 flex-1 transition-[transform,opacity] duration-200 ${selectedReadyOrders.includes(order.id) ? 'scale-[0.985] opacity-95' : 'scale-100'}`}>
- <OrderCard order={order} onClick={() => handleToggleReadySelection(order.id)} />
- </div>
- </div>
+ ) : (
+ <OrderCard
+ key={order.id}
+ order={order}
+ onClick={() => activeQueue === 'new' && ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? setSelectedPaymentOrder(order) : null}
+ />
  ))}
- {printReadyOrders.length === 0 && (
- <div className="flex lg:h-full min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center">
- <p className="text-sm font-medium leading-relaxed text-gray-500">
- {shopOrders.filter(o => ['IN_PRODUCTION'].includes(o.state)).length > 0 
- ? "No orders match your filters." 
- : "No orders in production."}
- </p>
+ {activeOrders.length === 0 && (
+ <div className="flex min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center md:col-span-2 xl:col-span-3 lg:h-full">
+ <p className="text-sm font-medium leading-relaxed text-gray-600">{activeEmptyMessage}</p>
  </div>
  )}
  </div>
- </div>
- <QueuePagination label="Print Ready" controlsId="queue-ready-orders" page={pages.ready} pageSize={QUEUE_PAGE_SIZE} total={printReadyOrders.length} onPageChange={page => handleQueuePageChange('ready', page)} />
- </div>
 
- {/* Column 3: Completed */}
- <div className="flex w-full min-w-0 flex-none flex-col border border-gray-300 border-t-4 border-t-gray-400 bg-gray-100 lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
- <div className="flex shrink-0 items-center justify-between border-b border-gray-300 bg-gray-50 px-4 py-3.5">
- <h3 id="queue-completed-heading" tabIndex={-1} className="text-lg font-black tracking-tight text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60">Completed</h3>
- <span className="min-w-8 bg-gray-200 px-2.5 py-1 text-center text-sm font-black tabular-nums text-gray-700">{completedOrders.length}</span>
- </div>
- <div id="queue-completed-orders" aria-labelledby="queue-completed-heading" className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
- {visibleCompletedOrders.map(order => (
- <OrderCard key={order.id} order={order} onClick={() => {}} />
- ))}
- {completedOrders.length === 0 && (
- <div className="flex lg:h-full min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center">
- <p className="text-sm font-medium leading-relaxed text-gray-500">
- {shopOrders.filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state)).length > 0 
- ? "No orders match your filters." 
- : "No completed orders."}
- </p>
- </div>
- )}
- </div>
- <QueuePagination label="Completed" controlsId="queue-completed-orders" page={pages.completed} pageSize={QUEUE_PAGE_SIZE} total={completedOrders.length} onPageChange={page => handleQueuePageChange('completed', page)} />
- </div>
-
+ <QueuePagination
+ label={QUEUE_LABELS[activeQueue]}
+ controlsId={`queue-${activeQueue}-orders`}
+ page={pages[activeQueue]}
+ pageSize={QUEUE_PAGE_SIZE}
+ total={activeOrders.length}
+ onPageChange={page => handleQueuePageChange(activeQueue, page)}
+ />
+ </motion.section>
+ </AnimatePresence>
  </div>
 
  </div>

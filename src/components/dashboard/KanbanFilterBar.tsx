@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, ChevronDown } from '@carbon/icons-react';
 
 interface KanbanFilterBarProps {
+ contextLabel: string;
+ searchQuery: string;
  onSearch: (query: string) => void;
  paperSizeFilter: string;
  setPaperSizeFilter: (size: string) => void;
@@ -10,44 +12,59 @@ interface KanbanFilterBarProps {
 }
 
 export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
+ contextLabel,
+ searchQuery,
  onSearch,
  paperSizeFilter,
  setPaperSizeFilter,
  colorModeFilter,
  setColorModeFilter,
 }) => {
- const [localQuery, setLocalQuery] = useState('');
+ const [localQuery, setLocalQuery] = useState(searchQuery);
+ const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
- // Debounce logic
  useEffect(() => {
- const handler = setTimeout(() => {
- onSearch(localQuery);
- }, 300);
-
  return () => {
- clearTimeout(handler);
+ if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
  };
- }, [localQuery, onSearch]);
+ }, []);
+
+ const handleSearchChange = (value: string) => {
+ setLocalQuery(value);
+ if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+ searchTimerRef.current = setTimeout(() => {
+ onSearch(value);
+ searchTimerRef.current = null;
+ }, 300);
+ };
+
+ const flushPendingSearch = () => {
+ if (!searchTimerRef.current) return;
+ clearTimeout(searchTimerRef.current);
+ searchTimerRef.current = null;
+ onSearch(localQuery);
+ };
 
  return (
- <div className="flex shrink-0 flex-col flex-wrap items-stretch justify-between gap-2 border-b border-[#e0e0e0] bg-white p-2 sm:p-3 lg:flex-row lg:items-center">
+ <div className="flex shrink-0 flex-col items-stretch justify-between gap-2 border-b border-gray-300 bg-white p-2 lg:flex-row lg:items-center">
  {/* Search Input */}
  <div className="relative w-full min-w-0 lg:max-w-md lg:flex-1">
  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
- <Search className="h-4 w-4 text-gray-400" />
+ <Search aria-hidden="true" className="h-4 w-4 text-gray-400" />
  </div>
  <input
  type="text"
- aria-label="Search by Order ID or Client ID"
+ aria-label={`Search ${contextLabel} by Order ID or Client ID`}
  value={localQuery}
- onChange={(e) => setLocalQuery(e.target.value)}
- placeholder="Search by Order ID or Client ID..."
- className="block min-h-11 w-full border border-[#8d8d8d] bg-white py-2 pl-10 pr-3 text-base font-medium leading-5 text-carbon-gray-100 placeholder-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm"
+ onChange={(e) => handleSearchChange(e.target.value)}
+ onBlur={flushPendingSearch}
+ placeholder={`Search ${contextLabel} by Order or Client ID...`}
+ className="block h-11 w-full border border-[#8d8d8d] bg-white py-2 pl-10 pr-3 text-base font-medium leading-5 text-carbon-gray-100 placeholder-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
  />
  </div>
 
  {/* Advanced Filters */}
- <div className="grid w-full min-w-0 grid-cols-2 gap-2 lg:w-auto lg:gap-4">
+ <div className="grid w-full min-w-0 grid-cols-2 gap-2 lg:w-auto lg:gap-3">
  <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-2">
  <label htmlFor="queue-paper-size" className="text-[10px] font-bold uppercase tracking-wider text-gray-500 lg:whitespace-nowrap">Paper Size</label>
  <div className="relative lg:w-36">
@@ -55,14 +72,14 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  id="queue-paper-size"
  value={paperSizeFilter}
  onChange={(e) => setPaperSizeFilter(e.target.value)}
- className="block min-h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm"
+ className="block h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
  >
  <option value="ALL">All Sizes</option>
  <option value="SHORT">Short</option>
  <option value="A4">A4</option>
  <option value="LONG">Long</option>
  </select>
- <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+ <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
  </div>
  </div>
 
@@ -73,13 +90,13 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  id="queue-color-mode"
  value={colorModeFilter}
  onChange={(e) => setColorModeFilter(e.target.value)}
- className="block min-h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm"
+ className="block h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
  >
  <option value="ALL">All Modes</option>
  <option value="COLOR">Color</option>
  <option value="BLACK_AND_WHITE">B&W</option>
  </select>
- <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+ <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
  </div>
  </div>
  </div>

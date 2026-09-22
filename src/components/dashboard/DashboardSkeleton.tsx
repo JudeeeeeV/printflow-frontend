@@ -19,89 +19,67 @@ export const DashboardSkeleton: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Filter Bar Skeleton (Matches KanbanFilterBar) */}
-                    <div className="flex shrink-0 flex-col items-start justify-between gap-2 border-b border-[#e0e0e0] bg-white p-2 sm:p-3 lg:flex-row lg:items-center">
-                        <div className="h-11 w-full border border-[#e0e0e0] bg-gray-100 animate-pulse md:max-w-md"></div>
-                        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <div className="h-3 w-16 bg-gray-200 animate-pulse"></div>
-                                <div className="h-9 w-32 bg-gray-100 animate-pulse border border-[#e0e0e0]"></div>
+                    <div aria-hidden="true" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1.5 sm:gap-2 sm:px-2">
+                        {[1, 2, 3].map(tab => (
+                            <div key={tab} className={`flex h-12 items-center justify-center gap-2 border border-gray-300 shadow-[0_2px_0_rgba(22,22,22,0.12)] ${tab === 1 ? 'bg-blue-100' : 'bg-white'}`}>
+                                <div className={`h-4 animate-pulse ${tab === 1 ? 'w-20 bg-blue-200' : 'w-16 bg-gray-200'}`} />
+                                <div className="h-5 w-7 animate-pulse bg-black" />
                             </div>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <div className="h-3 w-20 bg-gray-200 animate-pulse"></div>
-                                <div className="h-9 w-32 bg-gray-100 animate-pulse border border-[#e0e0e0]"></div>
+                        ))}
+                    </div>
+
+                    <div className="flex shrink-0 flex-col items-stretch justify-between gap-2 border-b border-gray-300 bg-white p-2 lg:flex-row lg:items-center">
+                        <div className="h-11 w-full animate-pulse border border-gray-200 bg-gray-100 lg:h-10 lg:max-w-md" />
+                        <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:gap-3">
+                            <div className="space-y-1 lg:flex lg:items-center lg:gap-2 lg:space-y-0">
+                                <div className="h-3 w-16 animate-pulse bg-gray-200" />
+                                <div className="h-11 animate-pulse border border-gray-200 bg-gray-100 lg:h-10 lg:w-36" />
+                            </div>
+                            <div className="space-y-1 lg:flex lg:items-center lg:gap-2 lg:space-y-0">
+                                <div className="h-3 w-20 animate-pulse bg-gray-200" />
+                                <div className="h-11 animate-pulse border border-gray-200 bg-gray-100 lg:h-10 lg:w-36" />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-none flex-col gap-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-5 lg:overflow-x-auto lg:overflow-y-hidden lg:p-6">
-                        {[1, 2, 3].map((colIndex) => (
-                            <div key={colIndex} className="flex w-full min-w-0 flex-none flex-col bg-gray-100 border border-[#e0e0e0] lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
-                                {/* Column Header Skeleton */}
-                                <div className="p-4 bg-white border-b border-[#e0e0e0] flex justify-between items-center shrink-0">
-                                    <div className="h-6 w-32 bg-gray-200 animate-pulse"></div>
-                                    <div className="h-6 w-8 bg-gray-200 animate-pulse"></div>
-                                </div>
-                                
-                                <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-                                {/* Print Ready Batch Controls Skeleton */}
-                                {colIndex === 2 && (
-                                    <div className="p-3 bg-white border-b border-gray-100 flex flex-col gap-2 shrink-0 z-10">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="h-4 w-20 bg-gray-200 animate-pulse"></div>
-                                            <div className="h-3 w-16 bg-gray-100 animate-pulse"></div>
+                    <div className="flex flex-none flex-col overflow-hidden p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:p-5">
+                        <div className="flex w-full min-w-0 flex-col overflow-hidden border border-gray-300 border-t-4 border-t-blue-200 bg-gray-100 lg:min-h-0 lg:flex-1">
+                            <div className="grid grid-cols-1 items-start gap-3 overflow-hidden p-3 sm:p-4 md:grid-cols-2 lg:min-h-0 lg:flex-1 xl:grid-cols-3">
+                                {Array.from({ length: 3 }).map((_, cardIndex) => (
+                                    <div key={cardIndex} className="min-w-0 animate-pulse border border-gray-200 bg-white p-3 sm:p-4">
+                                        <div className="mb-3 flex items-start justify-between gap-2">
+                                            <div className="space-y-2">
+                                                <div className="h-4 w-24 bg-gray-200" />
+                                                <div className="h-3 w-16 bg-gray-100" />
+                                            </div>
+                                            <div className="h-5 w-20 bg-gray-200" />
                                         </div>
-                                        <div className="h-8 w-full bg-gray-100 animate-pulse border border-[#8d8d8d]"></div>
-                                        <div className="h-10 w-full bg-gray-200 animate-pulse border border-[#8d8d8d]"></div>
-                                    </div>
-                                )}
-
-                                <div className="p-3 space-y-4 sm:p-4">
-                                    {/* Match the three-order page size. */}
-                                    {Array.from({ length: 3 }).map((_, cardIndex) => (
-                                        <div key={cardIndex} className="flex items-center gap-3">
-                                            {colIndex === 2 && (
-                                                <div className="shrink-0 pl-1">
-                                                    <div className="w-4 h-4 bg-gray-200 animate-pulse border border-[#8d8d8d]"></div>
-                                                </div>
-                                            )}
-                                            <div className="min-w-0 flex-1 bg-white border border-[#e0e0e0] p-3 animate-pulse sm:p-4">
-                                                <div className="flex flex-wrap gap-2 justify-between items-start mb-3">
-                                                    <div className="space-y-2">
-                                                        <div className="h-4 w-24 bg-gray-200"></div>
-                                                        <div className="h-3 w-16 bg-gray-100"></div>
-                                                    </div>
-                                                    <div className="h-5 w-20 bg-gray-200"></div>
-                                                </div>
-                                                <div className="flex gap-2 mb-4">
-                                                    <div className="h-4 w-8 bg-gray-200"></div>
-                                                    <div className="h-4 w-12 bg-gray-200"></div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between">
-                                                        <div className="h-3 w-20 bg-gray-100"></div>
-                                                        <div className="h-3 w-12 bg-gray-200"></div>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <div className="h-3 w-16 bg-gray-100"></div>
-                                                        <div className="h-3 w-24 bg-gray-200"></div>
-                                                    </div>
-                                                </div>
+                                        <div className="mb-4 flex gap-2">
+                                            <div className="h-4 w-8 bg-gray-200" />
+                                            <div className="h-4 w-12 bg-gray-200" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between">
+                                                <div className="h-3 w-20 bg-gray-100" />
+                                                <div className="h-3 w-12 bg-gray-200" />
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <div className="h-3 w-16 bg-gray-100" />
+                                                <div className="h-3 w-24 bg-gray-200" />
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                                </div>
-                                <div aria-hidden="true" className="shrink-0 space-y-2 border-t border-gray-300 bg-white p-3">
-                                    <div className="h-5 w-32 animate-pulse bg-gray-100" />
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="h-11 w-24 animate-pulse border border-gray-200 bg-gray-100" />
-                                        <div className="h-4 w-16 animate-pulse bg-gray-100" />
-                                        <div className="h-11 w-20 animate-pulse border border-gray-200 bg-gray-100" />
                                     </div>
+                                ))}
+                            </div>
+                            <div aria-hidden="true" className="shrink-0 space-y-2 border-t border-gray-300 bg-white p-3">
+                                <div className="h-5 w-32 animate-pulse bg-gray-100" />
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="h-11 w-24 animate-pulse border border-gray-200 bg-gray-100" />
+                                    <div className="h-4 w-16 animate-pulse bg-gray-100" />
+                                    <div className="h-11 w-20 animate-pulse border border-gray-200 bg-gray-100" />
                                 </div>
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </div>
             </div>

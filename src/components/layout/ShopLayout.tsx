@@ -197,7 +197,7 @@ export const ShopLayout: React.FC = () => {
                     aria-live="polite"
                     aria-label={`Daemon status: ${daemonStatusLabel}`}
                     title={`Daemon: ${daemonStatusLabel}`}
-                    className="relative z-10 ml-auto flex min-h-9 shrink-0 items-center gap-2 border border-gray-600 border-l-2 border-l-carbon-blue-60 bg-carbon-gray-100 px-2.5 text-white sm:px-3"
+                    className="relative z-10 ml-auto flex min-h-9 shrink-0 items-center gap-2 border border-gray-600 border-l-2 bg-carbon-gray-100 px-2.5 text-white sm:px-3"
                 >
                     <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 ${daemonStatus === 'CONNECTED' ? 'bg-green-500' : daemonStatus === 'RECONNECTING' ? 'animate-pulse bg-yellow-500 motion-reduce:animate-none' : 'bg-gray-400'}`} />
                     <span className="hidden whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.08em] min-[360px]:inline sm:hidden">
