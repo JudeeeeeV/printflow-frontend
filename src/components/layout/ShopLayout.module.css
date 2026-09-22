@@ -3,10 +3,61 @@
     top: 0;
     right: 0;
     bottom: 0;
-    left: 55%;
+    left: 25%;
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
+    isolation: isolate;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 100%);
+    background:
+        linear-gradient(112deg, transparent 10%, rgba(20, 44, 91, 0.16) 46%, rgba(15, 98, 254, 0.12) 72%, transparent 100%);
+}
+
+.ambientLayer::before,
+.ambientLayer::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    will-change: opacity, transform;
+}
+
+.ambientLayer::before {
+    top: -3.25rem;
+    right: -8%;
+    bottom: -3.25rem;
+    left: 12%;
+    z-index: -1;
+    background: linear-gradient(
+        112deg,
+        transparent 10%,
+        rgba(15, 98, 254, 0.08) 28%,
+        rgba(120, 169, 255, 0.3) 45%,
+        rgba(15, 98, 254, 0.14) 60%,
+        transparent 82%
+    );
+    filter: blur(8px);
+    opacity: 0.58;
+    animation: lightSweep 12s cubic-bezier(0.45, 0, 0.55, 1) -4s infinite;
+}
+
+.ambientLayer::after {
+    right: -5%;
+    bottom: -1.35rem;
+    z-index: -1;
+    width: 78%;
+    height: 3.25rem;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(69, 137, 255, 0.82) 0%,
+        rgba(15, 98, 254, 0.42) 34%,
+        rgba(20, 44, 91, 0.14) 65%,
+        transparent 82%
+    );
+    filter: blur(9px);
+    opacity: 0.72;
+    animation: horizonPulse 8s cubic-bezier(0.45, 0, 0.55, 1) -2s infinite;
 }
 
 .glow {
@@ -16,36 +67,36 @@
 }
 
 .primaryGlow {
-    right: -5rem;
-    bottom: -7.5rem;
-    width: 24rem;
-    height: 15rem;
+    right: -4rem;
+    bottom: -8rem;
+    width: 30rem;
+    height: 18rem;
     background: radial-gradient(
         ellipse at center,
-        rgba(15, 98, 254, 0.9) 0%,
-        rgba(15, 98, 254, 0.46) 31%,
-        rgba(20, 44, 91, 0.18) 57%,
+        rgba(69, 137, 255, 0.98) 0%,
+        rgba(15, 98, 254, 0.58) 31%,
+        rgba(20, 44, 91, 0.24) 57%,
         transparent 75%
     );
-    filter: blur(18px);
-    opacity: 0.34;
+    filter: blur(16px);
+    opacity: 0.46;
     animation: glowBreathe 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .secondaryGlow {
-    top: -5rem;
-    left: 4%;
-    width: 17rem;
-    height: 12rem;
+    top: -5.5rem;
+    left: 1%;
+    width: 23rem;
+    height: 14rem;
     background: radial-gradient(
         ellipse at center,
-        rgba(20, 80, 196, 0.82) 0%,
-        rgba(20, 44, 91, 0.52) 38%,
-        rgba(57, 57, 57, 0.14) 62%,
+        rgba(54, 122, 255, 0.88) 0%,
+        rgba(20, 80, 196, 0.58) 38%,
+        rgba(57, 57, 57, 0.18) 62%,
         transparent 78%
     );
     filter: blur(14px);
-    opacity: 0.3;
+    opacity: 0.4;
     animation: glowDrift 14s cubic-bezier(0.45, 0, 0.55, 1) -5s infinite;
 }
 
@@ -56,13 +107,13 @@
     height: 10rem;
     background: radial-gradient(
         ellipse at center,
-        rgba(120, 169, 255, 0.72) 0%,
-        rgba(15, 98, 254, 0.44) 34%,
+        rgba(160, 194, 255, 0.86) 0%,
+        rgba(15, 98, 254, 0.56) 34%,
         rgba(20, 44, 91, 0.12) 63%,
         transparent 80%
     );
     filter: blur(10px);
-    opacity: 0.26;
+    opacity: 0.36;
     animation: accentPulse 9s cubic-bezier(0.45, 0, 0.55, 1) -3s infinite;
 }
 
@@ -76,8 +127,8 @@
 .rectangleOne {
     top: 0.6rem;
     left: 10%;
-    width: 4.75rem;
-    height: 0.55rem;
+    width: 2.75rem;
+    height: 0.35rem;
     background: rgba(20, 44, 91, 0.78);
     animation: driftOne 17s cubic-bezier(0.45, 0, 0.55, 1) -6s infinite;
 }
@@ -85,8 +136,8 @@
 .rectangleTwo {
     right: 34%;
     bottom: 0.55rem;
-    width: 2.5rem;
-    height: 1rem;
+    width: 1.5rem;
+    height: 0.65rem;
     border: 1px solid rgba(241, 241, 241, 0.2);
     background: rgba(241, 241, 241, 0.06);
     animation: driftTwo 21s cubic-bezier(0.45, 0, 0.55, 1) -13s infinite;
@@ -95,8 +146,8 @@
 .rectangleThree {
     top: 0.9rem;
     right: 8%;
-    width: 6.25rem;
-    height: 0.7rem;
+    width: 3.5rem;
+    height: 0.4rem;
     background: rgba(57, 57, 57, 0.82);
     animation: driftThree 23s cubic-bezier(0.45, 0, 0.55, 1) -4s infinite;
 }
@@ -104,19 +155,56 @@
 .rectangleFour {
     top: 1.7rem;
     left: 38%;
-    width: 3.25rem;
-    height: 0.85rem;
-    background: rgba(15, 98, 254, 0.28);
+    width: 2rem;
+    height: 0.55rem;
+    background: rgba(15, 98, 254, 0.46);
     animation: driftTwo 16s cubic-bezier(0.45, 0, 0.55, 1) -10s infinite reverse;
 }
 
 .rectangleFive {
     right: 19%;
     bottom: 0.25rem;
-    width: 4.25rem;
-    height: 0.5rem;
-    background: rgba(241, 241, 241, 0.12);
+    width: 2.5rem;
+    height: 0.3rem;
+    background: rgba(241, 241, 241, 0.2);
     animation: driftOne 19s cubic-bezier(0.45, 0, 0.55, 1) -15s infinite reverse;
+}
+
+.rectangleSix {
+    top: 0.35rem;
+    left: 24%;
+    width: 1.25rem;
+    height: 0.35rem;
+    background: rgba(15, 98, 254, 0.58);
+    animation: driftThree 15s cubic-bezier(0.45, 0, 0.55, 1) -9s infinite;
+}
+
+.rectangleSeven {
+    bottom: 0.4rem;
+    left: 54%;
+    width: 2rem;
+    height: 0.3rem;
+    border: 1px solid rgba(241, 241, 241, 0.24);
+    background: rgba(241, 241, 241, 0.05);
+    animation: driftOne 18s cubic-bezier(0.45, 0, 0.55, 1) -11s infinite reverse;
+}
+
+.rectangleEight {
+    top: 1.15rem;
+    right: 26%;
+    width: 1.4rem;
+    height: 0.45rem;
+    background: rgba(57, 57, 57, 0.74);
+    animation: driftTwo 20s cubic-bezier(0.45, 0, 0.55, 1) -7s infinite;
+}
+
+.rectangleNine {
+    right: 3%;
+    bottom: 0.75rem;
+    width: 2.25rem;
+    height: 0.3rem;
+    background: rgba(20, 44, 91, 0.82);
+    animation: driftThree 16s cubic-bezier(0.45, 0, 0.55, 1) -12s infinite reverse;
 }
 
 @keyframes driftOne {
@@ -166,62 +254,83 @@
 
 @keyframes glowBreathe {
     0%, 100% {
-        opacity: 0.34;
+        opacity: 0.46;
         transform: translate3d(0, 0, 0) scale(0.96);
     }
     19% {
-        opacity: 0.52;
+        opacity: 0.64;
         transform: translate3d(-6px, -2px, 0) scale(1.01);
     }
     46% {
-        opacity: 0.78;
+        opacity: 0.9;
         transform: translate3d(-14px, -5px, 0) scale(1.08);
     }
     71% {
-        opacity: 0.46;
+        opacity: 0.58;
         transform: translate3d(-8px, -3px, 0) scale(1.02);
     }
 }
 
 @keyframes glowDrift {
     0%, 100% {
-        opacity: 0.3;
+        opacity: 0.4;
         transform: translate3d(0, 0, 0) scale(0.98);
     }
     32% {
-        opacity: 0.58;
+        opacity: 0.7;
         transform: translate3d(18px, 4px, 0) scale(1.06);
     }
     67% {
-        opacity: 0.4;
+        opacity: 0.5;
         transform: translate3d(-9px, -3px, 0) scale(1.02);
     }
 }
 
 @keyframes accentPulse {
     0%, 100% {
-        opacity: 0.26;
+        opacity: 0.36;
         transform: translate3d(0, 0, 0) scale(0.94);
     }
     41% {
-        opacity: 0.56;
+        opacity: 0.72;
         transform: translate3d(-8px, 3px, 0) scale(1.08);
     }
     74% {
-        opacity: 0.36;
+        opacity: 0.48;
         transform: translate3d(7px, -2px, 0) scale(1.01);
     }
 }
 
-@media (min-width: 640px) {
-    .ambientLayer {
-        left: 50%;
+@keyframes lightSweep {
+    0%, 100% {
+        opacity: 0.42;
+        transform: translate3d(-12%, 0, 0) skewX(-8deg);
+    }
+    45% {
+        opacity: 0.82;
+        transform: translate3d(10%, 0, 0) skewX(-8deg);
+    }
+    72% {
+        opacity: 0.56;
+        transform: translate3d(2%, 0, 0) skewX(-8deg);
+    }
+}
+
+@keyframes horizonPulse {
+    0%, 100% {
+        opacity: 0.62;
+        transform: translate3d(0, 2px, 0) scaleX(0.94);
+    }
+    48% {
+        opacity: 0.94;
+        transform: translate3d(-3%, -2px, 0) scaleX(1.06);
     }
 }
 
 @media (max-width: 639px) {
     .rectangleTwo,
-    .rectangleFive {
+    .rectangleFive,
+    .rectangleEight {
         display: none;
     }
 
@@ -239,24 +348,36 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .ambientLayer::before,
+    .ambientLayer::after,
     .glow,
     .floatingRectangle {
         animation: none;
         will-change: auto;
     }
 
+    .ambientLayer::before {
+        opacity: 0.58;
+        transform: none;
+    }
+
+    .ambientLayer::after {
+        opacity: 0.72;
+        transform: none;
+    }
+
     .primaryGlow {
-        opacity: 0.46;
+        opacity: 0.58;
         transform: translate3d(-8px, -3px, 0) scale(1);
     }
 
     .secondaryGlow {
-        opacity: 0.34;
+        opacity: 0.44;
         transform: translate3d(8px, 0, 0) scale(1);
     }
 
     .accentGlow {
-        opacity: 0.28;
+        opacity: 0.38;
         transform: translate3d(-4px, 0, 0) scale(1);
     }
 }

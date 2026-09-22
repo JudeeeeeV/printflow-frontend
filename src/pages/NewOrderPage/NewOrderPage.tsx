@@ -283,6 +283,11 @@ export const NewOrderPage: React.FC = () => {
                             <span className={`${styles.floatingRectangle} ${styles.rectangleFive}`} />
                             <span className={`${styles.floatingRectangle} ${styles.rectangleSix}`} />
                             <span className={`${styles.floatingRectangle} ${styles.rectangleSeven}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleEight}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleNine}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleTen}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleEleven}`} />
+                            <span className={`${styles.floatingRectangle} ${styles.rectangleTwelve}`} />
                         </div>
 
                         <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

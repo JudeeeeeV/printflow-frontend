@@ -175,6 +175,10 @@ export const ShopLayout: React.FC = () => {
                     <span className={`${styles.floatingRectangle} ${styles.rectangleThree}`} />
                     <span className={`${styles.floatingRectangle} ${styles.rectangleFour}`} />
                     <span className={`${styles.floatingRectangle} ${styles.rectangleFive}`} />
+                    <span className={`${styles.floatingRectangle} ${styles.rectangleSix}`} />
+                    <span className={`${styles.floatingRectangle} ${styles.rectangleSeven}`} />
+                    <span className={`${styles.floatingRectangle} ${styles.rectangleEight}`} />
+                    <span className={`${styles.floatingRectangle} ${styles.rectangleNine}`} />
                 </div>
                 <button ref={hamburgerRef} type="button" onClick={() => {
                     setTooltip(null);
