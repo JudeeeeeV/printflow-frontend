@@ -30,9 +30,9 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  }, [localQuery, onSearch]);
 
  return (
- <div className="flex shrink-0 flex-col flex-wrap items-stretch justify-between gap-3 border-b border-[#e0e0e0] bg-white p-3 sm:p-4 xl:flex-row xl:items-center">
+ <div className="flex shrink-0 flex-col flex-wrap items-stretch justify-between gap-2 border-b border-[#e0e0e0] bg-white p-2 sm:p-3 lg:flex-row lg:items-center">
  {/* Search Input */}
- <div className="relative w-full min-w-0 xl:max-w-md xl:flex-1">
+ <div className="relative w-full min-w-0 lg:max-w-md lg:flex-1">
  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
  <Search className="h-4 w-4 text-gray-400" />
  </div>
@@ -47,10 +47,10 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  </div>
 
  {/* Advanced Filters */}
- <div className="grid w-full min-w-0 grid-cols-2 gap-3 xl:w-auto">
- <div className="flex min-w-0 flex-col gap-2">
- <label htmlFor="queue-paper-size" className="text-xs font-bold text-gray-500 uppercase tracking-wider">Paper Size</label>
- <div className="relative">
+ <div className="grid w-full min-w-0 grid-cols-2 gap-2 lg:w-auto lg:gap-4">
+ <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-2">
+ <label htmlFor="queue-paper-size" className="text-[10px] font-bold uppercase tracking-wider text-gray-500 lg:whitespace-nowrap">Paper Size</label>
+ <div className="relative lg:w-36">
  <select
  id="queue-paper-size"
  value={paperSizeFilter}
@@ -66,9 +66,9 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  </div>
  </div>
 
- <div className="flex min-w-0 flex-col gap-2">
- <label htmlFor="queue-color-mode" className="text-xs font-bold text-gray-500 uppercase tracking-wider">Color Mode</label>
- <div className="relative">
+ <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-2">
+ <label htmlFor="queue-color-mode" className="text-[10px] font-bold uppercase tracking-wider text-gray-500 lg:whitespace-nowrap">Color Mode</label>
+ <div className="relative lg:w-36">
  <select
  id="queue-color-mode"
  value={colorModeFilter}

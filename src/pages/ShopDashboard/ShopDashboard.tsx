@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { shopService } from '../../services/shopService';
 import { DashboardSkeleton } from '../../components/dashboard/DashboardSkeleton';
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
-import { AnimatePresence } from 'framer-motion';
+import { QueuePagination } from '../../components/dashboard/QueuePagination';
 import { daemonSocketService } from '../../services/daemonSocketService';
 import { API_URL } from '../../config/runtime';
 import type { DaemonStatus } from '../../services/daemonSocketService';
@@ -13,6 +13,10 @@ import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgre
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 import { AlertModal } from '../../components/common/AlertModal';
 import { apiClient } from '../../services/apiClient';
+
+const QUEUE_PAGE_SIZE = 3;
+type QueueKey = 'new' | 'ready' | 'completed';
+const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', completed: 'Completed' };
 
 export const ShopDashboard: React.FC = () => {
  const navigate = useNavigate();
@@ -46,6 +50,24 @@ export const ShopDashboard: React.FC = () => {
  const [searchQuery, setSearchQuery] = useState('');
  const [paperSizeFilter, setPaperSizeFilter] = useState('ALL');
  const [colorModeFilter, setColorModeFilter] = useState('ALL');
+
+ const [queuePages, setQueuePages] = useState<Record<QueueKey, number>>({ new: 1, ready: 1, completed: 1 });
+ const filterKey = JSON.stringify([searchQuery, paperSizeFilter, colorModeFilter]);
+ const [previousFilterKey, setPreviousFilterKey] = useState(filterKey);
+ const [pageAnnouncement, setPageAnnouncement] = useState('');
+ const queueBoardRef = useRef<HTMLDivElement>(null);
+
+ // Prune only orders that left production, not selections hidden by filters or pagination.
+ const readyOrderIds = new Set(shopOrders.filter(order => order.state === 'IN_PRODUCTION').map(order => order.id));
+ const validSelectedReadyOrders = selectedReadyOrders.filter(id => readyOrderIds.has(id));
+ if (validSelectedReadyOrders.length !== selectedReadyOrders.length) {
+ setSelectedReadyOrders(validSelectedReadyOrders);
+ }
+
+ if (previousFilterKey !== filterKey) {
+ setPreviousFilterKey(filterKey);
+ setQueuePages({ new: 1, ready: 1, completed: 1 });
+ }
 
  const [alertState, setAlertState] = useState<{isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'}>({ isOpen: false, message: '' });
  const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string) => {
@@ -185,7 +207,7 @@ export const ShopDashboard: React.FC = () => {
  };
 
  const handleSelectAllReady = () => {
- if (selectedReadyOrders.length === printReadyOrders.length) {
+ if (allMatchingReadySelected) {
  setSelectedReadyOrders([]);
  } else {
  setSelectedReadyOrders(printReadyOrders.map(o => o.id));
@@ -316,21 +338,65 @@ export const ShopDashboard: React.FC = () => {
  .filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state))
  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+ const pageTotals = {
+ new: Math.max(1, Math.ceil(newOrders.length / QUEUE_PAGE_SIZE)),
+ ready: Math.max(1, Math.ceil(printReadyOrders.length / QUEUE_PAGE_SIZE)),
+ completed: Math.max(1, Math.ceil(completedOrders.length / QUEUE_PAGE_SIZE)),
+ };
+ const pages = {
+ new: Math.min(queuePages.new, pageTotals.new),
+ ready: Math.min(queuePages.ready, pageTotals.ready),
+ completed: Math.min(queuePages.completed, pageTotals.completed),
+ };
+ // Store the clamp so a later poll cannot restore an obsolete page number.
+ if (previousFilterKey === filterKey && (pages.new !== queuePages.new || pages.ready !== queuePages.ready || pages.completed !== queuePages.completed)) {
+ setQueuePages(pages);
+ }
+ const visibleNewOrders = newOrders.slice((pages.new - 1) * QUEUE_PAGE_SIZE, pages.new * QUEUE_PAGE_SIZE);
+ const visibleReadyOrders = printReadyOrders.slice((pages.ready - 1) * QUEUE_PAGE_SIZE, pages.ready * QUEUE_PAGE_SIZE);
+ const visibleCompletedOrders = completedOrders.slice((pages.completed - 1) * QUEUE_PAGE_SIZE, pages.completed * QUEUE_PAGE_SIZE);
+ const selectedReadyIds = new Set(selectedReadyOrders);
+ const matchingSelectedCount = printReadyOrders.filter(order => selectedReadyIds.has(order.id)).length;
+ const allMatchingReadySelected = printReadyOrders.length > 0 && matchingSelectedCount === printReadyOrders.length;
+ const someMatchingReadySelected = matchingSelectedCount > 0 && !allMatchingReadySelected;
+ const offPageSelectedCount = selectedReadyOrders.length - visibleReadyOrders.filter(order => selectedReadyIds.has(order.id)).length;
+
+ const handleQueuePageChange = (queue: QueueKey, requestedPage: number) => {
+ const page = Math.max(1, Math.min(requestedPage, pageTotals[queue]));
+ setQueuePages(previous => ({ ...previous, [queue]: page }));
+ setPageAnnouncement(`${QUEUE_LABELS[queue]}, page ${page} of ${pageTotals[queue]}.`);
+ requestAnimationFrame(() => {
+ const heading = queueBoardRef.current?.querySelector<HTMLElement>(`#queue-${queue}-heading`);
+ if (!heading) return;
+ heading.focus({ preventScroll: true });
+ if (window.matchMedia('(min-width: 1024px)').matches) {
+ queueBoardRef.current?.querySelector<HTMLElement>(`#queue-${queue}-orders`)?.scrollTo({ top: 0, behavior: 'instant' });
+ } else {
+ const scroller = heading.closest<HTMLElement>('[data-shop-scroll]');
+ if (!scroller) return;
+ const headingBounds = heading.getBoundingClientRect();
+ const scrollBounds = scroller.getBoundingClientRect();
+ if (headingBounds.top < scrollBounds.top || headingBounds.bottom > scrollBounds.bottom) {
+ scroller.scrollTo({ top: scroller.scrollTop + headingBounds.top - scrollBounds.top - 12, behavior: 'instant' });
+ }
+ }
+ });
+ };
 
  return (
  <div className="flex min-h-full min-w-0 flex-col bg-carbon-gray-10 font-sans lg:h-full lg:min-h-0 lg:overflow-hidden">
- <div className="z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-gray-300 bg-white px-4 py-4 sm:px-6 lg:px-8">
- <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4 sm:gap-6">
+ <div className="z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-300 bg-white px-4 py-2 sm:px-6 lg:px-8">
+ <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 sm:gap-4">
  <div className="flex min-w-0 items-center gap-3">
- <span className="h-10 w-1 shrink-0 bg-carbon-blue-60" aria-hidden="true" />
+ <span className="h-8 w-1 shrink-0 bg-carbon-blue-60" aria-hidden="true" />
  <div className="min-w-0">
- <h2 className="truncate text-xl font-black tracking-tight text-carbon-gray-100 sm:text-2xl">{name}</h2>
- <p className="mt-0.5 text-xs font-bold uppercase tracking-[0.18em] text-gray-500">Live Queue</p>
+ <h2 className="truncate text-lg font-black tracking-tight text-carbon-gray-100 sm:text-xl">{name}</h2>
+ <p className="text-[10px] font-bold uppercase leading-none tracking-[0.18em] text-gray-500">Live Queue</p>
  </div>
  </div>
  
  {/* Daemon Status Badge */}
- <div className="ml-auto flex min-h-10 items-center gap-3 border border-gray-300 bg-carbon-gray-10 px-3 py-2 sm:px-4">
+ <div className="ml-auto flex min-h-9 items-center gap-2 border border-gray-300 bg-carbon-gray-10 px-3 py-1.5">
  <span className={`relative flex h-2.5 w-2.5 shrink-0`}>
  {daemonStatus === 'CONNECTED' && (
  <span className="relative inline-flex h-2.5 w-2.5 bg-green-500"></span>
@@ -404,17 +470,17 @@ export const ShopDashboard: React.FC = () => {
  // Kanban Board Layout
  <div className="flex flex-none flex-col bg-carbon-gray-10 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
  {/* Dashboard Top Bar (QR Code & Status) */}
- <div className="z-10 flex shrink-0 flex-col gap-4 border-b border-gray-300 bg-white px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
- <div className="flex min-h-11 items-center border-l-4 border-green-500 bg-carbon-gray-10 px-4">
- <span className="mr-3 flex h-3 w-3 shrink-0">
- <span className="relative inline-flex h-3 w-3 bg-green-500"></span>
+ <div className="z-10 flex shrink-0 flex-col gap-2 border-b border-gray-300 bg-white px-4 py-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+ <div className="flex min-h-10 items-center border-l-4 border-green-500 bg-carbon-gray-10 px-3">
+ <span className="mr-2.5 flex h-2.5 w-2.5 shrink-0">
+ <span className="relative inline-flex h-2.5 w-2.5 bg-green-500"></span>
  </span>
- <span className="font-black tracking-tight text-carbon-gray-100">Queue Active</span>
+ <span className="text-sm font-black tracking-tight text-carbon-gray-100">Queue Active</span>
  </div>
 
- <div className="flex min-w-0 flex-col gap-2 lg:items-end">
- <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
- <label className="shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-gray-600">GCash QR:</label>
+ <div className="flex min-w-0 flex-col gap-1 lg:items-end">
+ <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center">
+ <label className="shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-600">GCash QR:</label>
  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
  <input
  type="file"
@@ -438,7 +504,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  </div>
 
- <div className="shrink-0 border-b border-gray-300 bg-carbon-gray-10 px-3 py-3 sm:px-5 lg:px-7">
+ <div className="shrink-0 border-b border-gray-300 bg-carbon-gray-10 px-3 py-2 sm:px-5 lg:px-7">
  <div className="border border-gray-300 bg-white [&>div]:border-b-0">
  <KanbanFilterBar 
  onSearch={setSearchQuery} 
@@ -450,24 +516,23 @@ export const ShopDashboard: React.FC = () => {
  </div>
  </div>
 
- <div data-live-queue className="flex flex-none flex-col gap-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-5 lg:overflow-x-auto lg:overflow-y-hidden lg:p-6">
+ <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{pageAnnouncement}</p>
+ <div ref={queueBoardRef} data-live-queue className="flex flex-none flex-col gap-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-5 lg:overflow-x-auto lg:overflow-y-hidden lg:p-6">
  
  {/* Column 1: New Orders */}
  <div className="flex w-full min-w-0 flex-none flex-col border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-gray-100 lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
  <div className="flex shrink-0 items-center justify-between border-b border-gray-300 bg-white px-4 py-3.5">
- <h3 className="text-lg font-black tracking-tight text-carbon-gray-100">New Orders</h3>
+ <h3 id="queue-new-heading" tabIndex={-1} className="text-lg font-black tracking-tight text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60">New Orders</h3>
  <span className="min-w-8 bg-blue-50 px-2.5 py-1 text-center text-sm font-black tabular-nums text-carbon-blue-70">{newOrders.length}</span>
  </div>
- <div className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
- <AnimatePresence>
- {newOrders.map(order => (
+ <div id="queue-new-orders" aria-labelledby="queue-new-heading" className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+ {visibleNewOrders.map(order => (
  <OrderCard 
  key={order.id} 
  order={order} 
  onClick={() => ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? setSelectedPaymentOrder(order) : null} 
  />
  ))}
- </AnimatePresence>
  {newOrders.length === 0 && (
  <div className="flex lg:h-full min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center">
  <p className="text-sm font-medium leading-relaxed text-gray-500">
@@ -478,29 +543,37 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
  </div>
+ <QueuePagination label="New Orders" controlsId="queue-new-orders" page={pages.new} pageSize={QUEUE_PAGE_SIZE} total={newOrders.length} onPageChange={page => handleQueuePageChange('new', page)} />
  </div>
 
  {/* Column 2: Print Ready */}
  <div className="flex w-full min-w-0 flex-none flex-col border border-carbon-gray-100 border-t-4 border-t-carbon-gray-100 bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
  <div className="flex shrink-0 items-center justify-between border-b border-carbon-gray-100 bg-carbon-gray-100 px-4 py-3.5 text-white">
- <h3 className="text-lg font-black tracking-tight">Print Ready</h3>
+ <h3 id="queue-ready-heading" tabIndex={-1} className="text-lg font-black tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Print Ready</h3>
  <span className="min-w-8 bg-white px-2.5 py-1 text-center text-sm font-black tabular-nums text-carbon-gray-100">{printReadyOrders.length}</span>
  </div>
  
+ <div id="queue-ready-orders" aria-labelledby="queue-ready-heading" className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
  {/* Batch Controls */}
- {printReadyOrders.length > 0 && (
+ {(printReadyOrders.length > 0 || selectedReadyOrders.length > 0) && (
  <div className="z-10 flex shrink-0 flex-col gap-3 border-b border-gray-300 bg-white p-4">
- <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+ <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3">
  <label className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-carbon-gray-100">
  <input 
  type="checkbox" 
  className="mr-3 h-5 w-5 cursor-pointer border-gray-500 text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
- checked={selectedReadyOrders.length === printReadyOrders.length && printReadyOrders.length > 0}
+ checked={allMatchingReadySelected}
+ disabled={printReadyOrders.length === 0}
+ ref={element => { if (element) element.indeterminate = someMatchingReadySelected; }}
+ aria-describedby="ready-selection-scope"
  onChange={handleSelectAllReady}
  />
- Select All
+ <span>Select all matching orders<span id="ready-selection-scope" className="block text-xs font-normal text-gray-600">Across all pages</span></span>
  </label>
- <span className="bg-carbon-gray-10 px-2.5 py-1 text-xs font-bold tabular-nums text-gray-600">{selectedReadyOrders.length} selected</span>
+ <span className="bg-carbon-gray-10 px-2.5 py-1 text-xs font-bold tabular-nums text-gray-600">{selectedReadyOrders.length} selected{offPageSelectedCount > 0 && <span className="block font-normal">{offPageSelectedCount} not on this page</span>}</span>
+ {selectedReadyOrders.length > 0 && (
+ <button type="button" onClick={() => setSelectedReadyOrders([])} className="min-h-11 cursor-pointer px-2 text-sm font-semibold text-carbon-blue-70 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none">Clear selection</button>
+ )}
  </div>
  
  {daemonStatus === 'CONNECTED' ? (
@@ -551,14 +624,14 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
 
- <div className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
- <AnimatePresence>
- {printReadyOrders.map(order => (
+ <div className="space-y-4 p-3 sm:p-4">
+ {visibleReadyOrders.map(order => (
  <div key={order.id} className={`group flex items-center gap-3 border-l-4 transition-colors ${selectedReadyOrders.includes(order.id) ? 'border-carbon-blue-60 bg-blue-50' : 'border-transparent'}`}>
  <div className="shrink-0 pl-2">
  <input 
  type="checkbox" 
  className="h-5 w-5 cursor-pointer border-gray-500 text-carbon-blue-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+ aria-label={`Select order ${order.id.slice(0, 8)}`}
  checked={selectedReadyOrders.includes(order.id)}
  onChange={() => handleToggleReadySelection(order.id)}
  />
@@ -568,7 +641,6 @@ export const ShopDashboard: React.FC = () => {
  </div>
  </div>
  ))}
- </AnimatePresence>
  {printReadyOrders.length === 0 && (
  <div className="flex lg:h-full min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center">
  <p className="text-sm font-medium leading-relaxed text-gray-500">
@@ -580,19 +652,19 @@ export const ShopDashboard: React.FC = () => {
  )}
  </div>
  </div>
+ <QueuePagination label="Print Ready" controlsId="queue-ready-orders" page={pages.ready} pageSize={QUEUE_PAGE_SIZE} total={printReadyOrders.length} onPageChange={page => handleQueuePageChange('ready', page)} />
+ </div>
 
  {/* Column 3: Completed */}
  <div className="flex w-full min-w-0 flex-none flex-col border border-gray-300 border-t-4 border-t-gray-400 bg-gray-100 lg:min-h-0 lg:min-w-[320px] lg:flex-1 lg:overflow-hidden">
  <div className="flex shrink-0 items-center justify-between border-b border-gray-300 bg-gray-50 px-4 py-3.5">
- <h3 className="text-lg font-black tracking-tight text-gray-700">Completed</h3>
+ <h3 id="queue-completed-heading" tabIndex={-1} className="text-lg font-black tracking-tight text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60">Completed</h3>
  <span className="min-w-8 bg-gray-200 px-2.5 py-1 text-center text-sm font-black tabular-nums text-gray-700">{completedOrders.length}</span>
  </div>
- <div className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
- <AnimatePresence>
- {completedOrders.map(order => (
+ <div id="queue-completed-orders" aria-labelledby="queue-completed-heading" className="space-y-4 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+ {visibleCompletedOrders.map(order => (
  <OrderCard key={order.id} order={order} onClick={() => {}} />
  ))}
- </AnimatePresence>
  {completedOrders.length === 0 && (
  <div className="flex lg:h-full min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center">
  <p className="text-sm font-medium leading-relaxed text-gray-500">
@@ -603,6 +675,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
  </div>
+ <QueuePagination label="Completed" controlsId="queue-completed-orders" page={pages.completed} pageSize={QUEUE_PAGE_SIZE} total={completedOrders.length} onPageChange={page => handleQueuePageChange('completed', page)} />
  </div>
 
  </div>
