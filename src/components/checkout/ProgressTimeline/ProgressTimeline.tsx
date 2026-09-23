@@ -1,4 +1,5 @@
 import React from 'react';
+import { Checkmark } from '@carbon/icons-react';
 
 interface ProgressTimelineProps {
  currentStep: number;
@@ -6,46 +7,51 @@ interface ProgressTimelineProps {
 
 export const ProgressTimeline: React.FC<ProgressTimelineProps> = ({ currentStep }) => {
  const steps = [
- { label: 'Order Placed', number: 1 },
- { label: 'Awaiting Payment', number: 2 },
+ { label: 'Order placed', number: 1 },
+ { label: 'Payment', number: 2 },
  { label: 'Printing', number: 3 },
- { label: 'Ready', number: 4 }
+ { label: 'Ready', number: 4 },
  ];
+ const progress = Math.min(((currentStep - 1) / (steps.length - 1)) * 100, 100);
 
  return (
- <div className="w-full py-4 relative">
- <div className="absolute left-0 top-8 w-full h-1 bg-gray-200 z-0"></div>
- <div 
- className="absolute left-0 top-8 h-1 bg-carbon-blue-60 hover:bg-carbon-blue-70 z-0 transition-all duration-500"
- style={{ width: `${Math.min(((currentStep - 1) / (steps.length - 1)) * 100, 100)}%` }}
- ></div>
- 
- <div className="flex items-center justify-between relative z-10">
+ <section aria-labelledby="order-progress-heading" className="border-y border-gray-300 bg-carbon-gray-10 px-4 py-5 sm:px-7">
+ <div className="mb-4 flex items-center justify-between gap-4">
+ <h3 id="order-progress-heading" className="text-xs font-bold uppercase tracking-[0.16em] text-carbon-gray-100">Order progress</h3>
+ <span className="text-xs font-semibold text-gray-600">Step {currentStep} of {steps.length}</span>
+ </div>
+ <div className="relative">
+ <div aria-hidden="true" className="absolute left-[12.5%] right-[12.5%] top-4 h-1 bg-gray-300" />
+ <div
+ aria-hidden="true"
+ className="absolute left-[12.5%] top-4 h-1 bg-carbon-blue-60 transition-[width] duration-300 motion-reduce:transition-none"
+ style={{ width: `${progress * 0.75}%` }}
+ />
+ <ol className="relative grid grid-cols-4">
  {steps.map((step) => {
- const isActive = step.number <= currentStep;
+ const isComplete = step.number < currentStep;
  const isCurrent = step.number === currentStep;
- 
+ const isActive = step.number <= currentStep;
+
  return (
- <div key={step.number} className="flex flex-col items-center w-24">
- <div className="relative w-8 h-8 mb-2">
- {isCurrent && (
- <div className="absolute inset-0 bg-carbon-blue-60 hover:bg-carbon-blue-70/20 animate-ping"></div>
- )}
- <div 
- className={`relative z-10 w-full h-full flex items-center justify-center font-bold text-sm transition-colors duration-300 ${
- isActive ? 'bg-carbon-blue-60 hover:bg-carbon-blue-70 text-white ' : 'bg-gray-200 text-gray-500'
- }`}
- >
- {step.number}
- </div>
- </div>
- <span className={`text-xs font-bold text-center mt-1 ${isActive ? 'text-carbon-gray-100' : 'text-gray-400'}`}>
+ <li key={step.number} aria-current={isCurrent ? 'step' : undefined} className="flex min-w-0 flex-col items-center text-center">
+ <span className={`relative flex h-8 w-8 items-center justify-center border-2 text-xs font-black ${
+ isCurrent
+ ? 'border-carbon-blue-60 bg-carbon-blue-60 text-white shadow-[0_0_0_4px_rgba(15,98,254,0.16)]'
+ : isComplete
+ ? 'border-carbon-gray-100 bg-carbon-gray-100 text-white'
+ : 'border-gray-400 bg-white text-gray-600'
+ }`}>
+ {isComplete ? <Checkmark aria-hidden="true" className="h-4 w-4" /> : step.number}
+ </span>
+ <span className={`mt-2 max-w-20 text-[11px] font-bold leading-tight sm:text-xs ${isActive ? 'text-carbon-gray-100' : 'text-gray-500'}`}>
  {step.label}
  </span>
- </div>
+ </li>
  );
  })}
+ </ol>
  </div>
- </div>
+ </section>
  );
 };

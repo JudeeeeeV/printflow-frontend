@@ -9,18 +9,14 @@ interface SubmitVerificationButtonProps {
 export const SubmitVerificationButton: React.FC<SubmitVerificationButtonProps> = ({ onSubmit, isSubmitting, disabled }) => {
  return (
  <button
+ type="button"
  onClick={onSubmit}
  disabled={disabled || isSubmitting}
- className="w-full bg-carbon-blue-60 text-white font-bold py-4 hover:bg-carbon-blue-70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+ aria-busy={isSubmitting}
+ className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 bg-carbon-blue-60 px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
  >
- {isSubmitting ? (
- <>
- <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin"></div>
- VERIFYING...
- </>
- ) : (
- 'SUBMIT FOR VERIFICATION'
- )}
+ {isSubmitting && <span aria-hidden="true" className="h-5 w-5 animate-spin border-2 border-white border-t-transparent motion-reduce:animate-none" />}
+ {isSubmitting ? 'Submitting receipt...' : 'Submit for verification'}
  </button>
  );
 };
