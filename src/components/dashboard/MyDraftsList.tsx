@@ -40,7 +40,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  const fetchDrafts = useCallback(async () => {
  setIsLoading(true);
  try {
- const res = await orderService.getDrafts(currentPage, 10);
+ const res = await orderService.getDrafts(currentPage, 6);
  setDrafts(res.data as DraftOrder[]);
  setTotalPages(res.meta.totalPages);
  } catch (error) {
