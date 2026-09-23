@@ -328,6 +328,10 @@
 }
 
 @media (max-width: 639px) {
+    .ambientLayer {
+        opacity: 0.3;
+    }
+
     .rectangleTwo,
     .rectangleFive,
     .rectangleEight {

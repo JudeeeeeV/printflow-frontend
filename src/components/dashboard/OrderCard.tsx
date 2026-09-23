@@ -65,7 +65,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       transition={{ duration: 0.15, ease: "easeOut" }}
       whileHover={{ scale: 1.01 }}
       onClick={onClick}
-      className={`bg-white p-4 cursor-pointer transition-all duration-200 ${isSelected ? 'border-2 border-carbon-blue-60 shadow-md' : 'border border-[#e0e0e0] hover:border-[#8d8d8d] hover:shadow-md'}`}
+      className={`cursor-pointer bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : 'border border-[#e0e0e0] p-4 hover:border-[#8d8d8d] hover:shadow-md'}`}
     >
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -112,10 +112,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       </div>
 
       {/* Bottom bar: checkbox (if selectable) + Preview Document button */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex min-h-11 items-center justify-between gap-2 border-t border-[#e0e0e0] pt-3">
         {onToggleSelect ? (
           <label
-            className="flex items-center gap-2 cursor-pointer text-sm font-bold text-carbon-gray-100"
+            className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100"
             onClick={(e) => e.stopPropagation()}
           >
             <input
@@ -139,7 +139,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
               setPreviewUrl(order.assets[0].file_url);
               setIsPreviewOpen(true);
             }}
-            className="flex items-center gap-1.5 bg-carbon-gray-100 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-black"
+            className="flex min-h-11 items-center gap-1.5 bg-carbon-gray-100 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
           >
             <svg
               className="w-4 h-4"
