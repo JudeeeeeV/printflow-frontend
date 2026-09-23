@@ -9,6 +9,8 @@ import {
   useWalkingDirections,
 } from "./useWalkingDirections";
 import LocationMap from "./LocationMap";
+
+interface Props {
   name: string;
   address?: string | null;
   photoUrl?: string | null;
