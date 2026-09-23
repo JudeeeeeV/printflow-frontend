@@ -126,6 +126,8 @@ export const ShopLayout: React.FC = () => {
             }
         };
         fetchShop();
+        window.addEventListener('shop-settings-updated', fetchShop);
+        return () => window.removeEventListener('shop-settings-updated', fetchShop);
     }, []);
 
     if (role !== 'Print Shop') {

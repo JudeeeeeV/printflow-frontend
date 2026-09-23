@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
+import { ChevronDown } from '@carbon/icons-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import styles from './ShopSelector.module.css';
+import type { PrintShop } from '../../../services/orderService';
+import { ShopLocation } from '../../maps/ShopLocation';
 
 const SHOPS_PER_PAGE = 3;
 type SlideDirection = 'next' | 'previous' | null;
 
 interface ShopSelectorProps {
- shops: Array<{ id: string; name: string; rating: number; status: string }>;
+ shops: PrintShop[];
  selectedShopId: string | null;
  onSelect: (id: string) => void;
 }
@@ -13,6 +17,9 @@ interface ShopSelectorProps {
 export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopId, onSelect }) => {
  const [currentPage, setCurrentPage] = useState(1);
  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
+ const [expandedShopId, setExpandedShopId] = useState<string | null>(null);
+ const selectorId = useId();
+ const reduceMotion = useReducedMotion();
  const totalPages = Math.max(1, Math.ceil(shops.length / SHOPS_PER_PAGE));
  const displayedPage = Math.min(currentPage, totalPages);
  const firstShopIndex = (displayedPage - 1) * SHOPS_PER_PAGE;
@@ -21,6 +28,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const changePage = (page: number, direction: Exclude<SlideDirection, null>) => {
   setSlideDirection(direction);
   setCurrentPage(page);
+  setExpandedShopId(null);
  };
 
  return (
@@ -29,15 +37,26 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <div className="overflow-hidden">
  <div
  key={displayedPage}
- className={`flex h-[264px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
+ className={`flex min-h-[264px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
  >
- {visibleShops.map((shop) => (
+ {visibleShops.map((shop) => {
+ const isExpanded = expandedShopId === shop.id && selectedShopId === shop.id;
+ const buttonId = `${selectorId}-${shop.id}-button`;
+ const panelId = `${selectorId}-${shop.id}-details`;
+ return (
+ <div key={shop.id} className="min-w-0">
  <button
- key={shop.id}
+ id={buttonId}
  type="button"
- onClick={() => onSelect(shop.id)}
+ onClick={() => {
+ setExpandedShopId(isExpanded ? null : shop.id);
+ if (selectedShopId !== shop.id) onSelect(shop.id);
+ }}
  disabled={shop.status !== 'OPEN'}
- className={`flex h-20 shrink-0 items-center p-4 text-left border-2 transition-all duration-200 ${
+ aria-pressed={selectedShopId === shop.id}
+ aria-expanded={isExpanded}
+ aria-controls={isExpanded ? panelId : undefined}
+ className={`flex h-20 w-full shrink-0 items-center p-4 text-left border-2 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${
  selectedShopId === shop.id
  ? 'border-black bg-carbon-gray-10'
  : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
@@ -55,14 +74,32 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  </span>
  </p>
  </div>
+ <ChevronDown size={20} aria-hidden="true" className={`ml-3 shrink-0 text-gray-600 transition-transform duration-200 motion-reduce:transition-none ${isExpanded ? 'rotate-180' : ''}`} />
  </button>
- ))}
+ <AnimatePresence initial={false}>
+ {isExpanded && <motion.div
+ key={panelId}
+ id={panelId}
+ role="region"
+ aria-labelledby={buttonId}
+ initial={{ height: 0, opacity: 0 }}
+ animate={{ height: 'auto', opacity: 1 }}
+ exit={{ height: 0, opacity: 0 }}
+ transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeInOut' }}
+ className="overflow-hidden"
+ >
+ <ShopLocation shop={shop} />
+ </motion.div>}
+ </AnimatePresence>
+ </div>
+ );
+ })}
  </div>
  </div>
  {totalPages > 1 && (
  <nav
  aria-label="Print shop pages"
- className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-gray-200 pt-4"
+ className="mt-4 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-t border-gray-200 pt-4"
  >
  <button
  type="button"
@@ -76,7 +113,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <span
  aria-live="polite"
  aria-atomic="true"
- className="text-center text-xs font-bold uppercase tracking-[0.12em] text-gray-600 sm:text-sm"
+ className="min-w-0 text-center text-xs font-bold uppercase tracking-[0.06em] text-gray-600 sm:text-sm"
  >
  Page {displayedPage} of {totalPages}
  </span>

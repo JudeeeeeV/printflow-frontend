@@ -5,6 +5,10 @@ export interface PrintShop {
  name: string;
  rating: number;
  status: 'OPEN' | 'CLOSED' | 'BUSY';
+ location?: string | null;
+ latitude?: number | null;
+ longitude?: number | null;
+ shop_photo_url?: string | null;
  pricing_matrix?: any;
 }
 
