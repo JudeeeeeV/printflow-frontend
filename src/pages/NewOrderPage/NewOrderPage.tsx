@@ -469,7 +469,6 @@ export const NewOrderPage: React.FC = () => {
 
                 {activeTab === 'drafts' && !editingDraft && (
                     <div className="mx-auto max-w-7xl border border-black bg-white p-5 shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:p-7 lg:p-8">
-                        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Saved work</p>
                         <h2 className="mb-6 text-2xl font-black tracking-tight text-carbon-gray-100">My Drafts</h2>
                         <MyDraftsList onEditDraft={setEditingDraft} />
                     </div>

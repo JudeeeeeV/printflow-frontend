@@ -11,6 +11,7 @@ export interface DraftOrder {
  shopId: string;
  shopName: string;
  fileName: string;
+ originalFileName?: string | null;
  fileUrl: string;
  total: number;
  updatedAt: string;
@@ -81,26 +82,26 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  <>
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
  {drafts.map((draft) => (
- <div key={draft.id} className="bg-white border-2 border-gray-100 p-6 flex flex-col hover:border-black transition-colors duration-200">
- <div className="flex justify-between items-start mb-4">
- <div>
- <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 tracking-wide uppercase">Draft</span>
- <h4 className="font-bold text-carbon-gray-100 mt-3 text-lg">{draft.shopName}</h4>
+ <div key={draft.id} className="flex min-w-0 flex-col border-2 border-black bg-white p-5 transition-colors duration-200 hover:border-carbon-blue-60 motion-reduce:transition-none sm:p-6">
+ <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
+ <div className="min-w-0">
+ <h4 className="break-words text-lg font-bold leading-snug text-carbon-gray-100" title={draft.originalFileName || undefined}>
+ {draft.originalFileName || 'Original filename unavailable'}
+ </h4>
+ <p className="mt-2 break-words text-sm font-medium text-gray-600">{draft.shopName}</p>
  </div>
- <button 
+ <button
+ type="button"
  onClick={() => setDraftToDelete(draft.id)}
  disabled={isActionLoading === draft.id}
- className="text-gray-400 hover:text-carbon-gray-100 transition-colors disabled:opacity-50"
+ aria-label={`Delete draft ${draft.originalFileName || 'with unavailable filename'}`}
+ className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center text-gray-600 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
  >
- <TrashCan className="w-5 h-5" />
+ <TrashCan className="h-5 w-5" aria-hidden="true" />
  </button>
  </div>
 
  <div className="flex-grow space-y-2 mb-6">
- <div className="flex items-center text-sm text-gray-600">
- <Document className="w-4 h-4 mr-2" />
- <span className="truncate">{draft.fileName}</span>
- </div>
  <div className="text-xs text-gray-400">
  Saved on {new Date(draft.updatedAt).toLocaleDateString()}
  </div>
@@ -111,11 +112,12 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  </div>
 
  <button
+ type="button"
  onClick={() => onEditDraft(draft)}
  disabled={isActionLoading === draft.id}
- className="w-full bg-white border-2 border-black text-carbon-gray-100 font-bold py-3 flex items-center justify-center gap-2 hover:bg-carbon-gray-10 disabled:opacity-50 transition-colors"
+ className="flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 border-2 border-black bg-black px-4 py-3 font-bold text-white transition-colors hover:border-carbon-gray-100 hover:bg-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
  >
- REVIEW & EDIT <Edit className="w-4 h-4" />
+ REVIEW &amp; EDIT <Edit className="h-4 w-4" aria-hidden="true" />
  </button>
  </div>
  ))}
