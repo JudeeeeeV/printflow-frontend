@@ -5,8 +5,10 @@ import App from './App.tsx'
 
 // Handle Vite dynamic import errors (usually caused by new deployments clearing old chunks)
 window.addEventListener('vite:preloadError', (event) => {
-  console.warn('Vite preload error, reloading page...', event);
-  window.location.reload();
+  console.warn('Vite preload error:', event);
+  if (confirm('A new update is available (or a file failed to load). Would you like to refresh the page to apply it?')) {
+    window.location.reload();
+  }
 });
 
 createRoot(document.getElementById('root')!).render(
