@@ -13,6 +13,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
+  const [hasImageError, setHasImageError] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
 
   // Determine the state badge configuration
@@ -136,6 +137,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
             onClick={(e) => {
               e.stopPropagation();
               setIsAssetLoading(true);
+              setHasImageError(false);
               setPreviewUrl(order.assets[0].file_url);
               setIsPreviewOpen(true);
             }}
@@ -272,19 +274,40 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
                         </div>
                       </div>
                     )}
-                    <motion.img
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{
-                        opacity: isAssetLoading ? 0 : 1,
-                        scale: isAssetLoading ? 0.95 : 1,
-                        y: isAssetLoading ? 10 : 0,
-                      }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
-                      src={previewUrl}
-                      alt="Document Preview"
-                      onLoad={() => setIsAssetLoading(false)}
-                      className={`w-full h-full object-contain bg-white shadow-2xl border border-gray-200 ring-1 ring-black/5 ${isAssetLoading ? "pointer-events-none" : ""}`}
-                    />
+                    {hasImageError ? (
+                      <div role="alert" className="w-full max-w-md border border-gray-300 bg-white p-6 text-center">
+                        <h4 className="text-lg font-bold text-carbon-gray-100">Preview unavailable</h4>
+                        <p className="mt-2 text-sm text-gray-600">The image could not be loaded. Try again.</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAssetLoading(true);
+                            setHasImageError(false);
+                          }}
+                          className="mt-4 min-h-11 bg-carbon-blue-60 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : (
+                      <motion.img
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{
+                          opacity: isAssetLoading ? 0 : 1,
+                          scale: isAssetLoading ? 0.95 : 1,
+                          y: isAssetLoading ? 10 : 0,
+                        }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        src={previewUrl}
+                        alt="Document Preview"
+                        onLoad={() => setIsAssetLoading(false)}
+                        onError={() => {
+                          setIsAssetLoading(false);
+                          setHasImageError(true);
+                        }}
+                        className={`w-full h-full object-contain bg-white shadow-2xl border border-gray-200 ring-1 ring-black/5 ${isAssetLoading ? "pointer-events-none" : ""}`}
+                      />
+                    )}
                   </div>
                 ) : (
                   <>

@@ -13,17 +13,55 @@ export interface Order {
 export const ShopOrdersPage: React.FC = () => {
  const [orders, setOrders] = useState<Order[]>([]);
  const [isLoading, setIsLoading] = useState(true);
+ const [error, setError] = useState<string | null>(null);
+ const [requestAttempt, setRequestAttempt] = useState(0);
 
  useEffect(() => {
+ let isCurrent = true;
  const fetchOrders = async () => {
+ try {
  const data = await orderService.getShopOrders();
- setOrders(data);
- setIsLoading(false);
+ if (isCurrent) setOrders(data);
+ } catch (err: unknown) {
+ if (isCurrent) {
+ setError(err instanceof Error ? err.message : 'Unable to load orders. Please try again.');
+ }
+ } finally {
+ if (isCurrent) setIsLoading(false);
+ }
  };
- fetchOrders();
- }, []);
+ void fetchOrders();
+ return () => {
+ isCurrent = false;
+ };
+ }, [requestAttempt]);
+
+ const handleRetry = () => {
+ setError(null);
+ setIsLoading(true);
+ setRequestAttempt(attempt => attempt + 1);
+ };
 
  if (isLoading) return <TableSkeleton columns={5} rows={6} />;
+
+ if (error) return (
+ <div className="p-4 font-sans sm:p-8">
+ <h1 className="mb-6 text-2xl font-bold text-carbon-gray-100">All Orders</h1>
+ <div className="border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-5 sm:p-6">
+ <div role="alert">
+ <h2 className="text-lg font-bold text-carbon-gray-100">Unable to load orders</h2>
+ <p className="mt-2 text-sm text-gray-600">{error}</p>
+ </div>
+ <button
+ type="button"
+ onClick={handleRetry}
+ className="mt-4 min-h-11 cursor-pointer bg-carbon-blue-60 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+ >
+ Retry
+ </button>
+ </div>
+ </div>
+ );
 
  return (
  <div className="p-8 font-sans h-full flex flex-col">
