@@ -325,23 +325,23 @@ export const NewOrderPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <nav aria-label="Order workspace" className="overflow-x-auto border-b-4 border-carbon-blue-60 bg-white">
-                        <div className="flex min-w-max">
+                    <nav aria-label="Order workspace" className="border-b-4 border-carbon-blue-60 bg-white">
+                        <div className="grid w-full grid-cols-3">
                             <button
                                 onClick={() => handleTabChange('new')}
-                                className={`min-h-12 border-r border-gray-200 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'new' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                                className={`min-h-12 min-w-0 cursor-pointer break-words border-r border-gray-200 px-2 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-5 sm:text-sm ${activeTab === 'new' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
                             >
                                 Create New Order
                             </button>
                             <button
                                 onClick={() => handleTabChange('drafts')}
-                                className={`min-h-12 border-r border-gray-200 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'drafts' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                                className={`min-h-12 min-w-0 cursor-pointer break-words border-r border-gray-200 px-2 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-5 sm:text-sm ${activeTab === 'drafts' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
                             >
                                 Drafts
                             </button>
                             <button
                                 onClick={() => handleTabChange('orders')}
-                                className={`min-h-12 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'orders' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                                className={`min-h-12 min-w-0 cursor-pointer break-words px-2 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-5 sm:text-sm ${activeTab === 'orders' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
                             >
                                 My Orders
                             </button>
