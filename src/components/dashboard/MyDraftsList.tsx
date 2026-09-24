@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { Document, TrashCan, Edit } from '@carbon/icons-react';
 import { orderService } from '../../services/orderService';
-import { TableSkeleton } from '../common/TableSkeleton';
+import { MyDraftsSkeleton } from './skeletons/MyDraftsSkeleton';
 import { Pagination } from '../common/Pagination';
 import { AlertModal } from '../common/AlertModal';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -68,7 +68,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  }
  };
 
- if (isLoading) return <TableSkeleton columns={4} rows={4} />;
+ if (isLoading) return <MyDraftsSkeleton />;
 
  if (drafts.length === 0) return (
  <div className="bg-white border-2 border-dashed border-[#8d8d8d] p-12 text-center flex flex-col items-center justify-center">

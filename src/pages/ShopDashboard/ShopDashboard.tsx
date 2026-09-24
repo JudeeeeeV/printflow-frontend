@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight } from '@carbon/icons-react';
 import { shopService } from '../../services/shopService';
-import { DashboardSkeleton } from '../../components/dashboard/DashboardSkeleton';
+import { DashboardSkeleton } from '../../components/dashboard/skeletons/DashboardSkeleton';
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
