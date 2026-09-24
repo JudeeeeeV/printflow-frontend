@@ -39,16 +39,15 @@ export const ShopPrinterAgentPage: React.FC = () => {
   const isWindows = /Windows/i.test(navigator.userAgent);
   const revokeDialogRef = useRef<HTMLDivElement>(null);
   const cancelRevokeRef = useRef<HTMLButtonElement>(null);
+  const devicesLoadingRef = useRef(false);
 
   const load = useCallback(async (showLoader = false) => {
+    if (devicesLoadingRef.current) return;
+    devicesLoadingRef.current = true;
     if (showLoader) setIsLoading(true);
     try {
-      const [deviceRows, latestRelease] = await Promise.all([
-        daemonDeviceService.listMine(),
-        daemonDeviceService.latestRelease(),
-      ]);
+      const deviceRows = await daemonDeviceService.listMine();
       setDevices(deviceRows);
-      setRelease(latestRelease);
     } catch (error) {
       setMessage({
         type: "error",
@@ -58,18 +57,47 @@ export const ShopPrinterAgentPage: React.FC = () => {
             : "Failed to load printer-agent information.",
       });
     } finally {
+      devicesLoadingRef.current = false;
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const initialTimer = window.setTimeout(() => void load(false), 0);
+    const refresh = () => void load(false);
+    const initialTimer = window.setTimeout(refresh, 0);
     const timer = window.setInterval(() => void load(false), 10_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
     return () => {
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
     };
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Installer metadata must not block live printer counts and device status.
+    void daemonDeviceService
+      .latestRelease()
+      .then((latestRelease) => {
+        if (!cancelled) setRelease(latestRelease);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled)
+          setMessage({
+            type: "error",
+            text:
+              error instanceof Error
+                ? error.message
+                : "Installer download information is unavailable.",
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!deviceToRevoke) return;
