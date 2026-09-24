@@ -43,19 +43,10 @@ export const NewOrderPage: React.FC = () => {
     };
     const [shops, setShops] = useState<PrintShop[]>([]);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
-    const uploadSectionRef = useRef<HTMLDivElement>(null);
     const uploadButtonRef = useRef<HTMLButtonElement>(null);
     const imagePreviewRef = useRef<HTMLImageElement>(null);
     const pdfPreviewRef = useRef<HTMLIFrameElement>(null);
     const shouldFocusUploadRef = useRef(false);
-
-    const handleShopSelect = (shopId: string) => {
-        setSelectedShopId(shopId);
-        uploadSectionRef.current?.scrollIntoView({
-            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-            block: 'start',
-        });
-    };
 
     const [paperSize, setPaperSize] = useState<string>('A4');
     const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
@@ -364,7 +355,7 @@ export const NewOrderPage: React.FC = () => {
                             </div>
 
                             <div className="p-5 sm:p-7 lg:p-8">
-                                <div className="h-[27rem]">
+                                <div className="min-w-0">
                                     <div className="mb-5 flex items-center gap-3">
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-blue-60 text-xs font-black text-white">01</span>
                                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-black">Choose your print partner</p>
@@ -373,13 +364,12 @@ export const NewOrderPage: React.FC = () => {
                                         <ShopSelector
                                             shops={shops}
                                             selectedShopId={selectedShopId}
-                                            onSelect={handleShopSelect}
+                                            onSelect={setSelectedShopId}
                                         />
                                     </div>
                                 </div>
 
                                 <div
-                                    ref={uploadSectionRef}
                                     className={`mt-8 scroll-mt-6 border-t border-gray-200 pt-8 transition-opacity duration-300 ${selectedShopId ? 'opacity-100' : 'pointer-events-none opacity-40'}`}
                                 >
                                     <div className="mb-5 flex items-center gap-3">
