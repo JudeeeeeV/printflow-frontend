@@ -9,7 +9,6 @@ import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
 import { QueuePagination } from '../../components/dashboard/QueuePagination';
 import { daemonSocketService } from '../../services/daemonSocketService';
-import { API_URL } from '../../config/runtime';
 import type { DaemonStatus } from '../../services/daemonSocketService';
 import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
@@ -157,8 +156,6 @@ export const ShopDashboard: React.FC = () => {
 
  useEffect(() => {
  if (shopData?.id) {
- daemonSocketService.connect(shopData.id);
-
  const unsubscribeStatus = daemonSocketService.onStatusChange((status) => {
  setDaemonStatus(status);
  });
@@ -180,10 +177,10 @@ export const ShopDashboard: React.FC = () => {
 
  const unsubscribePrinters = daemonSocketService.onPrintersList((printers) => {
  setAvailablePrinters(printers);
- if (printers.length > 0 && !selectedPrinter) {
- setSelectedPrinter(printers[0]);
- }
+ setSelectedPrinter(current => printers.includes(current) ? current : (printers[0] || ''));
  });
+
+ daemonSocketService.connect(shopData.id);
 
  return () => {
  unsubscribeStatus();
@@ -309,6 +306,10 @@ export const ShopDashboard: React.FC = () => {
 
  const handleBatchComplete = async () => {
  if (selectedReadyOrders.length === 0) return;
+ if (daemonStatus !== 'CONNECTED' || !availablePrinters.includes(selectedPrinter)) {
+ showAlert('Wait for the PrintFlow Agent to connect and select a detected printer before sending orders.', 'error', 'Printer Not Ready');
+ return;
+ }
  
  setIsBatchProcessing(true);
  // Initialize progresses for all selected orders
@@ -316,27 +317,18 @@ export const ShopDashboard: React.FC = () => {
  setIsProgressModalOpen(true);
  
  try {
-  const response = await fetch(`${API_URL}/edge/batch-execute`, {
+  await apiClient('/edge/batch-execute', {
  method: 'POST',
- credentials: 'include',
- headers: {
- 'Content-Type': 'application/json'
- },
  body: JSON.stringify({ 
  orderIds: selectedReadyOrders,
  printerName: selectedPrinter || undefined
  })
  });
  
- if (!response.ok) {
- const errData = await response.json();
- throw new Error(errData.message || 'Failed to dispatch batch');
- }
- 
  setSelectedReadyOrders([]);
  // Don't close modal here, wait for daemon status updates via WS
- } catch (err: any) {
- showAlert('Batch error: ' + err.message, 'error', 'Batch Failed');
+ } catch (err: unknown) {
+ showAlert(err instanceof Error ? err.message : 'Failed to dispatch batch', 'error', 'Batch Failed');
  setIsProgressModalOpen(false);
  } finally {
  setIsBatchProcessing(false);
@@ -638,11 +630,11 @@ export const ShopDashboard: React.FC = () => {
  ))}
  </select>
  ) : (
- <span className="min-h-11 flex-1 border-l-4 border-gray-300 bg-carbon-gray-10 px-3 py-2 text-xs font-medium italic text-gray-500">Fetching printers...</span>
+ <span role="status" className="min-h-11 flex-1 border-l-4 border-gray-300 bg-carbon-gray-10 px-3 py-2 text-xs font-medium text-gray-600">Agent online. No printers detected yet; checking automatically.</span>
  )}
  <button
  onClick={handleBatchComplete}
- disabled={selectedReadyOrders.length === 0 || isBatchProcessing}
+ disabled={selectedReadyOrders.length === 0 || isBatchProcessing || !availablePrinters.includes(selectedPrinter)}
  className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-carbon-blue-60 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:pointer-events-none disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
  >
  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -653,11 +645,11 @@ export const ShopDashboard: React.FC = () => {
  </div>
  ) : (
  <div className="flex min-w-0 flex-col gap-2 border border-gray-300 border-l-4 border-l-gray-500 bg-carbon-gray-10 p-2 sm:flex-row sm:items-center lg:w-full lg:max-w-xl">
- <span className="flex min-h-10 flex-1 items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-carbon-gray-100">
+ <span role="status" className="flex min-h-10 flex-1 items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-carbon-gray-100">
  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
  </svg>
- Daemon Offline
+ {daemonStatus === 'RECONNECTING' ? 'Checking agent connection…' : 'Daemon offline — checking automatically'}
  </span>
  <button
  onClick={handleManualDownload}

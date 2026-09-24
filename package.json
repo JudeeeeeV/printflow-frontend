@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:daemon": "node --test tests/daemonSocketService.test.cjs",
     "preview": "vite preview"
   },
   "dependencies": {
