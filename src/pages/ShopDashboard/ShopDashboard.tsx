@@ -180,13 +180,13 @@ export const ShopDashboard: React.FC = () => {
  setSelectedPrinter(current => printers.includes(current) ? current : (printers[0] || ''));
  });
 
- daemonSocketService.connect(shopData.id);
+ // connection managed by ShopLayout
 
  return () => {
  unsubscribeStatus();
  unsubscribeProgress();
  unsubscribePrinters();
- daemonSocketService.disconnect();
+ // disconnection managed by ShopLayout
  };
  }
  }, [shopData?.id]);

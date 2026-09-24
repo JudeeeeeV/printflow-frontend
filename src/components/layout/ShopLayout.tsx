@@ -12,6 +12,7 @@ export const ShopLayout: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [shopName, setShopName] = useState<string>('Print Shop');
+    const [shopId, setShopId] = useState<string | null>(null);
     const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>('OFFLINE');
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [isSupportOpen, setIsSupportOpen] = useState(false);
@@ -117,9 +118,12 @@ export const ShopLayout: React.FC = () => {
     useEffect(() => {
         const fetchShop = async () => {
             try {
-                const data = await apiClient<{ name?: string }>('/shops/me', { method: 'GET' });
+                const data = await apiClient<{ id?: string, name?: string }>('/shops/me', { method: 'GET' });
                 if (data && data.name) {
                     setShopName(data.name);
+                }
+                if (data && data.id) {
+                    setShopId(data.id);
                 }
             } catch (err) {
                 console.error("Failed to fetch shop name:", err);
@@ -129,6 +133,15 @@ export const ShopLayout: React.FC = () => {
         window.addEventListener('shop-settings-updated', fetchShop);
         return () => window.removeEventListener('shop-settings-updated', fetchShop);
     }, []);
+
+    useEffect(() => {
+        if (shopId) {
+            daemonSocketService.connect(shopId);
+            return () => {
+                daemonSocketService.disconnect();
+            };
+        }
+    }, [shopId]);
 
     if (role !== 'Print Shop') {
         return <Navigate to="/auth" replace />;
