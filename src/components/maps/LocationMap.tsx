@@ -98,11 +98,9 @@ export default function LocationMap({
       setLoading(false);
       setMapError("");
     });
-    map.on("error", () => {
+    map.on("error", (e) => {
+      console.warn("Map error (often non-fatal):", e);
       setLoading(false);
-      setMapError(
-        "Some map details could not load. Check your connection and reopen the map to retry.",
-      );
     });
     if (editable) {
       map.on("click", (event) => {
