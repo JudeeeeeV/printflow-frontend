@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { GeolocateControl, Map, Marker, NavigationControl } from "maplibre-gl";
+import {
+  GeolocateControl,
+  Map,
+  Marker,
+  NavigationControl,
+  setWorkerUrl,
+} from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { hasCoordinates } from "./coordinates";
 import { attachShopPhotoPopup } from "./shopPhotoPopup";
 import styles from "./Maps.module.css";
 import type { WalkingRoute } from "../../services/directionsService";
 import { attachWalkingRoute } from "./walkingRouteLayer";
+
+// MapLibre v6 needs an explicit worker URL when bundled. Vite must bundle
+// the worker's shared imports too; a plain ?url leaves them missing in dist.
+setWorkerUrl(workerUrl);
 
 interface LocationMapProps {
   name: string;
@@ -96,11 +107,13 @@ export default function LocationMap({
     });
     map.on("load", () => {
       setLoading(false);
-      setMapError("");
     });
     map.on("error", (e) => {
-      console.warn("Map error (often non-fatal):", e);
+      console.warn("Map resource failed to load:", e.error);
       setLoading(false);
+      setMapError(
+        "Some map details could not load. Reopen the map to retry.",
+      );
     });
     if (editable) {
       map.on("click", (event) => {
@@ -209,6 +222,16 @@ export default function LocationMap({
         <p role="status" className="text-sm text-amber-800">
           {mapError || locationError}
         </p>
+      )}
+      {mapError && hasCoordinates(latitude, longitude) && (
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.textButton}
+        >
+          Open pickup location in Google Maps
+        </a>
       )}
       {editable && (
         <button

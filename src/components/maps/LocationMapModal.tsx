@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, Checkmark, Close, Location } from "@carbon/icons-react";
 import { hasCoordinates } from "./coordinates";
@@ -8,7 +8,8 @@ import {
   routingProviderUrl,
   useWalkingDirections,
 } from "./useWalkingDirections";
-import LocationMap from "./LocationMap";
+
+const LocationMap = lazy(() => import("./LocationMap"));
 
 interface Props {
   name: string;

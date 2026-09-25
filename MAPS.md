@@ -77,6 +77,35 @@ retained. Map resources are requested from the tile provider. To use another
 provider, set `VITE_MAP_STYLE_URL` to its MapLibre-compatible style URL and rebuild.
 Only public browser-safe configuration belongs in Vite environment variables.
 
+## Production map loading
+
+MapLibre v6 requires a separate worker. `LocationMap.tsx` imports it with Vite's
+`?worker&url` and calls `setWorkerUrl` before creating a map. Keep both parts:
+without them the production map can show a pin and attribution but no streets.
+Do not replace this with `?url`, which omits the worker's shared dependencies.
+The production build must contain an `assets/maplibre-gl-worker-*.js` file.
+The map library is lazy-loaded when a map is opened; application routes are
+also split so charts and PDF tools do not delay the sign-in page.
+
+Deploy the frontend build and apply the headers in `render.yaml`. If the static
+site is managed manually instead of through a Render Blueprint, copy the updated
+Content-Security-Policy and Permissions-Policy into its Render Headers settings.
+The policy allows same-origin workers, OpenFreeMap resources, walking-route
+requests and user-approved geolocation. Custom map or routing providers also
+need their resource origins added to the policy.
+
+Verify the deployed worker returns JavaScript, not the SPA's `index.html`, and
+that the map's style, tile and font requests succeed in the browser Network tab.
+Test the pickup map and directions after deployment. Failed resources display
+a message with a Google Maps fallback for shops with coordinates.
+
+A separate delay can affect API calls if the Render backend uses a Free
+instance: after 15 idle minutes Render spins it down, and waking it takes about
+a minute. Check the backend instance type in Render; use an always-on paid
+instance if consistent first-request latency is required. Frontend bundle
+changes cannot eliminate that backend cold start. See
+https://render.com/docs/free for the hosting behavior.
+
 Walking routes default to FOSSGIS's public OSRM foot endpoint. Its public service
 is limited to light use and one request per second; the client prevents rapid
 repeated requests within a tab and makes no background route polls. For production
