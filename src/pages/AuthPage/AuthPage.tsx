@@ -74,10 +74,10 @@ export const AuthPage: React.FC = () => {
                 ? 'min-h-0 overflow-hidden'
                 : activeView === 'login'
                     ? 'min-h-0 overflow-y-auto'
-                    : 'min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'} ${activeView === 'login' ? 'lg:items-center' : ''}`}>
+                    : 'min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'}`}>
                 <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 hidden h-24 w-24 border-b border-l border-gray-300 lg:block" />
 
-                <div className={`relative z-10 min-w-0 w-full ${activeView === 'register' ? 'grid h-full min-h-0 max-w-[560px] grid-rows-[minmax(0,1fr)_auto]' : 'max-w-[500px]'}`}>
+                <div className={`relative z-10 min-w-0 w-full ${activeView === 'login' ? 'my-auto' : ''} ${activeView === 'register' ? 'grid h-full min-h-0 max-w-[560px] grid-rows-[minmax(0,1fr)_auto]' : 'max-w-[500px]'}`}>
                     <div className={`border border-gray-200 border-t-4 border-t-carbon-blue-60 bg-white shadow-[0_16px_40px_rgba(22,22,22,0.10)] ${activeView === 'register' ? 'min-h-0 overflow-hidden' : ''}`}>
                         <div
                             className={`${styles.authCardContent} px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10 ${activeView === 'register' ? 'h-full min-h-0 overflow-y-auto overscroll-contain' : ''}`}

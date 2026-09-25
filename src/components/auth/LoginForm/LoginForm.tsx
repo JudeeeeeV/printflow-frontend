@@ -5,6 +5,7 @@ import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService, type LoginPayload } from '../../../services/authService';
+import { API_URL } from '../../../config/runtime';
 
 interface LoginFormProps {
   onForgotPassword?: () => void;
@@ -20,6 +21,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,6 +75,32 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
 
   return (
     <form className="flex flex-col w-full" onSubmit={handleSubmit}>
+      <button
+        type="button"
+        disabled={isSubmitting || isMicrosoftLoading}
+        onClick={() => {
+          setIsMicrosoftLoading(true);
+          localStorage.removeItem('user_role');
+          window.location.assign(`${API_URL}/auth/microsoft`);
+        }}
+        className="flex min-h-12 w-full items-center justify-center gap-3 border border-gray-400 bg-white px-4 py-3 text-sm font-semibold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-wait disabled:opacity-60"
+      >
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 21 21">
+          <path fill="#f25022" d="M1 1h9v9H1z" />
+          <path fill="#7fba00" d="M11 1h9v9h-9z" />
+          <path fill="#00a4ef" d="M1 11h9v9H1z" />
+          <path fill="#ffb900" d="M11 11h9v9h-9z" />
+        </svg>
+        {isMicrosoftLoading ? 'Opening Microsoft…' : 'Continue with Microsoft'}
+      </button>
+      <p className="mt-2 text-center text-xs leading-relaxed text-gray-500">
+        Use your @cit.edu account. New accounts are registered as students.
+      </p>
+      <div className="my-5 flex items-center gap-3 text-xs text-gray-500">
+        <span className="h-px flex-1 bg-gray-200" />
+        <span>or sign in with email</span>
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
       <div className="mb-5">
         <EmailInput
           value={email}
@@ -135,7 +163,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
       <div className="mt-4">
         <SubmitButton
           label="Sign In"
-          isLoading={isSubmitting}
+          isLoading={isSubmitting || isMicrosoftLoading}
         />
       </div>
     </form>

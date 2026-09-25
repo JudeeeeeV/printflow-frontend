@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthPage } from './pages/AuthPage/AuthPage';
+import { MicrosoftCallbackPage } from './pages/AuthPage/MicrosoftCallbackPage';
 import { NewOrderPage } from './pages/NewOrderPage/NewOrderPage';
 import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -21,6 +22,7 @@ export const App: React.FC = () => {
  <Routes>
  <Route path="/" element={<Navigate to="/auth" replace />} />
  <Route path="/auth" element={<AuthPage />} />
+ <Route path="/auth/microsoft/callback" element={<MicrosoftCallbackPage />} />
  <Route path="/unauthorized" element={<UnauthorizedPage />} />
  <Route path="/new-order" element={
  <ProtectedRoute allowedRoles={['Student']}>

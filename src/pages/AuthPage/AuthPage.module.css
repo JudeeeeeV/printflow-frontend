@@ -109,7 +109,8 @@
 
 @media (min-width: 1024px) and (min-height: 600px) and (max-height: 700px) {
     .loginPage .authMain {
-        overflow-y: hidden;
+        overflow-y: auto;
+        align-items: flex-start;
         padding-top: 18px;
         padding-bottom: 18px;
     }
