@@ -1,0 +1,18 @@
+@keyframes draftCardPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.05;
+  }
+}
+
+.card {
+  animation: draftCardPulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}

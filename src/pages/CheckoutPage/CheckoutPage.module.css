@@ -1,0 +1,267 @@
+.ambientLayer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    isolation: isolate;
+    background:
+        radial-gradient(circle at 80% 14%, rgba(15, 98, 254, 0.18), transparent 31%),
+        linear-gradient(145deg, #050505 0%, #111827 46%, #050505 100%);
+}
+
+.ambientLayer::before,
+.ambientLayer::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    will-change: opacity, transform;
+}
+
+.ambientLayer::before {
+    inset: -22% -12% -22% 18%;
+    z-index: -1;
+    background: linear-gradient(
+        112deg,
+        transparent 11%,
+        rgba(20, 44, 91, 0.16) 29%,
+        rgba(120, 169, 255, 0.28) 47%,
+        rgba(15, 98, 254, 0.16) 63%,
+        transparent 82%
+    );
+    filter: blur(26px);
+    opacity: 0.58;
+    animation: lightSweep 14s cubic-bezier(0.45, 0, 0.55, 1) -5s infinite;
+}
+
+.ambientLayer::after {
+    right: -18%;
+    bottom: -19rem;
+    z-index: -1;
+    width: 78rem;
+    height: 48rem;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(69, 137, 255, 0.9) 0%,
+        rgba(15, 98, 254, 0.46) 31%,
+        rgba(20, 44, 91, 0.18) 58%,
+        transparent 76%
+    );
+    filter: blur(42px);
+    opacity: 0.54;
+    animation: horizonPulse 10s cubic-bezier(0.45, 0, 0.55, 1) -3s infinite;
+}
+
+.glow {
+    position: absolute;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    will-change: opacity, transform;
+}
+
+.primaryGlow {
+    right: -15rem;
+    top: -12rem;
+    width: 48rem;
+    height: 40rem;
+    background: radial-gradient(circle, rgba(15, 98, 254, 0.72), rgba(20, 44, 91, 0.24) 48%, transparent 72%);
+    filter: blur(32px);
+    opacity: 0.48;
+    animation: glowBreathe 12s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.secondaryGlow {
+    left: -18rem;
+    top: 28%;
+    width: 42rem;
+    height: 34rem;
+    background: radial-gradient(circle, rgba(54, 122, 255, 0.5), rgba(20, 44, 91, 0.2) 46%, transparent 73%);
+    filter: blur(36px);
+    opacity: 0.34;
+    animation: glowDrift 16s cubic-bezier(0.45, 0, 0.55, 1) -6s infinite;
+}
+
+.accentGlow {
+    right: 18%;
+    bottom: 12%;
+    width: 28rem;
+    height: 24rem;
+    background: radial-gradient(circle, rgba(160, 194, 255, 0.48), rgba(15, 98, 254, 0.22) 45%, transparent 72%);
+    filter: blur(28px);
+    opacity: 0.32;
+    animation: accentPulse 11s cubic-bezier(0.45, 0, 0.55, 1) -4s infinite;
+}
+
+.floatingRectangle {
+    position: absolute;
+    display: block;
+    transform-origin: center;
+    will-change: transform;
+}
+
+.rectangleOne {
+    left: 6%;
+    top: 10%;
+    width: 4rem;
+    height: 0.55rem;
+    background: rgba(20, 44, 91, 0.86);
+    animation: driftOne 18s cubic-bezier(0.45, 0, 0.55, 1) -7s infinite;
+}
+
+.rectangleTwo {
+    left: 17%;
+    top: 42%;
+    width: 2rem;
+    height: 1rem;
+    border: 1px solid rgba(241, 241, 241, 0.26);
+    background: rgba(241, 241, 241, 0.05);
+    animation: driftTwo 22s cubic-bezier(0.45, 0, 0.55, 1) -14s infinite;
+}
+
+.rectangleThree {
+    right: 7%;
+    top: 18%;
+    width: 5rem;
+    height: 0.6rem;
+    background: rgba(57, 57, 57, 0.92);
+    animation: driftThree 24s cubic-bezier(0.45, 0, 0.55, 1) -5s infinite;
+}
+
+.rectangleFour {
+    right: 26%;
+    top: 35%;
+    width: 2.75rem;
+    height: 0.8rem;
+    background: rgba(15, 98, 254, 0.52);
+    animation: driftTwo 17s cubic-bezier(0.45, 0, 0.55, 1) -11s infinite reverse;
+}
+
+.rectangleFive {
+    right: 13%;
+    bottom: 17%;
+    width: 3.25rem;
+    height: 0.45rem;
+    background: rgba(241, 241, 241, 0.22);
+    animation: driftOne 20s cubic-bezier(0.45, 0, 0.55, 1) -16s infinite reverse;
+}
+
+.rectangleSix {
+    left: 31%;
+    bottom: 11%;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 1px solid rgba(120, 169, 255, 0.36);
+    animation: driftThree 19s cubic-bezier(0.45, 0, 0.55, 1) -10s infinite;
+}
+
+.rectangleSeven {
+    right: 39%;
+    bottom: 31%;
+    width: 3.8rem;
+    height: 0.5rem;
+    background: rgba(20, 44, 91, 0.84);
+    animation: driftOne 21s cubic-bezier(0.45, 0, 0.55, 1) -12s infinite reverse;
+}
+
+.rectangleEight {
+    left: 48%;
+    top: 8%;
+    width: 1.8rem;
+    height: 0.7rem;
+    background: rgba(15, 98, 254, 0.62);
+    animation: driftTwo 18s cubic-bezier(0.45, 0, 0.55, 1) -8s infinite;
+}
+
+.rectangleNine {
+    left: 8%;
+    bottom: 23%;
+    width: 2.7rem;
+    height: 0.45rem;
+    background: rgba(57, 57, 57, 0.92);
+    animation: driftThree 20s cubic-bezier(0.45, 0, 0.55, 1) -13s infinite reverse;
+}
+
+.rectangleTen {
+    right: 4%;
+    top: 56%;
+    width: 2.2rem;
+    height: 0.65rem;
+    border: 1px solid rgba(241, 241, 241, 0.26);
+    background: rgba(241, 241, 241, 0.04);
+    animation: driftOne 23s cubic-bezier(0.45, 0, 0.55, 1) -6s infinite;
+}
+
+@keyframes driftOne {
+    0%, 100% { transform: translate3d(0, 0, 0) rotate(-7deg); }
+    25% { transform: translate3d(22px, -15px, 0) rotate(-2deg); }
+    54% { transform: translate3d(-14px, 18px, 0) rotate(-11deg); }
+    79% { transform: translate3d(28px, 9px, 0) rotate(-4deg); }
+}
+
+@keyframes driftTwo {
+    0%, 100% { transform: translate3d(0, 0, 0) rotate(8deg); }
+    21% { transform: translate3d(-19px, 14px, 0) rotate(3deg); }
+    48% { transform: translate3d(12px, -20px, 0) rotate(12deg); }
+    75% { transform: translate3d(-26px, -7px, 0) rotate(5deg); }
+}
+
+@keyframes driftThree {
+    0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg); }
+    29% { transform: translate3d(14px, 20px, 0) rotate(4deg); }
+    59% { transform: translate3d(-22px, -10px, 0) rotate(-6deg); }
+    85% { transform: translate3d(24px, -16px, 0) rotate(1deg); }
+}
+
+@keyframes glowBreathe {
+    0%, 100% { opacity: 0.38; transform: translate3d(0, 0, 0) scale(0.96); }
+    46% { opacity: 0.68; transform: translate3d(-22px, 14px, 0) scale(1.08); }
+    72% { opacity: 0.48; transform: translate3d(-8px, 6px, 0) scale(1.02); }
+}
+
+@keyframes glowDrift {
+    0%, 100% { opacity: 0.28; transform: translate3d(0, 0, 0) scale(0.98); }
+    35% { opacity: 0.52; transform: translate3d(30px, -12px, 0) scale(1.08); }
+    69% { opacity: 0.38; transform: translate3d(-14px, 18px, 0) scale(1.02); }
+}
+
+@keyframes accentPulse {
+    0%, 100% { opacity: 0.26; transform: translate3d(0, 0, 0) scale(0.94); }
+    44% { opacity: 0.54; transform: translate3d(-13px, 8px, 0) scale(1.09); }
+    76% { opacity: 0.34; transform: translate3d(10px, -6px, 0) scale(1.01); }
+}
+
+@keyframes lightSweep {
+    0%, 100% { opacity: 0.38; transform: translate3d(-13%, 0, 0) skewX(-8deg); }
+    47% { opacity: 0.74; transform: translate3d(11%, 0, 0) skewX(-8deg); }
+    74% { opacity: 0.5; transform: translate3d(3%, 0, 0) skewX(-8deg); }
+}
+
+@keyframes horizonPulse {
+    0%, 100% { opacity: 0.42; transform: translate3d(0, 10px, 0) scale(0.94); }
+    50% { opacity: 0.7; transform: translate3d(-3%, -8px, 0) scale(1.06); }
+}
+
+@media (max-width: 639px) {
+    .ambientLayer {
+        opacity: 0.3;
+    }
+
+    .rectangleTwo,
+    .rectangleThree,
+    .rectangleSix,
+    .rectangleEight,
+    .rectangleTen {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ambientLayer::before,
+    .ambientLayer::after,
+    .glow,
+    .floatingRectangle {
+        animation: none;
+        will-change: auto;
+    }
+}

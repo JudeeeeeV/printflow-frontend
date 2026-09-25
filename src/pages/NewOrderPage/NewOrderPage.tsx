@@ -316,23 +316,23 @@ export const NewOrderPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <nav aria-label="Order workspace" className="overflow-x-auto border-b-4 border-carbon-blue-60 bg-white">
-                        <div className="flex min-w-max">
+                    <nav aria-label="Order workspace" className="border-b-4 border-carbon-blue-60 bg-white">
+                        <div className="grid w-full grid-cols-3">
                             <button
                                 onClick={() => handleTabChange('new')}
-                                className={`min-h-12 border-r border-gray-200 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'new' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                                className={`min-h-12 min-w-0 cursor-pointer break-words border-r border-gray-200 px-2 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-5 sm:text-sm ${activeTab === 'new' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
                             >
                                 Create New Order
                             </button>
                             <button
                                 onClick={() => handleTabChange('drafts')}
-                                className={`min-h-12 border-r border-gray-200 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'drafts' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                                className={`min-h-12 min-w-0 cursor-pointer break-words border-r border-gray-200 px-2 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-5 sm:text-sm ${activeTab === 'drafts' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
                             >
                                 Drafts
                             </button>
                             <button
                                 onClick={() => handleTabChange('orders')}
-                                className={`min-h-12 px-5 text-sm font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-7 ${activeTab === 'orders' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
+                                className={`min-h-12 min-w-0 cursor-pointer break-words px-2 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 sm:px-5 sm:text-sm ${activeTab === 'orders' ? 'bg-carbon-blue-60 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-carbon-gray-100'}`}
                             >
                                 My Orders
                             </button>
@@ -459,7 +459,6 @@ export const NewOrderPage: React.FC = () => {
 
                 {activeTab === 'drafts' && !editingDraft && (
                     <div className="mx-auto max-w-7xl border border-black bg-white p-5 shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:p-7 lg:p-8">
-                        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Saved work</p>
                         <h2 className="mb-6 text-2xl font-black tracking-tight text-carbon-gray-100">My Drafts</h2>
                         <MyDraftsList onEditDraft={setEditingDraft} />
                     </div>

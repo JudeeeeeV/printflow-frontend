@@ -6,6 +6,7 @@ import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService, type LoginPayload } from '../../../services/authService';
 import { API_URL } from '../../../config/runtime';
+import { ApiError } from '../../../services/apiClient';
 
 interface LoginFormProps {
   onForgotPassword?: () => void;
@@ -55,7 +56,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
         navigate('/new-order');
       }
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (
+        !navigator.onLine ||
+        (err instanceof ApiError && (err.status === 0 || err.status === 503))
+      ) {
+        setError('Connection unavailable. Check your internet and try again.');
+      } else if (err instanceof Error) {
         setError(err.message || 'Invalid login credentials');
       } else {
         setError('Login failed. Please try again.');

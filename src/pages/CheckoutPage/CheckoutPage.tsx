@@ -1,25 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { type ReactNode, useEffect, useState } from 'react';
+import { WarningAlt } from '@carbon/icons-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { CheckoutCard } from '../../components/checkout/CheckoutCard/CheckoutCard';
 import { orderService } from '../../services/orderService';
 import { CheckoutSkeleton } from './CheckoutSkeleton';
+import styles from './CheckoutPage.module.css';
+
+interface CheckoutOrder {
+ total?: number;
+ created_at?: string;
+ expires_at?: string;
+ shop_rejection_reason?: string;
+ state?: string;
+ payment_receipts?: Array<{ receipt_url?: string; reference_number?: string }>;
+ shops?: {
+ gcash_number?: string;
+ gcash_qr_url?: string;
+ };
+}
+
+const CheckoutAmbientBackground = () => (
+ <div aria-hidden="true" className={styles.ambientLayer}>
+ <span className={`${styles.glow} ${styles.primaryGlow}`} />
+ <span className={`${styles.glow} ${styles.secondaryGlow}`} />
+ <span className={`${styles.glow} ${styles.accentGlow}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleOne}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleTwo}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleThree}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleFour}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleFive}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleSix}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleSeven}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleEight}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleNine}`} />
+ <span className={`${styles.floatingRectangle} ${styles.rectangleTen}`} />
+ </div>
+);
+
+const CheckoutPageShell: React.FC<{ children: ReactNode }> = ({ children }) => (
+ <main className="relative min-h-screen overflow-x-hidden bg-black px-3 py-5 font-sans supports-[min-height:100dvh]:min-h-dvh sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+ <CheckoutAmbientBackground />
+ <div className="relative z-10 mx-auto w-full max-w-6xl">{children}</div>
+ </main>
+);
 
 export const CheckoutPage: React.FC = () => {
  const { orderId } = useParams<{ orderId: string }>();
  const navigate = useNavigate();
- const [order, setOrder] = useState<any>(null);
+ const [order, setOrder] = useState<CheckoutOrder | null>(null);
  const [isLoading, setIsLoading] = useState(true);
  const [orderNotFound, setOrderNotFound] = useState(false);
 
- // Fetch order details
  useEffect(() => {
  if (!orderId) return;
- 
  let isMounted = true;
 
  const fetchOrder = () => {
  orderService.getOrder(orderId)
- .then(data => {
+ .then((data) => {
  if (!isMounted) return;
  setOrder(data);
  setIsLoading(false);
@@ -31,12 +69,8 @@ export const CheckoutPage: React.FC = () => {
  });
  };
 
- // Initial fetch
  fetchOrder();
-
- // Poll every 5 seconds
  const intervalId = setInterval(fetchOrder, 5000);
-
  return () => {
  isMounted = false;
  clearInterval(intervalId);
@@ -45,43 +79,49 @@ export const CheckoutPage: React.FC = () => {
 
  if (!orderId) {
  return (
- <div className="min-h-screen bg-carbon-gray-10 flex items-center justify-center">
- <p className="text-gray-500 font-semibold">Invalid Order ID</p>
- </div>
+ <CheckoutPageShell>
+ <section className="mx-auto max-w-md border border-black border-t-4 border-t-red-700 bg-white p-7 text-center shadow-2xl" role="alert">
+ <WarningAlt aria-hidden="true" className="mx-auto h-12 w-12 text-red-700" />
+ <h1 className="mt-4 text-xl font-black text-carbon-gray-100">Invalid order ID</h1>
+ <p className="mt-2 text-sm leading-relaxed text-gray-600">Checkout cannot continue without a valid order.</p>
+ </section>
+ </CheckoutPageShell>
  );
  }
- 
+
  if (orderNotFound) {
  return (
- <div className="min-h-screen bg-carbon-gray-10 flex flex-col items-center justify-center font-sans">
- <div className="bg-white p-8 max-w-md w-full shadow-xl text-center border border-[#e0e0e0]">
- <svg className="w-16 h-16 text-carbon-gray-100 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
- </svg>
- <h3 className="text-xl font-bold text-carbon-gray-100 mb-2">Order Not Found</h3>
- <p className="text-sm text-gray-600 mb-6">This order may have expired, been cancelled, or never existed.</p>
-  <button 
-  onClick={() => navigate('/new-order?tab=orders')}
-  className="w-full px-6 py-3 bg-carbon-gray-100 text-white font-bold hover:bg-black transition-colors"
-  >
-  Return to Dashboard
-  </button>
- </div>
- </div>
+ <CheckoutPageShell>
+ <section className="mx-auto max-w-md border border-black border-t-4 border-t-carbon-blue-60 bg-white p-7 text-center shadow-2xl" role="alert">
+ <WarningAlt aria-hidden="true" className="mx-auto h-12 w-12 text-carbon-gray-100" />
+ <h1 className="mt-4 text-xl font-black text-carbon-gray-100">Order not found</h1>
+ <p className="mt-2 text-sm leading-relaxed text-gray-600">Order may have expired, been cancelled, or never existed.</p>
+ <button
+ type="button"
+ onClick={() => navigate('/new-order?tab=orders')}
+ className="mt-6 min-h-11 w-full cursor-pointer bg-carbon-gray-100 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+ >
+ Return to Dashboard
+ </button>
+ </section>
+ </CheckoutPageShell>
  );
  }
 
  if (isLoading) {
- return <CheckoutSkeleton />;
+ return (
+ <CheckoutPageShell>
+ <CheckoutSkeleton />
+ </CheckoutPageShell>
+ );
  }
 
  return (
- <div className="min-h-screen bg-carbon-gray-10 py-10 px-4 sm:px-6 lg:px-8 font-sans">
- <div className="max-w-4xl mx-auto">
- <CheckoutCard 
- orderId={orderId} 
- amount={order?.total ?? 15.00}
- gcashNumber={order?.shops?.gcash_number || "09123456789"}
+ <CheckoutPageShell>
+ <CheckoutCard
+ orderId={orderId}
+ amount={order?.total ?? 15}
+ gcashNumber={order?.shops?.gcash_number || '09123456789'}
  gcashQrUrl={order?.shops?.gcash_qr_url}
  createdAt={order?.created_at}
  expiresAt={order?.expires_at}
@@ -89,7 +129,6 @@ export const CheckoutPage: React.FC = () => {
  orderState={order?.state}
  paymentReceipts={order?.payment_receipts}
  />
- </div>
- </div>
+ </CheckoutPageShell>
  );
 };
