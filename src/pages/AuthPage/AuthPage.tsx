@@ -137,10 +137,6 @@ export const AuthPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
-
-                    <p className="mt-5 shrink-0 text-center text-xs font-medium text-gray-500">
-                        Secure access for PrintFlow students and print partners.
-                    </p>
                 </div>
             </main>
         </div>

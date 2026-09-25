@@ -99,9 +99,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
         </svg>
         {isMicrosoftLoading ? 'Opening Microsoft…' : 'Continue with Microsoft'}
       </button>
-      <p className="mt-2 text-center text-xs leading-relaxed text-gray-500">
-        Use your @cit.edu account. New accounts are registered as students.
-      </p>
       <div className="my-5 flex items-center gap-3 text-xs text-gray-500">
         <span className="h-px flex-1 bg-gray-200" />
         <span>or sign in with email</span>
