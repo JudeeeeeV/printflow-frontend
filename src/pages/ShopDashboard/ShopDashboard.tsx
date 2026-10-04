@@ -497,7 +497,7 @@ export const ShopDashboard: React.FC = () => {
  ) : (
  // Kanban Board Layout
  <div className="flex flex-none flex-col bg-carbon-gray-10 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
- <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1.5 sm:gap-2 sm:px-2">
+ <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
  {QUEUE_ORDER.map(queue => {
  const isActive = activeQueue === queue;
  return (
@@ -512,7 +512,7 @@ export const ShopDashboard: React.FC = () => {
  tabIndex={isActive ? 0 : -1}
  onClick={() => handleQueueTabChange(queue)}
  onKeyDown={event => handleQueueTabKeyDown(event, queue)}
- className={`group flex min-h-12 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm ${isActive ? 'border-carbon-blue-60 bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'border-gray-300 bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
+ className={`group flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm lg:min-h-9 ${isActive ? 'border-carbon-blue-60 bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'border-gray-300 bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
  >
  <span className="truncate">{QUEUE_LABELS[queue]}</span>
  <span className="min-w-7 shrink-0 border border-black bg-black px-2 py-0.5 text-center text-xs font-black tabular-nums text-white">

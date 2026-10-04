@@ -6,25 +6,25 @@ export const DashboardSkeleton: React.FC = () => {
             <div className="flex flex-none flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                 <div className="flex flex-none flex-col bg-gray-100/50 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                     
-                    <div aria-hidden="true" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1.5 sm:gap-2 sm:px-2">
+                    <div aria-hidden="true" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
                         {[1, 2, 3].map(tab => (
-                            <div key={tab} className={`flex h-12 items-center justify-center gap-2 border border-gray-300 shadow-[0_2px_0_rgba(22,22,22,0.12)] ${tab === 1 ? 'bg-blue-100' : 'bg-white'}`}>
+                            <div key={tab} className={`flex h-11 items-center justify-center gap-2 border border-gray-300 shadow-[0_2px_0_rgba(22,22,22,0.12)] lg:h-9 ${tab === 1 ? 'bg-blue-100' : 'bg-white'}`}>
                                 <div className={`h-4 animate-pulse ${tab === 1 ? 'w-20 bg-blue-200' : 'w-16 bg-gray-200'}`} />
                                 <div className="h-5 w-7 animate-pulse bg-black" />
                             </div>
                         ))}
                     </div>
 
-                    <div className="flex shrink-0 flex-col items-stretch justify-between gap-2 border-b border-gray-300 bg-white p-2 lg:flex-row lg:items-center">
-                        <div className="h-11 w-full animate-pulse border border-gray-200 bg-gray-100 lg:h-10 lg:max-w-md" />
+                    <div className="flex shrink-0 flex-col items-stretch justify-between gap-1 border-b border-gray-300 bg-white px-2 py-1 lg:flex-row lg:items-center">
+                        <div className="h-11 w-full animate-pulse border border-gray-200 bg-gray-100 lg:h-9 lg:max-w-md" />
                         <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:gap-3">
                             <div className="space-y-1 lg:flex lg:items-center lg:gap-2 lg:space-y-0">
                                 <div className="h-3 w-16 animate-pulse bg-gray-200" />
-                                <div className="h-11 animate-pulse border border-gray-200 bg-gray-100 lg:h-10 lg:w-36" />
+                                <div className="h-11 animate-pulse border border-gray-200 bg-gray-100 lg:h-9 lg:w-36" />
                             </div>
                             <div className="space-y-1 lg:flex lg:items-center lg:gap-2 lg:space-y-0">
                                 <div className="h-3 w-20 animate-pulse bg-gray-200" />
-                                <div className="h-11 animate-pulse border border-gray-200 bg-gray-100 lg:h-10 lg:w-36" />
+                                <div className="h-11 animate-pulse border border-gray-200 bg-gray-100 lg:h-9 lg:w-36" />
                             </div>
                         </div>
                     </div>

@@ -46,7 +46,7 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  };
 
  return (
- <div className="flex shrink-0 flex-col items-stretch justify-between gap-2 border-b border-gray-300 bg-white p-2 lg:flex-row lg:items-center">
+ <div className="flex shrink-0 flex-col items-stretch justify-between gap-1 border-b border-gray-300 bg-white px-2 py-1 lg:flex-row lg:items-center">
  {/* Search Input */}
  <div className="relative w-full min-w-0 lg:max-w-md lg:flex-1">
  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -59,7 +59,7 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  onChange={(e) => handleSearchChange(e.target.value)}
  onBlur={flushPendingSearch}
  placeholder={`Search ${contextLabel} by Order ID or Client Name...`}
- className="block h-11 w-full border border-[#8d8d8d] bg-white py-2 pl-10 pr-3 text-base font-medium leading-5 text-carbon-gray-100 placeholder-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
+ className="block h-11 w-full border border-[#8d8d8d] bg-white py-2 pl-10 pr-3 text-base font-medium leading-5 text-carbon-gray-100 placeholder-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-9 lg:py-1.5"
  />
  </div>
 
@@ -72,7 +72,7 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  id="queue-paper-size"
  value={paperSizeFilter}
  onChange={(e) => setPaperSizeFilter(e.target.value)}
- className="block h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
+ className="block h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-9 lg:py-1.5"
  >
  <option value="ALL">All Sizes</option>
  <option value="SHORT">Short</option>
@@ -90,7 +90,7 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  id="queue-color-mode"
  value={colorModeFilter}
  onChange={(e) => setColorModeFilter(e.target.value)}
- className="block h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
+ className="block h-11 w-full min-w-0 cursor-pointer appearance-none border border-[#8d8d8d] bg-carbon-gray-10 py-2 pl-3 pr-9 text-base font-medium text-carbon-gray-100 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-9 lg:py-1.5"
  >
  <option value="ALL">All Modes</option>
  <option value="COLOR">Color</option>
