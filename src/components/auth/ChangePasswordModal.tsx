@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { View, ViewOff, Close, Checkmark } from '@carbon/icons-react';
 import { SubmitButton } from './SubmitButton/SubmitButton';
 import { authService } from '../../services/authService';
 import { ProfileNameForm } from './ProfileNameForm';
 import { ShopGcashQrForm } from './ShopGcashQrForm';
+import { AccountSettingsSkeleton } from './AccountSettingsSkeleton';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
@@ -48,6 +49,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const [qrReady, setQrReady] = useState(false);
+  const handleProfileReady = useCallback(() => setProfileReady(true), []);
+  const handleQrReady = useCallback(() => setQrReady(true), []);
+  const settingsLoading = !profileReady || (showShopGcashQr && !qrReady);
 
   const hasLength = newPassword.length >= 8;
   const hasUpper = /[A-Z]/.test(newPassword);
@@ -124,8 +130,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
               </button>
             </div>
 
-            <ProfileNameForm />
-            {showShopGcashQr && <ShopGcashQrForm />}
+            <div aria-busy={settingsLoading}>
+            {settingsLoading && <AccountSettingsSkeleton showShopGcashQr={showShopGcashQr} />}
+            <div hidden={settingsLoading}>
+            <ProfileNameForm onReady={handleProfileReady} />
+            {showShopGcashQr && <ShopGcashQrForm onReady={handleQrReady} />}
             <h4 className="mb-4 font-bold text-carbon-gray-100">Change password</h4>
             <form onSubmit={handleSubmit} className="flex flex-col w-full">
               
@@ -210,6 +219,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
                 />
               </div>
             </form>
+            </div>
+            </div>
           </>
         )}
       </div>

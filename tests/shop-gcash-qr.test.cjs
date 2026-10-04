@@ -17,7 +17,7 @@ const deferred = () => {
 
 // Run the real form handlers/effects with controlled hooks and requests. Browser
 // layout and focus behavior are checked separately; this needs no DOM dependency.
-function formFixture(saved = null, overrides = {}) {
+function formFixture(saved = null, overrides = {}, props = {}) {
   const calls = { upload: [], remove: 0, read: 0, created: [], revoked: [] };
   let savedUrl = saved;
   const service = {
@@ -68,7 +68,7 @@ function formFixture(saved = null, overrides = {}) {
   });
   const render = () => {
     cursor = 0; effects = [];
-    tree = exports.ShopGcashQrForm();
+    tree = exports.ShopGcashQrForm(props);
     effects.forEach(effect => effect());
     return tree;
   };
@@ -90,6 +90,105 @@ function formFixture(saved = null, overrides = {}) {
 }
 
 const image = (type = 'image/png', size = 100) => ({ name: 'qr.png', type, size });
+
+test('signals readiness only after the saved preview loads or fails', async () => {
+  for (const event of ['onLoad', 'onError']) {
+    let ready = false;
+    const request = deferred();
+    const f = formFixture(null, { getGcashQr: () => request.promise }, { onReady: () => { ready = true; } });
+    assert.equal(ready, false);
+    request.resolve({ gcash_qr_url: 'https://example.test/saved-qr' });
+    await f.flush();
+    assert.equal(ready, false);
+    f.find(node => node.type === 'img').props[event](); f.render();
+    assert.equal(ready, true);
+    f.unmount();
+  }
+});
+
+test('empty QR and load failures finish loading without waiting for an image', async () => {
+  for (const service of [{}, { getGcashQr: () => Promise.reject(new Error('offline')) }]) {
+    let ready = false;
+    const f = formFixture(null, service, { onReady: () => { ready = true; } });
+    await f.flush();
+    assert.equal(ready, true);
+    f.unmount();
+  }
+});
+
+function modalFixture(shopOnly) {
+  const values = [];
+  let cursor;
+  let tree;
+  const ProfileNameForm = () => {};
+  const ShopGcashQrForm = () => {};
+  const AccountSettingsSkeleton = () => {};
+  const exports = {};
+  vm.runInNewContext(compile('components/auth/ChangePasswordModal.tsx'), {
+    exports, document: { body: {} },
+    require: name => {
+      if (name === 'react') return {
+        useState(initial) {
+          const index = cursor++;
+          if (!(index in values)) values[index] = initial;
+          return [values[index], value => { values[index] = value; }];
+        },
+        useEffect() {},
+        useRef: value => ({ current: value }),
+        useCallback: callback => callback,
+      };
+      if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+      if (name === 'react-dom') return { createPortal: node => node };
+      if (name === './ProfileNameForm') return { ProfileNameForm };
+      if (name === './ShopGcashQrForm') return { ShopGcashQrForm };
+      if (name === './AccountSettingsSkeleton') return { AccountSettingsSkeleton };
+      if (name === './SubmitButton/SubmitButton') return { SubmitButton: () => {} };
+      if (name === '../../services/authService') return { authService: {} };
+      if (name === '@carbon/icons-react') return {};
+      throw new Error(`Unexpected import ${name}`);
+    },
+  });
+  const render = () => {
+    cursor = 0;
+    tree = exports.ChangePasswordModal({ onClose() {}, showShopGcashQr: shopOnly });
+  };
+  const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node)
+    ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
+  const find = predicate => nodes(tree).find(predicate);
+  render();
+  return {
+    loading: () => find(node => 'hidden' in (node.props || {})).props.hidden,
+    hasSkeleton: () => Boolean(find(node => node.type === AccountSettingsSkeleton)),
+    hasQr: () => Boolean(find(node => node.type === ShopGcashQrForm)),
+    ready(section) {
+      find(node => node.type === (section === 'profile' ? ProfileNameForm : ShopGcashQrForm)).props.onReady();
+      render();
+    },
+  };
+}
+
+test('shop settings reveal the entire body only when both sections are ready, in either completion order', () => {
+  for (const order of [['profile', 'qr'], ['qr', 'profile']]) {
+    const f = modalFixture(true);
+    assert.equal(f.loading(), true);
+    assert.equal(f.hasSkeleton(), true);
+    f.ready(order[0]);
+    assert.equal(f.loading(), true);
+    assert.equal(f.hasSkeleton(), true);
+    f.ready(order[1]);
+    assert.equal(f.loading(), false);
+    assert.equal(f.hasSkeleton(), false);
+  }
+});
+
+test('student settings wait only for the profile and never mount QR management', () => {
+  const f = modalFixture(false);
+  assert.equal(f.hasQr(), false);
+  assert.equal(f.loading(), true);
+  f.ready('profile');
+  assert.equal(f.loading(), false);
+  assert.equal(f.hasSkeleton(), false);
+});
 
 test('loads saved and empty QR states with saving initially disabled', async () => {
   for (const saved of [null, 'https://example.test/saved-qr']) {

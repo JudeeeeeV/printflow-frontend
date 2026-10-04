@@ -5,7 +5,7 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const BUTTON_FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60';
 
-export function ShopGcashQrForm() {
+export function ShopGcashQrForm({ onReady }: { onReady?: () => void } = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [savedQrUrl, setSavedQrUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -17,6 +17,7 @@ export function ShopGcashQrForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [failedPreviewUrl, setFailedPreviewUrl] = useState<string | null>(null);
+  const [loadedPreviewUrl, setLoadedPreviewUrl] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -33,6 +34,12 @@ export function ShopGcashQrForm() {
     if (localUrl) URL.revokeObjectURL(localUrl);
   }, [localUrl]);
 
+  useEffect(() => {
+    if (!loading && (loadError || !savedQrUrl || loadedPreviewUrl === savedQrUrl || failedPreviewUrl === savedQrUrl)) {
+      onReady?.();
+    }
+  }, [loading, loadError, savedQrUrl, loadedPreviewUrl, failedPreviewUrl, onReady]);
+
   const previewUrl = selectedFile ? localUrl : pendingRemoval ? null : savedQrUrl;
   const changed = selectedFile !== null || pendingRemoval;
 
@@ -43,7 +50,7 @@ export function ShopGcashQrForm() {
       {loading ? <p role="status" className="text-sm text-gray-600">Loading your GCash QR code...</p> : loadError ? (
         <div>
           <p role="alert" className="text-sm text-red-700">{loadError}</p>
-          <button type="button" className={`mt-2 min-h-11 px-3 text-sm font-bold text-carbon-blue-60 ${BUTTON_FOCUS}`} onClick={() => {
+          <button type="button" className={`mx-auto mt-2 block min-h-11 px-3 text-xs font-bold text-carbon-blue-60 ${BUTTON_FOCUS}`} onClick={() => {
             setLoading(true); setLoadError(''); setAttempt(value => value + 1);
           }}>Retry</button>
         </div>
@@ -63,11 +70,11 @@ export function ShopGcashQrForm() {
             setError(error instanceof Error ? error.message : 'Unable to save your GCash QR code.');
           } finally { setSaving(false); }
         }}>
-          <div className="mb-4 flex h-44 w-44 max-w-full items-center justify-center border border-gray-300 bg-white p-2">
+          <div className="mx-auto mb-4 flex h-44 w-44 max-w-full items-center justify-center border border-gray-300 bg-white p-2">
             {previewUrl ? failedPreviewUrl === previewUrl ? (
               <p role="alert" className="p-2 text-center text-sm text-red-700">Unable to display this image. Choose another image or reopen settings to reload the saved QR code.</p>
             ) : (
-              <img key={previewUrl} src={previewUrl} alt="Your shop's GCash payment QR code" className="h-full w-full object-contain" onError={() => setFailedPreviewUrl(previewUrl)} />
+              <img key={previewUrl} src={previewUrl} alt="Your shop's GCash payment QR code" className="h-full w-full object-contain" onLoad={() => setLoadedPreviewUrl(previewUrl)} onError={() => setFailedPreviewUrl(previewUrl)} />
             ) : <p role="status" className="p-2 text-center text-sm text-gray-600">{pendingRemoval ? 'QR code will be removed when you save.' : 'No GCash QR code saved.'}</p>}
           </div>
           <input ref={inputRef} id="shop-gcash-qr-image" type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={saving}
@@ -83,20 +90,20 @@ export function ShopGcashQrForm() {
               setError(''); setFailedPreviewUrl(null);
               setSelectedFile(file); setLocalUrl(URL.createObjectURL(file)); setPendingRemoval(false);
             }} />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             <button type="button" disabled={saving} onClick={() => inputRef.current?.click()} aria-describedby="shop-gcash-qr-help"
-              className={`min-h-11 border border-carbon-blue-60 bg-white px-4 py-3 text-sm font-bold text-carbon-blue-60 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_FOCUS}`}>
+              className={`min-h-11 border border-carbon-blue-60 bg-white px-3 py-2 text-xs font-bold text-carbon-blue-60 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_FOCUS}`}>
               {previewUrl ? 'Change image' : 'Choose image'}
             </button>
             {previewUrl && <button type="button" disabled={saving} onClick={() => {
               setSelectedFile(null); setLocalUrl(null); setPendingRemoval(savedQrUrl !== null);
               setError(''); setSuccess(false); setFailedPreviewUrl(null);
-            }} className={`min-h-11 bg-red-700 px-4 py-3 text-sm font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_FOCUS}`}>Remove</button>}
+            }} className={`min-h-11 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_FOCUS}`}>Remove</button>}
           </div>
           {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
           {success && <p role="status" className="mt-3 text-sm text-green-700">Your GCash QR code has been saved.</p>}
           <button type="submit" disabled={saving || !changed}
-            className={`mt-4 min-h-11 bg-carbon-blue-60 px-5 py-3 text-sm font-bold text-white hover:bg-carbon-blue-70 disabled:cursor-not-allowed disabled:bg-gray-400 ${BUTTON_FOCUS}`}>
+            className={`mx-auto mt-4 block min-h-11 bg-carbon-blue-60 px-3 py-2 text-xs font-bold text-white hover:bg-carbon-blue-70 disabled:cursor-not-allowed disabled:bg-gray-400 ${BUTTON_FOCUS}`}>
             {saving ? 'Saving...' : 'Save QR code'}
           </button>
         </form>
