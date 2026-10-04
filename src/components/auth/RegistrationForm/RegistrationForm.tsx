@@ -165,7 +165,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             placeholder="First Name"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            className="w-full px-4 py-3 text-base text-carbon-gray-100 bg-white outline-none ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+            className="w-full px-4 py-3 text-base text-carbon-gray-100 bg-white outline-hidden ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
           />
         </div>
         <div>
@@ -184,7 +184,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             placeholder="Last Name"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            className="w-full px-4 py-3 text-base text-carbon-gray-100 bg-white outline-none ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+            className="w-full px-4 py-3 text-base text-carbon-gray-100 bg-white outline-hidden ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
           />
         </div>
       </div>
@@ -220,7 +220,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             onBlur={() => setPasswordTouched(true)}
             id="password"
             type={showPassword ? "text" : "password"}
-            className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+            className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-inset ${
               passwordError
                 ? "ring-4 ring-black font-bold animate-shake"
                 : "ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
@@ -293,7 +293,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             aria-describedby="confirm-feedback"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-none ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+            className="w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-hidden ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
           />
           <button
             type="button"
@@ -339,7 +339,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             <input
               id="shopName"
               type="text"
-              className="w-full pl-4 pr-4 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+              className="w-full pl-4 pr-4 py-3 text-base text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
               placeholder="e.g. TLBH Print Co."
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}

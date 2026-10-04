@@ -4,15 +4,13 @@ import { View, ViewOff, Close, Checkmark } from '@carbon/icons-react';
 import { SubmitButton } from './SubmitButton/SubmitButton';
 import { authService } from '../../services/authService';
 import { ProfileNameForm } from './ProfileNameForm';
-import { ShopGcashQrForm } from './ShopGcashQrForm';
 import { AccountSettingsSkeleton } from './AccountSettingsSkeleton';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
-  showShopGcashQr?: boolean;
 }
 
-export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose, showShopGcashQr = false }) => {
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -50,10 +48,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
-  const [qrReady, setQrReady] = useState(false);
   const handleProfileReady = useCallback(() => setProfileReady(true), []);
-  const handleQrReady = useCallback(() => setQrReady(true), []);
-  const settingsLoading = !profileReady || (showShopGcashQr && !qrReady);
+  const settingsLoading = !profileReady;
 
   const hasLength = newPassword.length >= 8;
   const hasUpper = /[A-Z]/.test(newPassword);
@@ -129,10 +125,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
           </div>
         ) : (
             <div aria-busy={settingsLoading} className="min-h-0 flex-1 overflow-y-auto p-6">
-            {settingsLoading && <AccountSettingsSkeleton showShopGcashQr={showShopGcashQr} />}
+            {settingsLoading && <AccountSettingsSkeleton />}
             <div hidden={settingsLoading}>
             <ProfileNameForm onReady={handleProfileReady} />
-            {showShopGcashQr && <ShopGcashQrForm onReady={handleQrReady} />}
             <h4 className="mb-4 font-bold text-carbon-gray-100">Change password</h4>
             <form onSubmit={handleSubmit} className="flex flex-col w-full">
               
@@ -142,7 +137,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
                   <input
                     id="current-password"
                     type={showCurrent ? 'text' : 'password'}
-                    className="w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white border border-[#8d8d8d] outline-none transition-all duration-200 ease-out focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+                    className="w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white border border-[#8d8d8d] outline-hidden transition-all duration-200 ease-out focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
                     placeholder="Enter current password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -163,7 +158,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
                   <input
                     id="new-password"
                     type={showNew ? 'text' : 'password'}
-                    className="w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white border border-[#8d8d8d] outline-none transition-all duration-200 ease-out focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+                    className="w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white border border-[#8d8d8d] outline-hidden transition-all duration-200 ease-out focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
                     placeholder="Create a new password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}

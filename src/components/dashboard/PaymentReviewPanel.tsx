@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Checkmark, Close } from '@carbon/icons-react';
+import buttonStyles from '../maps/Maps.module.css';
 
 interface PaymentReviewOrder {
  id: string;
@@ -120,7 +121,7 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  initial={{ opacity: prefersReducedMotion ? 1 : 0, y: prefersReducedMotion ? 0 : 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: prefersReducedMotion ? 0 : 0.15, ease: 'easeOut' }}
- className="flex max-h-[calc(100dvh-32px)] w-full max-w-lg flex-col overflow-hidden border border-gray-300 bg-white text-carbon-gray-100 shadow-xl focus:outline-none"
+ className="flex max-h-[calc(100dvh-32px)] w-full max-w-lg flex-col overflow-hidden border border-gray-300 bg-white text-carbon-gray-100 shadow-xl focus:outline-hidden"
  >
  <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-300 p-4">
  <div className="min-w-0">
@@ -162,10 +163,10 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  <div className="space-y-2">
  <label htmlFor="payment-rejection-reason" className="block text-sm font-bold">Rejection reason (optional)</label>
  <input id="payment-rejection-reason" type="text" placeholder="e.g. Blurry, Wrong Amount" value={rejectReason} onChange={event => setRejectReason(event.target.value)} disabled={busy} className="min-h-11 w-full border border-[#8d8d8d] bg-white px-3 py-2 text-base focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 disabled:opacity-50 sm:text-sm" />
- <button type="button" onClick={() => void handleVerify('APPROVE')} disabled={busy} className="flex min-h-11 w-full items-center justify-center gap-1.5 bg-green-600 px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50">
+ <button type="button" onClick={() => void handleVerify('APPROVE')} disabled={busy} className={`${buttonStyles.primaryButton} w-full`}>
  <Checkmark size={16} aria-hidden="true" /> Verify &amp; Send to Production
  </button>
- <button type="button" onClick={() => void handleVerify('REJECT')} disabled={busy} className="min-h-11 w-full border border-red-600 bg-red-600 px-3 py-2 text-sm font-bold text-white transition-colors hover:border-red-700 hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50">Reject &amp; Request New Receipt</button>
+ <button type="button" onClick={() => void handleVerify('REJECT')} disabled={busy} className={`${buttonStyles.secondaryButton} w-full`}>Reject &amp; Request New Receipt</button>
  <p role="status" className="sr-only">{busy ? 'Verifying payment. Please wait.' : ''}</p>
  </div>
  )}

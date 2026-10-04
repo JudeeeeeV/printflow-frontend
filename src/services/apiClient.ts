@@ -42,7 +42,7 @@ export async function apiClient<T>(
  
  // Setup default headers
  const headers = new Headers(options.headers || {});
- if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+ if (options.body != null && !headers.has('Content-Type') && !(options.body instanceof FormData)) {
  headers.set('Content-Type', 'application/json');
  }
 

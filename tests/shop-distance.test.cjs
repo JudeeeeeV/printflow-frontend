@@ -35,13 +35,12 @@ test('invalid or missing pins are unavailable, not treated as zero distance', ()
   assert.equal(distanceToShop({ latitude: NaN, longitude: 0 }, origin), null);
 });
 
-test('sorts the full list nearest-first before three-shop pagination without mutating it', () => {
+test('sorts the full list nearest-first before five-shop pagination without mutating it', () => {
   const shops = [7, 6, 5, 4, 3, 2, 1].map(n => ({ id: `shop-${n}`, latitude: 0, longitude: n / 1000 }));
   const before = JSON.stringify(shops);
   const sorted = sortShopsByDistance(shops, origin);
-  assert.deepEqual(Array.from(sorted.slice(0, 3), entry => entry.shop.id), ['shop-1', 'shop-2', 'shop-3']);
-  assert.deepEqual(Array.from(sorted.slice(3, 6), entry => entry.shop.id), ['shop-4', 'shop-5', 'shop-6']);
-  assert.deepEqual(Array.from(sorted.slice(6, 9), entry => entry.shop.id), ['shop-7']);
+  assert.deepEqual(Array.from(sorted.slice(0, 5), entry => entry.shop.id), ['shop-1', 'shop-2', 'shop-3', 'shop-4', 'shop-5']);
+  assert.deepEqual(Array.from(sorted.slice(5, 10), entry => entry.shop.id), ['shop-6', 'shop-7']);
   assert.equal(JSON.stringify(shops), before);
 });
 

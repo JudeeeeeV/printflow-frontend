@@ -40,7 +40,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ value, onChange, hasErro
         type="email"
         required
         autoComplete="email"
-        className={`px-4 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+        className={`px-4 py-3 text-base text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-inset ${
           isInputError ? 'ring-4 ring-black font-bold animate-shake' : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60'
         }`}
         placeholder="University or Personal Email"

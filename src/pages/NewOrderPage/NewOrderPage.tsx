@@ -12,7 +12,6 @@ import { MyDraftsList } from '../../components/dashboard/MyDraftsList';
 import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
 import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
 import { AlertModal } from '../../components/common/AlertModal';
-import { PDFDocument } from 'pdf-lib';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
 import { apiClient } from '../../services/apiClient';
 import printflowLogoDark from '../../assets/printflow-logo-dark.png';
@@ -42,6 +41,9 @@ export const NewOrderPage: React.FC = () => {
         if (tab !== 'drafts') setEditingDraft(null);
     };
     const [shops, setShops] = useState<PrintShop[]>([]);
+    const [shopsLoading, setShopsLoading] = useState(true);
+    const [shopsError, setShopsError] = useState('');
+    const [shopsAttempt, setShopsAttempt] = useState(0);
     const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
     const uploadButtonRef = useRef<HTMLButtonElement>(null);
     const imagePreviewRef = useRef<HTMLImageElement>(null);
@@ -67,10 +69,13 @@ export const NewOrderPage: React.FC = () => {
     };
 
     useEffect(() => {
+        let active = true;
         shopService.getShops()
-            .then(data => setShops(data))
-            .catch(err => console.error("Failed to fetch shops:", err));
-    }, []);
+            .then(data => { if (active) setShops(data); })
+            .catch(err => { if (active) setShopsError(err instanceof Error ? err.message : 'Could not load print shops.'); })
+            .finally(() => { if (active) setShopsLoading(false); });
+        return () => { active = false; };
+    }, [shopsAttempt]);
 
     useEffect(() => {
         if (!file || !isFileValidated) return;
@@ -136,6 +141,7 @@ export const NewOrderPage: React.FC = () => {
 
         if (selectedFile.type === 'application/pdf') {
             try {
+                const { PDFDocument } = await import('pdf-lib');
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
                 detectedPageCount = pdfDoc.getPageCount();
@@ -365,6 +371,13 @@ export const NewOrderPage: React.FC = () => {
                                             shops={shops}
                                             selectedShopId={selectedShopId}
                                             onSelect={setSelectedShopId}
+                                            isLoading={shopsLoading}
+                                            error={shopsError}
+                                            onRetry={() => {
+                                                setShopsLoading(true);
+                                                setShopsError('');
+                                                setShopsAttempt(attempt => attempt + 1);
+                                            }}
                                         />
                                     </div>
                                 </div>

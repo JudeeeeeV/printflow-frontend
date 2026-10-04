@@ -165,7 +165,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
             pattern="[0-9]{8}"
             minLength={8}
             maxLength={8}
-            className={`w-full px-4 py-4 text-3xl font-bold tracking-[0.3em] text-center text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+            className={`w-full px-4 py-4 text-3xl font-bold tracking-[0.3em] text-center text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-inset ${
               error ? 'ring-4 ring-black animate-shake' : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 placeholder:text-gray-300 placeholder:font-normal'
             }`}
             placeholder="00000000"
@@ -182,7 +182,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
             <input
               id="new-password"
               type={showPassword ? 'text' : 'password'}
-              className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+              className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-inset ${
                 error ? 'ring-4 ring-black font-bold animate-shake' : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60'
               }`}
               placeholder="Enter new password"

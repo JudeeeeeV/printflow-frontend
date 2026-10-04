@@ -72,6 +72,7 @@ function fixture(overrides = {}, reducedMotion = false) {
       if (name === 'react-dom') return { createPortal: node => node };
       if (name === 'framer-motion') return { motion: { div: 'div' }, useReducedMotion: () => reducedMotion };
       if (name === '@carbon/icons-react') return { Close: 'icon', Checkmark: 'icon' };
+      if (name === '../maps/Maps.module.css') return { default: { primaryButton: 'primary', secondaryButton: 'secondary' } };
       throw new Error(`Unexpected import ${name}`);
     },
   });

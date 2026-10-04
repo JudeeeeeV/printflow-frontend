@@ -53,7 +53,7 @@ function formFixture(saved = null, overrides = {}, props = {}) {
     },
   };
   const exports = {};
-  vm.runInNewContext(compile('components/auth/ShopGcashQrForm.tsx'), {
+  vm.runInNewContext(compile('components/settings/ShopGcashQrForm.tsx'), {
     exports, Error,
     URL: {
       createObjectURL: file => { const url = `blob:qr-${calls.created.length}`; calls.created.push({ file, url }); return url; },
@@ -63,6 +63,7 @@ function formFixture(saved = null, overrides = {}, props = {}) {
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
       if (name === '../../services/shopService') return { shopService: service };
+      if (name === '../maps/Maps.module.css') return { default: { primaryButton: 'primary', secondaryButton: 'secondary' } };
       throw new Error(`Unexpected import ${name}`);
     },
   });
@@ -116,12 +117,11 @@ test('empty QR and load failures finish loading without waiting for an image', a
   }
 });
 
-function modalFixture(shopOnly) {
+function modalFixture() {
   const values = [];
   let cursor;
   let tree;
   const ProfileNameForm = () => {};
-  const ShopGcashQrForm = () => {};
   const AccountSettingsSkeleton = () => {};
   const exports = {};
   vm.runInNewContext(compile('components/auth/ChangePasswordModal.tsx'), {
@@ -140,7 +140,6 @@ function modalFixture(shopOnly) {
       if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
       if (name === 'react-dom') return { createPortal: node => node };
       if (name === './ProfileNameForm') return { ProfileNameForm };
-      if (name === './ShopGcashQrForm') return { ShopGcashQrForm };
       if (name === './AccountSettingsSkeleton') return { AccountSettingsSkeleton };
       if (name === './SubmitButton/SubmitButton') return { SubmitButton: () => {} };
       if (name === '../../services/authService') return { authService: {} };
@@ -150,7 +149,7 @@ function modalFixture(shopOnly) {
   });
   const render = () => {
     cursor = 0;
-    tree = exports.ChangePasswordModal({ onClose() {}, showShopGcashQr: shopOnly });
+    tree = exports.ChangePasswordModal({ onClose() {} });
   };
   const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node)
     ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
@@ -159,33 +158,17 @@ function modalFixture(shopOnly) {
   return {
     loading: () => find(node => 'hidden' in (node.props || {})).props.hidden,
     hasSkeleton: () => Boolean(find(node => node.type === AccountSettingsSkeleton)),
-    hasQr: () => Boolean(find(node => node.type === ShopGcashQrForm)),
-    ready(section) {
-      find(node => node.type === (section === 'profile' ? ProfileNameForm : ShopGcashQrForm)).props.onReady();
+    ready() {
+      find(node => node.type === ProfileNameForm).props.onReady();
       render();
     },
   };
 }
 
-test('shop settings reveal the entire body only when both sections are ready, in either completion order', () => {
-  for (const order of [['profile', 'qr'], ['qr', 'profile']]) {
-    const f = modalFixture(true);
-    assert.equal(f.loading(), true);
-    assert.equal(f.hasSkeleton(), true);
-    f.ready(order[0]);
-    assert.equal(f.loading(), true);
-    assert.equal(f.hasSkeleton(), true);
-    f.ready(order[1]);
-    assert.equal(f.loading(), false);
-    assert.equal(f.hasSkeleton(), false);
-  }
-});
-
-test('student settings wait only for the profile and never mount QR management', () => {
-  const f = modalFixture(false);
-  assert.equal(f.hasQr(), false);
+test('account settings finish loading after the profile is ready', () => {
+  const f = modalFixture();
   assert.equal(f.loading(), true);
-  f.ready('profile');
+  f.ready();
   assert.equal(f.loading(), false);
   assert.equal(f.hasSkeleton(), false);
 });
@@ -209,7 +192,7 @@ test('replaces local previews, rejects invalid selections without losing the edi
   f.select(selected);
   assert.equal(f.find(node => node.type === 'img').props.src, 'blob:qr-0');
   assert.equal(f.button('Save QR code').props.disabled, false);
-  for (const invalid of [image('image/gif'), image('image/png', 10 * 1024 * 1024 + 1)]) {
+  for (const invalid of [image('image/gif'), image('image/png', 0), image('image/png', 10 * 1024 * 1024 + 1)]) {
     f.select(invalid);
     assert.ok(f.find(node => node.props?.role === 'alert'));
     assert.equal(f.find(node => node.type === 'img').props.src, 'blob:qr-0');

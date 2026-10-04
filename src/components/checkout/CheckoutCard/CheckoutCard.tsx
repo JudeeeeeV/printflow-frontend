@@ -286,7 +286,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  value={referenceNumber}
  onChange={(event) => setReferenceNumber(event.target.value)}
  aria-describedby="gcash-reference-help"
- className="mt-2 min-h-12 w-full border border-gray-500 bg-carbon-gray-10 px-4 py-3 text-base text-carbon-gray-100 transition-colors placeholder:text-gray-500 focus:border-carbon-blue-60 focus:outline-none focus:ring-2 focus:ring-carbon-blue-60 motion-reduce:transition-none"
+ className="mt-2 min-h-12 w-full border border-gray-500 bg-carbon-gray-10 px-4 py-3 text-base text-carbon-gray-100 transition-colors placeholder:text-gray-500 focus:border-carbon-blue-60 focus:outline-hidden focus:ring-2 focus:ring-carbon-blue-60 motion-reduce:transition-none"
  />
  <p id="gcash-reference-help" className="mt-2 text-xs leading-relaxed text-gray-600">Adding the reference number can speed up verification.</p>
  </div>
@@ -318,7 +318,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  value={disputeReason}
  onChange={(event) => setDisputeReason(event.target.value)}
  placeholder="I transferred the exact amount to the number provided..."
- className="mt-2 h-32 w-full resize-none border border-gray-500 p-3 text-base focus:outline-none focus:ring-2 focus:ring-carbon-blue-60"
+ className="mt-2 h-32 w-full resize-none border border-gray-500 p-3 text-base focus:outline-hidden focus:ring-2 focus:ring-carbon-blue-60"
  />
  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
  <button type="button" onClick={() => setShowDisputeModal(false)} className={`min-h-11 border border-black bg-white px-4 py-2 text-sm font-bold text-carbon-gray-100 hover:bg-carbon-gray-10 ${focusClass}`}>Cancel</button>

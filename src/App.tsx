@@ -4,10 +4,15 @@ import { AuthPage } from './pages/AuthPage/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { UnauthorizedPage } from './pages/UnauthorizedPage/UnauthorizedPage';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { shopService } from './services/shopService';
 
 // Keep the sign-in page small; load each workspace only when it is visited.
 const MicrosoftCallbackPage = lazy(() => import('./pages/AuthPage/MicrosoftCallbackPage').then(m => ({ default: m.MicrosoftCallbackPage })));
-const NewOrderPage = lazy(() => import('./pages/NewOrderPage/NewOrderPage').then(m => ({ default: m.NewOrderPage })));
+const NewOrderPage = lazy(() => {
+ // Fetch the directory while the order-page chunk downloads, instead of after it mounts.
+ void shopService.getShops().catch(() => undefined);
+ return import('./pages/NewOrderPage/NewOrderPage').then(m => ({ default: m.NewOrderPage }));
+});
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
 const ShopDashboard = lazy(() => import('./pages/ShopDashboard/ShopDashboard').then(m => ({ default: m.ShopDashboard })));
 const ShopLayout = lazy(() => import('./components/layout/ShopLayout').then(m => ({ default: m.ShopLayout })));

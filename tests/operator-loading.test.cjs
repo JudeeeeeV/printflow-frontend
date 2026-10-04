@@ -89,6 +89,57 @@ test('failed shop lookups can be retried', async () => {
   assert.equal((await shopService.getMyShop()).id, 'shop');
 });
 
+test('shop directory requests overlap and remain cached for only 30 seconds', async () => {
+  let now = 1000, calls = 0;
+  const pending = deferred();
+  const shops = [{ id: 'shop-a', status: 'OPEN' }];
+  const { shopService } = loadModule('shopService.ts', {
+    './apiClient': { apiClient: () => { calls++; return pending.promise; } },
+    globals: { Date: { now: () => now } },
+  });
+  const initial = shopService.getShops();
+  assert.equal(shopService.getShops(), initial);
+  pending.resolve(shops);
+  await initial;
+  now += 29_999;
+  assert.equal(await shopService.getShops(), shops);
+  assert.equal(calls, 1);
+  now++;
+  await shopService.getShops();
+  assert.equal(calls, 2);
+});
+
+test('shop directory failures allow retries and empty lists are cached', async () => {
+  let calls = 0;
+  const { shopService } = loadModule('shopService.ts', {
+    './apiClient': { apiClient: () => ++calls === 1 ? Promise.reject(new Error('offline')) : Promise.resolve([]) },
+  });
+  const initial = shopService.getShops();
+  assert.equal(shopService.getShops(), initial);
+  await assert.rejects(initial, /offline/);
+  assert.equal((await shopService.getShops()).length, 0);
+  await shopService.getShops();
+  assert.equal(calls, 2);
+});
+
+test('GET requests omit JSON headers while JSON writes and multipart uploads keep their required headers', async () => {
+  const requests = [];
+  const { apiClient } = loadModule('apiClient.ts', {
+    '../config/runtime': { API_URL: 'https://api.example.test' },
+    globals: { fetch: async (_url, options) => {
+      requests.push(options);
+      return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+    } },
+  });
+  await apiClient('/shops');
+  await apiClient('/shops/me', { method: 'PATCH', body: JSON.stringify({ name: 'Shop' }) });
+  await apiClient('/shops/me/photo', { method: 'POST', body: new FormData() });
+  assert.equal(requests[0].headers.has('Content-Type'), false);
+  assert.equal(requests[1].headers.get('Content-Type'), 'application/json');
+  assert.equal(requests[2].headers.has('Content-Type'), false);
+  assert.ok(requests.every(options => options.credentials === 'include'));
+});
+
 test('profile saves refresh an expired cookie session and retry the same PATCH', async () => {
   const requests = [];
   const { apiClient } = loadModule('apiClient.ts', {

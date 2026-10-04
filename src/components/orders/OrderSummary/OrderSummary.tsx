@@ -54,7 +54,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
       </div>
 
       {estimate ? (
-        <div className="flex-grow">
+        <div className="grow">
           <div className="flex justify-between mb-2 text-sm text-gray-600 gap-2">
             <span className="truncate">Base ({paperSize === 'SHORT' ? 'Short' : paperSize === 'LONG' ? 'Long' : 'A4'})</span>
             <span className="whitespace-nowrap font-medium text-right">₱{estimate.basePrice.toFixed(2)} / pg</span>
@@ -73,7 +73,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
           </div>
         </div>
       ) : (
-        <div className="flex-grow flex items-center justify-center text-gray-400 text-sm text-center">
+        <div className="grow flex items-center justify-center text-gray-400 text-sm text-center">
           Select a shop and upload a file to view pricing.
         </div>
       )}

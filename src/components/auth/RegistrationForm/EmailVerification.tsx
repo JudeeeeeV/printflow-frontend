@@ -80,7 +80,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
             pattern="[0-9]{8}" minLength={8} maxLength={8} value={code} disabled={busy}
             onChange={e => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
             aria-label="8-digit verification code"
-            className="w-full py-4 text-center text-3xl font-bold tracking-[0.3em] text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 placeholder:text-gray-300 placeholder:font-normal" placeholder="00000000" />
+            className="w-full py-4 text-center text-3xl font-bold tracking-[0.3em] text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 placeholder:text-gray-300 placeholder:font-normal" placeholder="00000000" />
           <p role="status" className="text-sm mt-3 text-gray-500">{message}</p>
         </div>
 

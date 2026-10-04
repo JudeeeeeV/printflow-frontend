@@ -14,7 +14,7 @@ export const MyDraftsSkeleton: React.FC = () => (
             </div>
             <div className="h-11 w-11 shrink-0 bg-gray-100" />
           </div>
-          <div className="mb-6 flex-grow space-y-2">
+          <div className="mb-6 grow space-y-2">
             <div className="h-4 w-28 max-w-full bg-gray-100" />
             <div className="mt-4 flex items-end justify-between gap-3 border-t border-gray-100 pt-4">
               <div className="h-5 w-20 bg-gray-100" />

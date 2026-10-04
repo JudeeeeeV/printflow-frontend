@@ -1,4 +1,4 @@
-export function AccountSettingsSkeleton({ showShopGcashQr = false }: { showShopGcashQr?: boolean }) {
+export function AccountSettingsSkeleton() {
   return (
     <div role="status" aria-label="Loading account settings">
       <span className="sr-only">Loading account settings...</span>
@@ -16,18 +16,6 @@ export function AccountSettingsSkeleton({ showShopGcashQr = false }: { showShopG
           </div>
           <div className="mt-4 h-11 w-28 bg-gray-200" />
         </div>
-        {showShopGcashQr && (
-          <div className="mb-6 border-b border-gray-200 pb-6">
-            <div className="mb-2 h-5 w-32 bg-gray-200" />
-            <div className="mb-4 h-16 bg-gray-100" />
-            <div className="mx-auto mb-4 h-44 w-44 max-w-full border border-gray-200 bg-gray-100" />
-            <div className="flex justify-center gap-2">
-              <div className="h-11 w-28 bg-gray-200" />
-              <div className="h-11 w-20 bg-gray-200" />
-            </div>
-            <div className="mx-auto mt-4 h-11 w-28 bg-gray-200" />
-          </div>
-        )}
         <div className="mb-4 h-5 w-36 bg-gray-200" />
         {[1, 2].map(field => (
           <div key={field} className="mb-5">

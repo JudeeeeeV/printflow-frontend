@@ -3,6 +3,7 @@ import { ArrowRight, Location, Save, Store } from "@carbon/icons-react";
 import { apiClient } from "../../services/apiClient";
 import type { PrintShop } from "../../services/orderService";
 import { ShopPhotoUpload } from "../../components/maps/ShopPhotoUpload";
+import { ShopGcashQrForm } from "../../components/settings/ShopGcashQrForm";
 import { LocationMapModal } from "../../components/maps/LocationMapModal";
 import { hasCoordinates } from "../../components/maps/coordinates";
 import styles from "../../components/maps/Maps.module.css";
@@ -271,6 +272,7 @@ export const ShopSettingsPage: React.FC = () => {
           </div>
         </fieldset>
       </form>
+      <ShopGcashQrForm />
       {isMapOpen && (
         <LocationMapModal
           name={shopName || "Your shop"}

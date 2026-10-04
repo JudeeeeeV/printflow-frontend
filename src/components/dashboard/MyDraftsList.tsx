@@ -101,7 +101,7 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  </button>
  </div>
 
- <div className="flex-grow space-y-2 mb-6">
+ <div className="grow space-y-2 mb-6">
  <div className="text-xs text-gray-400">
  Saved on {new Date(draft.updatedAt).toLocaleDateString()}
  </div>

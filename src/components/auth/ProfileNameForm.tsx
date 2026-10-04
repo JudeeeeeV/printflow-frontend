@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
+import buttonStyles from '../maps/Maps.module.css';
 
 export function ProfileNameForm({ onReady }: { onReady?: () => void } = {}) {
   const [name, setName] = useState({ firstName: '', lastName: '' });
@@ -69,7 +70,7 @@ export function ProfileNameForm({ onReady }: { onReady?: () => void } = {}) {
           </div>
           {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
           {success && <p role="status" className="mt-3 text-sm text-green-700">Your name has been updated.</p>}
-          <button disabled={saving || unchanged} className="mt-4 min-h-11 bg-carbon-blue-60 px-5 py-3 text-sm font-bold text-white hover:bg-carbon-blue-70 disabled:cursor-not-allowed disabled:bg-gray-400">
+          <button disabled={saving || unchanged} className={`${buttonStyles.primaryButton} mt-4`}>
             {saving ? 'Saving…' : 'Save name'}
           </button>
         </form>

@@ -127,7 +127,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
           <input
             id="login-password"
             type={showPassword ? 'text' : 'password'}
-            className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+            className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-hidden transition-all duration-200 ease-out ring-inset ${
               hasPasswordError
                 ? 'ring-4 ring-black font-bold animate-shake'
                 : 'ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60'

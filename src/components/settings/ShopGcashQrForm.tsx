@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { shopService } from '../../services/shopService';
+import buttonStyles from '../maps/Maps.module.css';
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const BUTTON_FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60';
 
 export function ShopGcashQrForm({ onReady }: { onReady?: () => void } = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,13 +44,13 @@ export function ShopGcashQrForm({ onReady }: { onReady?: () => void } = {}) {
   const changed = selectedFile !== null || pendingRemoval;
 
   return (
-    <section className="mb-6 border-b border-gray-200 pb-6" aria-labelledby="shop-gcash-qr-title">
-      <h4 id="shop-gcash-qr-title" className="mb-2 font-bold text-carbon-gray-100">GCash QR code</h4>
+    <section className="mt-5 min-w-0 border border-[#e0e0e0] bg-white p-5 sm:p-6" aria-labelledby="shop-gcash-qr-title">
+      <h2 id="shop-gcash-qr-title" className="mb-2 text-base font-semibold text-carbon-gray-100">GCash QR code</h2>
       <p id="shop-gcash-qr-help" className="mb-4 text-sm text-gray-600">Students use this QR code to pay your shop. Choose a JPEG, PNG, or WebP image up to 10 MB, then save your changes.</p>
       {loading ? <p role="status" className="text-sm text-gray-600">Loading your GCash QR code...</p> : loadError ? (
         <div>
           <p role="alert" className="text-sm text-red-700">{loadError}</p>
-          <button type="button" className={`mx-auto mt-2 block min-h-11 px-3 text-xs font-bold text-carbon-blue-60 ${BUTTON_FOCUS}`} onClick={() => {
+          <button type="button" className={`${buttonStyles.secondaryButton} mt-2`} onClick={() => {
             setLoading(true); setLoadError(''); setAttempt(value => value + 1);
           }}>Retry</button>
         </div>
@@ -83,7 +83,7 @@ export function ShopGcashQrForm({ onReady }: { onReady?: () => void } = {}) {
               event.target.value = '';
               if (!file) return;
               setSuccess(false);
-              if (!IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_BYTES) {
+              if (!IMAGE_TYPES.includes(file.type) || file.size === 0 || file.size > MAX_IMAGE_BYTES) {
                 setError('Choose a JPEG, PNG, or WebP image no larger than 10 MB.');
                 return;
               }
@@ -92,18 +92,18 @@ export function ShopGcashQrForm({ onReady }: { onReady?: () => void } = {}) {
             }} />
           <div className="flex flex-wrap justify-center gap-2">
             <button type="button" disabled={saving} onClick={() => inputRef.current?.click()} aria-describedby="shop-gcash-qr-help"
-              className={`min-h-11 border border-carbon-blue-60 bg-white px-3 py-2 text-xs font-bold text-carbon-blue-60 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_FOCUS}`}>
+              className={buttonStyles.secondaryButton}>
               {previewUrl ? 'Change image' : 'Choose image'}
             </button>
             {previewUrl && <button type="button" disabled={saving} onClick={() => {
               setSelectedFile(null); setLocalUrl(null); setPendingRemoval(savedQrUrl !== null);
               setError(''); setSuccess(false); setFailedPreviewUrl(null);
-            }} className={`min-h-11 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_FOCUS}`}>Remove</button>}
+            }} className={buttonStyles.secondaryButton}>Remove</button>}
           </div>
           {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
           {success && <p role="status" className="mt-3 text-sm text-green-700">Your GCash QR code has been saved.</p>}
           <button type="submit" disabled={saving || !changed}
-            className={`mx-auto mt-4 block min-h-11 bg-carbon-blue-60 px-3 py-2 text-xs font-bold text-white hover:bg-carbon-blue-70 disabled:cursor-not-allowed disabled:bg-gray-400 ${BUTTON_FOCUS}`}>
+            className={`${buttonStyles.primaryButton} mx-auto mt-4 flex`}>
             {saving ? 'Saving...' : 'Save QR code'}
           </button>
         </form>

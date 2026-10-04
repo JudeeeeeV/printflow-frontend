@@ -7,13 +7,16 @@ import { ShopLocation } from '../../maps/ShopLocation';
 import { locateForDirections } from '../../../services/directionsService';
 import { formatShopDistance, sortShopsByDistance, type ShopPosition } from '../../../services/shopDistance';
 
-const SHOPS_PER_PAGE = 3;
+const SHOPS_PER_PAGE = 5;
 type SlideDirection = 'next' | 'previous' | null;
 
 interface ShopSelectorProps {
  shops: PrintShop[];
  selectedShopId: string | null;
  onSelect: (id: string) => void;
+ isLoading?: boolean;
+ error?: string;
+ onRetry?: () => void;
 }
 
 function ShopThumbnail({ photoUrl }: { photoUrl?: string | null }) {
@@ -36,7 +39,7 @@ function ShopThumbnail({ photoUrl }: { photoUrl?: string | null }) {
  );
 }
 
-export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopId, onSelect }) => {
+export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopId, onSelect, isLoading = false, error = '', onRetry }) => {
  const [currentPage, setCurrentPage] = useState(1);
  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
  const [expandedShopId, setExpandedShopId] = useState<string | null>(null);
@@ -65,8 +68,11 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
   }
  }, []);
  useEffect(() => {
-  void requestLocation();
-  return () => activeLocation.current?.abort();
+  const frame = requestAnimationFrame(() => void requestLocation());
+  return () => {
+   cancelAnimationFrame(frame);
+   activeLocation.current?.abort();
+  };
  }, [requestLocation]);
  const selectorId = useId();
  const reduceMotion = useReducedMotion();
@@ -86,6 +92,25 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  return (
  <div className="mb-8">
  <h3 className="text-sm font-semibold text-gray-700 mb-3">Selected Print Shop</h3>
+ {isLoading && (
+ <div role="status" aria-label="Loading print shops" className="space-y-3">
+ <span className="sr-only">Loading print shops…</span>
+ {Array.from({ length: SHOPS_PER_PAGE }, (_, index) => (
+ <div key={index} aria-hidden="true" className="flex min-h-24 items-center gap-4 border-2 border-gray-200 bg-white p-4 animate-pulse motion-reduce:animate-none">
+ <div className="h-12 w-12 shrink-0 bg-gray-200" />
+ <div className="flex-1 space-y-3"><div className="h-5 w-2/3 bg-gray-200" /><div className="h-3 w-1/3 bg-gray-100" /></div>
+ </div>
+ ))}
+ </div>
+ )}
+ {error && (
+ <div role="alert" className="mb-3 border border-gray-300 bg-carbon-gray-10 p-4 text-sm text-gray-700">
+ <p>{error}</p>
+ {onRetry && <button type="button" onClick={onRetry} className="mt-2 min-h-11 px-3 font-semibold text-carbon-blue-60 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Try again</button>}
+ </div>
+ )}
+ {!isLoading && !error && shops.length === 0 && <p role="status" className="border border-gray-300 bg-carbon-gray-10 p-4 text-sm text-gray-600">No print shops are open right now. Please check again later.</p>}
+ {!isLoading && shops.length > 0 && <>
  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
  <p role="status" className="min-w-0 flex-1 text-xs text-gray-600">
  {locating ? 'Finding your location…' : locationError || (userPosition ? 'Nearest first · Approximate straight-line distances' : 'Allow location access to find the nearest shops.')}
@@ -99,7 +124,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <div className="overflow-hidden">
  <div
  key={displayedPage}
- className={`flex min-h-[312px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
+ className={`flex min-h-[528px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
  >
  {visibleShops.map(({ shop, distance }) => {
  const isExpanded = expandedShopId === shop.id && selectedShopId === shop.id;
@@ -194,6 +219,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  </button>
  </nav>
  )}
+ </>}
  </div>
  );
 };

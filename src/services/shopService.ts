@@ -4,10 +4,22 @@ import type { PrintShop } from './orderService';
 type GcashQr = { gcash_qr_url: string | null };
 type MyShop = GcashQr & { id: string; name: string; status: string; verification_status: string };
 let pendingShop: Promise<MyShop> | null = null;
+const SHOP_LIST_TTL_MS = 30_000;
+let pendingShops: Promise<PrintShop[]> | null = null;
+let cachedShops: { shops: PrintShop[]; expiresAt: number } | null = null;
 
 export const shopService = {
- async getShops(): Promise<PrintShop[]> {
- return apiClient<PrintShop[]>('/shops');
+ getShops(): Promise<PrintShop[]> {
+ if (cachedShops && Date.now() < cachedShops.expiresAt) {
+ return Promise.resolve(cachedShops.shops);
+ }
+ if (!pendingShops) {
+ pendingShops = apiClient<PrintShop[]>('/shops').then(shops => {
+ cachedShops = { shops, expiresAt: Date.now() + SHOP_LIST_TTL_MS };
+ return shops;
+ }).finally(() => { pendingShops = null; });
+ }
+ return pendingShops;
  },
 
  getMyShop(): Promise<MyShop> {

@@ -303,7 +303,7 @@ export const ShopLayout: React.FC = () => {
             </aside>
 
             {/* Main Content Area */}
-            <main ref={mainRef} id="shop-main-content" tabIndex={-1} inert={isDrawerOpen || isAccountModalOpen} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white focus:outline-none">
+            <main ref={mainRef} id="shop-main-content" tabIndex={-1} inert={isDrawerOpen || isAccountModalOpen} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white focus:outline-hidden">
                 {/* Content */}
                 <div data-shop-scroll className={`relative min-h-0 min-w-0 flex-1 overflow-x-hidden bg-carbon-gray-10 ${isDrawerOpen || isAccountModalOpen ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
                     <Outlet />
@@ -361,7 +361,7 @@ export const ShopLayout: React.FC = () => {
             )}
             {/* Change Password Modal */}
             {isChangePasswordOpen && (
-                <ChangePasswordModal showShopGcashQr onClose={() => setIsChangePasswordOpen(false)} />
+                <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
             )}
         </div>
     );
