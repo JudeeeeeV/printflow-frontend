@@ -1,15 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { View, ViewOff, Close, Checkmark } from '@carbon/icons-react';
 import { SubmitButton } from './SubmitButton/SubmitButton';
 import { authService } from '../../services/authService';
 import { ProfileNameForm } from './ProfileNameForm';
+import { ShopGcashQrForm } from './ShopGcashQrForm';
+import { AccountSettingsSkeleton } from './AccountSettingsSkeleton';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
+  showShopGcashQr?: boolean;
 }
 
-export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) => {
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose, showShopGcashQr = false }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -17,7 +20,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const controls = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') || []);
+    const controls = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') || []).filter(control => control.getClientRects().length > 0);
     controls()[0]?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); }
@@ -46,6 +49,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const [qrReady, setQrReady] = useState(false);
+  const handleProfileReady = useCallback(() => setProfileReady(true), []);
+  const handleQrReady = useCallback(() => setQrReady(true), []);
+  const settingsLoading = !profileReady || (showShopGcashQr && !qrReady);
 
   const hasLength = newPassword.length >= 8;
   const hasUpper = /[A-Z]/.test(newPassword);
@@ -88,7 +96,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
         ref={dialogRef}
-        className="relative max-h-[90dvh] w-full max-w-lg overflow-y-auto bg-white p-6 shadow-xl animate-fade-in-up"
+        className="relative flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden bg-white shadow-xl animate-fade-in-up"
         style={{ animationDuration: '300ms' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -96,12 +104,18 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
         aria-labelledby="change-password-title"
       >
         
+        <div className="flex shrink-0 items-center justify-between border-b border-[#e0e0e0] bg-white px-6 py-4">
+          <h3 id="change-password-title" className="text-xl font-bold text-carbon-gray-100">Account Settings</h3>
+          <button type="button" aria-label="Close account settings" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">
+            <Close className="w-6 h-6" />
+          </button>
+        </div>
         {success ? (
-          <div className="flex flex-col text-center py-6">
+          <div className="flex min-h-0 flex-col overflow-y-auto px-6 py-12 text-center">
             <svg className="w-14 h-14 mx-auto mb-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h2 id="change-password-title" className="text-2xl font-bold text-carbon-gray-100 mb-2">Password changed!</h2>
+            <h2 className="text-2xl font-bold text-carbon-gray-100 mb-2">Password changed!</h2>
             <p className="text-sm text-gray-600 mb-8">
               Your password has been successfully updated.
             </p>
@@ -114,15 +128,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
             </button>
           </div>
         ) : (
-          <>
-            <div className="flex justify-between items-center border-b border-[#e0e0e0] pb-4 mb-6">
-              <h3 id="change-password-title" className="text-xl font-bold text-carbon-gray-100">Account Settings</h3>
-              <button aria-label="Close account settings" onClick={onClose} className="text-gray-400 hover:text-carbon-gray-100 transition-colors">
-                <Close className="w-6 h-6" />
-              </button>
-            </div>
-
-            <ProfileNameForm />
+            <div aria-busy={settingsLoading} className="min-h-0 flex-1 overflow-y-auto p-6">
+            {settingsLoading && <AccountSettingsSkeleton showShopGcashQr={showShopGcashQr} />}
+            <div hidden={settingsLoading}>
+            <ProfileNameForm onReady={handleProfileReady} />
+            {showShopGcashQr && <ShopGcashQrForm onReady={handleQrReady} />}
             <h4 className="mb-4 font-bold text-carbon-gray-100">Change password</h4>
             <form onSubmit={handleSubmit} className="flex flex-col w-full">
               
@@ -207,7 +217,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
                 />
               </div>
             </form>
-          </>
+            </div>
+            </div>
         )}
       </div>
     </div>,

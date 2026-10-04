@@ -47,8 +47,6 @@ export const ShopDashboard: React.FC = () => {
  const [uploadError, setUploadError] = useState<string | null>(null);
 
  const [qrFile, setQrFile] = useState<File | null>(null);
- const [isUploadingQr, setIsUploadingQr] = useState(false);
- const [uploadQrError, setUploadQrError] = useState<string | null>(null);
 
  const [shopOrders, setShopOrders] = useState<any[]>([]);
  const refreshOrders = useMemo(() => createRefreshQueue(
@@ -224,22 +222,6 @@ export const ShopDashboard: React.FC = () => {
  }
  };
 
- const handleUploadQr = async () => {
- if (!qrFile) return;
- setIsUploadingQr(true);
- setUploadQrError(null);
- try {
- await shopService.uploadGcashQr(qrFile);
- loadShopData();
- setQrFile(null);
- showAlert('GCash QR Code uploaded successfully!', 'success', 'Success');
- } catch (err: any) {
- setUploadQrError(err.message || 'Failed to submit GCash QR code.');
- } finally {
- setIsUploadingQr(false);
- }
- };
-
  const handleVerifyPayment = async (orderId: string, action: 'APPROVE' | 'REJECT', reason?: string) => {
  setIsVerifying(true);
  try {
@@ -249,8 +231,6 @@ export const ShopDashboard: React.FC = () => {
  setShopOrders(prev => prev.map(o => o.id === orderId ? { ...o, state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'AWAITING_PAYMENT' } : o));
  // Actual refresh
  refreshOrdersAfterChange();
- } catch (err: any) {
- showAlert(err.message || 'Failed to verify payment', 'error', 'Verification Failed');
  } finally {
  setIsVerifying(false);
  }
@@ -515,42 +495,7 @@ export const ShopDashboard: React.FC = () => {
  ) : (
  // Kanban Board Layout
  <div className="flex flex-none flex-col bg-carbon-gray-10 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
- {/* Dashboard Top Bar (QR Code & Status) */}
- <div className="z-10 flex shrink-0 flex-col gap-2 border-b border-gray-300 bg-white px-4 py-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
- <div className="flex min-h-10 items-center border-l-4 border-green-500 bg-carbon-gray-10 px-3">
- <span className="mr-2.5 flex h-2.5 w-2.5 shrink-0">
- <span className="relative inline-flex h-2.5 w-2.5 bg-green-500"></span>
- </span>
- <span className="text-sm font-black tracking-tight text-carbon-gray-100">Queue Active</span>
- </div>
-
- <div className="flex min-w-0 flex-col gap-1 lg:items-end">
- <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center">
- <label className="shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-600">GCash QR:</label>
- <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
- <input
- type="file"
- accept="image/*"
- className="min-h-11 w-full min-w-0 cursor-pointer border border-gray-300 bg-carbon-gray-10 text-xs text-gray-600 file:mr-2 file:min-h-11 file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-bold file:text-carbon-blue-70 hover:file:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 sm:w-64"
- onChange={(e) => setQrFile(e.target.files?.[0] || null)}
- disabled={isUploadingQr}
- />
- <button
- onClick={handleUploadQr}
- disabled={!qrFile || isUploadingQr}
- className={`min-h-11 shrink-0 px-4 py-2 text-xs font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 ${
- !qrFile || isUploadingQr ? 'cursor-not-allowed bg-gray-300' : 'bg-carbon-blue-60 hover:bg-carbon-blue-70'
- }`}
- >
- {isUploadingQr ? 'Saving...' : 'Update'}
- </button>
- </div>
- </div>
- {uploadQrError && <span className="border-l-4 border-carbon-gray-100 bg-carbon-gray-10 px-3 py-2 text-xs font-bold text-carbon-gray-100" role="alert">{uploadQrError}</span>}
- </div>
- </div>
-
- <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1.5 sm:gap-2 sm:px-2">
+ <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
  {QUEUE_ORDER.map(queue => {
  const isActive = activeQueue === queue;
  return (
@@ -565,7 +510,7 @@ export const ShopDashboard: React.FC = () => {
  tabIndex={isActive ? 0 : -1}
  onClick={() => handleQueueTabChange(queue)}
  onKeyDown={event => handleQueueTabKeyDown(event, queue)}
- className={`group flex min-h-12 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm ${isActive ? 'border-carbon-blue-60 bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'border-gray-300 bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
+ className={`group flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm lg:min-h-9 ${isActive ? 'border-carbon-blue-60 bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'border-gray-300 bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
  >
  <span className="truncate">{QUEUE_LABELS[queue]}</span>
  <span className="min-w-7 shrink-0 border border-black bg-black px-2 py-0.5 text-center text-xs font-black tabular-nums text-white">

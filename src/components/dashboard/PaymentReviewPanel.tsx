@@ -1,137 +1,181 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Checkmark, Close } from '@carbon/icons-react';
+
+interface PaymentReviewOrder {
+ id: string;
+ state: string;
+ total?: number | string | null;
+ payment_receipts?: { reference_number?: string | null; receipt_url?: string | null }[] | null;
+}
 
 interface PaymentReviewPanelProps {
  isOpen: boolean;
- order: any | null;
+ order: PaymentReviewOrder | null;
  onClose: () => void;
  onVerify: (orderId: string, action: 'APPROVE' | 'REJECT', reason?: string) => Promise<void>;
  isVerifying: boolean;
 }
 
-export const PaymentReviewPanel: React.FC<PaymentReviewPanelProps> = ({ isOpen, order, onClose, onVerify, isVerifying }) => {
- const [rejectReason, setRejectReason] = React.useState('');
+const ReceiptPreview: React.FC<{ url: string }> = ({ url }) => {
+ const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
+ return (
+ <div className="relative flex h-[min(240px,30dvh)] items-center justify-center overflow-hidden border border-gray-300 bg-carbon-gray-10" aria-busy={status === 'loading'}>
+ {status === 'loading' && <p role="status" className="absolute px-3 text-sm text-gray-600">Loading receipt…</p>}
+ {status === 'failed' ? (
+ <p role="status" className="px-3 text-center text-sm text-gray-600">Receipt preview could not be loaded. Open the original receipt to inspect it.</p>
+ ) : (
+ <img src={url} alt="Payment receipt" onLoad={() => setStatus('loaded')} onError={() => setStatus('failed')} className={`h-full w-full object-contain ${status === 'loading' ? 'opacity-0' : ''}`} />
+ )}
+ </div>
+ );
+};
 
- // Reset reason when panel opens
- React.useEffect(() => {
- if (isOpen) {
- setRejectReason('');
+const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'order'> & { order: PaymentReviewOrder }> = ({ order, onClose, onVerify, isVerifying }) => {
+ const [rejectReason, setRejectReason] = useState('');
+ const [error, setError] = useState<string | null>(null);
+ const [isSubmitting, setIsSubmitting] = useState(false);
+ const pendingRef = useRef(false);
+ const dialogRef = useRef<HTMLDivElement>(null);
+ const closeRef = useRef<HTMLButtonElement>(null);
+ const errorRef = useRef<HTMLParagraphElement>(null);
+ const latestRef = useRef({ onClose, isVerifying });
+ const prefersReducedMotion = useReducedMotion();
+ const busy = isVerifying || isSubmitting;
+ const receiptUrl = order.payment_receipts?.[0]?.receipt_url;
+ const escalated = order.state === 'ESCALATED_DISPUTE';
+
+ useEffect(() => { latestRef.current = { onClose, isVerifying }; }, [onClose, isVerifying]);
+ useEffect(() => {
+ const previousFocus = document.activeElement as HTMLElement | null;
+ const previousOverflow = document.body.style.overflow;
+ const appRoot = document.getElementById('root');
+ const previouslyInert = appRoot?.inert;
+ document.body.style.overflow = 'hidden';
+ if (appRoot) appRoot.inert = true;
+ closeRef.current?.focus();
+ const onKeyDown = (event: KeyboardEvent) => {
+ if (event.key === 'Escape') {
+ event.preventDefault();
+ if (!pendingRef.current && !latestRef.current.isVerifying) latestRef.current.onClose();
+ return;
  }
- }, [isOpen]);
+ if (event.key !== 'Tab') return;
+ const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), a[href]') || []).filter(control => control.getClientRects().length > 0);
+ const first = controls[0];
+ const last = controls[controls.length - 1];
+ if (!first) {
+ event.preventDefault();
+ dialogRef.current?.focus();
+ } else if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement as HTMLElement))) {
+ event.preventDefault(); last.focus();
+ } else if (!event.shiftKey && (document.activeElement === last || !controls.includes(document.activeElement as HTMLElement))) {
+ event.preventDefault(); first.focus();
+ }
+ };
+ document.addEventListener('keydown', onKeyDown);
+ return () => {
+ document.removeEventListener('keydown', onKeyDown);
+ document.body.style.overflow = previousOverflow;
+ if (appRoot) appRoot.inert = previouslyInert ?? false;
+ const target = previousFocus?.isConnected && previousFocus.getClientRects().length && !previousFocus.closest('[inert]')
+ ? previousFocus : document.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+ target?.focus();
+ };
+ }, []);
+ useEffect(() => {
+ if (error) errorRef.current?.focus();
+ }, [error]);
+
+ const handleClose = () => {
+ if (!pendingRef.current && !isVerifying) onClose();
+ };
+ const handleVerify = async (action: 'APPROVE' | 'REJECT') => {
+ if (pendingRef.current || isVerifying || escalated) return;
+ pendingRef.current = true;
+ setIsSubmitting(true);
+ setError(null);
+ try {
+ if (action === 'REJECT') await onVerify(order.id, action, rejectReason);
+ else await onVerify(order.id, action);
+ } catch (err: unknown) {
+ setError(err instanceof Error && err.message ? err.message : 'Failed to verify payment. Please try again.');
+ } finally {
+ pendingRef.current = false;
+ setIsSubmitting(false);
+ }
+ };
 
  return (
- <AnimatePresence>
- {isOpen && order && (
- <>
- {/* Backdrop */}
+ <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={event => { if (event.target === event.currentTarget) handleClose(); }}>
  <motion.div
- initial={{ opacity: 0 }}
- animate={{ opacity: 1 }}
- exit={{ opacity: 0 }}
- transition={{ duration: 0.15, ease: "easeOut" }}
- onClick={onClose}
- className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
- />
-
- {/* Slide-over Panel */}
- <motion.div
- initial={{ opacity: 0, x: 20 }}
- animate={{ opacity: 1, x: 0 }}
- exit={{ opacity: 0, x: 20 }}
- transition={{ duration: 0.15, ease: "easeOut" }}
- className="fixed top-0 right-0 h-full w-full max-w-sm bg-white z-50 overflow-y-auto flex flex-col border-l border-[#e0e0e0] "
+ ref={dialogRef}
+ role="dialog"
+ aria-modal="true"
+ aria-labelledby="payment-review-title"
+ aria-describedby="payment-review-order"
+ aria-busy={busy}
+ tabIndex={-1}
+ initial={{ opacity: prefersReducedMotion ? 1 : 0, y: prefersReducedMotion ? 0 : 8 }}
+ animate={{ opacity: 1, y: 0 }}
+ transition={{ duration: prefersReducedMotion ? 0 : 0.15, ease: 'easeOut' }}
+ className="flex max-h-[calc(100dvh-32px)] w-full max-w-lg flex-col overflow-hidden border border-gray-300 bg-white text-carbon-gray-100 shadow-xl focus:outline-none"
  >
- <div className="flex justify-between items-center p-4 border-b border-[#e0e0e0] bg-white sticky top-0 z-10">
- <div>
- <h3 className="text-2xl font-black text-carbon-gray-100">Review Payment</h3>
- <p className="text-sm font-medium text-gray-500">Order #{order.id.slice(0, 8)}</p>
+ <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-300 p-4">
+ <div className="min-w-0">
+ <h2 id="payment-review-title" className="text-xl font-black">Review Payment</h2>
+ <p id="payment-review-order" className="text-sm font-medium text-gray-600">Order #{order.id.slice(0, 8)}</p>
  </div>
- <button 
- onClick={onClose}
- className="p-2 text-gray-400 hover:text-carbon-gray-100 hover:bg-gray-100 transition-colors"
- >
- <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+ <button ref={closeRef} type="button" aria-label="Close payment review" onClick={handleClose} disabled={busy} className="flex h-11 w-11 shrink-0 items-center justify-center text-gray-600 transition-colors hover:bg-carbon-gray-10 hover:text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50">
+ <Close size={24} aria-hidden="true" />
  </button>
- </div>
+ </header>
 
- <div className="flex-1 p-4 space-y-4">
- <div className="bg-carbon-gray-10 p-3 border border-[#e0e0e0] flex justify-between items-center">
- <p className="font-bold text-sm text-gray-500">Amount Due</p>
- <p className="text-xl font-black text-carbon-gray-100">₱{order.total || 0}</p>
+ <div className="min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3">
+ <div className="flex items-center justify-between gap-3 border border-gray-300 bg-carbon-gray-10 p-3">
+ <p className="text-sm font-bold text-gray-600">Amount Due</p>
+ <p className="break-all text-xl font-black">₱{order.total || 0}</p>
  </div>
-
  <div>
- <p className="font-bold text-sm text-carbon-gray-100 mb-2">GCash Reference Number</p>
- <div className="bg-white p-2 border border-[#8d8d8d] text-gray-800 font-mono text-base ">
- {order.payment_receipts?.[0]?.reference_number || 'Not provided'}
+ <p className="mb-1 text-sm font-bold">GCash Reference Number</p>
+ <p className="break-all border border-[#8d8d8d] p-2 font-mono text-base">{order.payment_receipts?.[0]?.reference_number || 'Not provided'}</p>
  </div>
- </div>
-
  <div>
- <p className="font-bold text-sm text-carbon-gray-100 mb-3 flex items-center">
- <svg className="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
- Uploaded Receipt
- </p>
- {order.payment_receipts?.[0]?.receipt_url ? (
- <div className="border border-[#e0e0e0] overflow-hidden bg-carbon-gray-10">
- <img 
- src={order.payment_receipts[0].receipt_url} 
- alt="Payment Receipt" 
- className="w-full h-auto object-contain max-h-[400px]"
- />
- </div>
+ <p className="mb-1 text-sm font-bold">Uploaded Receipt</p>
+ {receiptUrl ? (
+ <>
+ <ReceiptPreview key={receiptUrl} url={receiptUrl} />
+ <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open original receipt</a>
+ </>
  ) : (
- <div className="border border-dashed border-[#8d8d8d] p-4 text-center bg-carbon-gray-10 ">
- <p className="text-sm text-gray-500 italic font-medium">No receipt image found.</p>
- </div>
+ <p className="border border-dashed border-[#8d8d8d] bg-carbon-gray-10 p-4 text-center text-sm text-gray-600">No receipt image found.</p>
  )}
  </div>
+ {error && <p ref={errorRef} role="alert" tabIndex={-1} className="break-words border border-red-200 bg-red-50 p-3 text-sm text-red-700 focus:outline focus:outline-2 focus:outline-carbon-blue-60">{error}</p>}
  </div>
 
- <div className="p-4 bg-carbon-gray-10 border-t border-[#e0e0e0] mt-auto">
- {order.state === 'ESCALATED_DISPUTE' ? (
- <div className="p-4 bg-blue-50 border border-blue-200 ">
- <p className="text-blue-800 font-bold text-center text-sm">
- This payment is under review by Platform Administration.
- </p>
- </div>
+ <footer className="shrink-0 border-t border-gray-300 bg-carbon-gray-10 p-4">
+ {escalated ? (
+ <p className="border border-blue-200 bg-blue-50 p-3 text-center text-sm font-bold text-blue-800">This payment is under review by Platform Administration.</p>
  ) : (
- <>
- <button
- onClick={() => onVerify(order.id, 'APPROVE')}
- disabled={isVerifying}
- className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none mb-4 flex items-center justify-center"
- >
- <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
- Verify & Send to Production
- </button>
-
  <div className="space-y-2">
- <label className="font-bold text-xs text-gray-700 flex items-center">
- <svg className="w-3.5 h-3.5 mr-1 text-carbon-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
- Reject Payment
- </label>
- <input 
- type="text" 
- placeholder="Optional reason (e.g. Blurry, Wrong Amount)" 
- value={rejectReason}
- onChange={e => setRejectReason(e.target.value)}
- className="w-full p-2 border border-[#8d8d8d] focus:ring-1 focus:outline-carbon-blue-60 transition-all text-xs"
- />
- <button
- onClick={() => onVerify(order.id, 'REJECT', rejectReason)}
- disabled={isVerifying}
- className="w-full py-2 bg-white hover:bg-gray-100 text-carbon-gray-100 font-bold border border-gray-300 hover:border-carbon-gray-100 transition-colors disabled:opacity-50 disabled:pointer-events-none text-sm"
- >
- Reject & Request New Receipt
+ <label htmlFor="payment-rejection-reason" className="block text-sm font-bold">Rejection reason (optional)</label>
+ <input id="payment-rejection-reason" type="text" placeholder="e.g. Blurry, Wrong Amount" value={rejectReason} onChange={event => setRejectReason(event.target.value)} disabled={busy} className="min-h-11 w-full border border-[#8d8d8d] bg-white px-3 py-2 text-base focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 disabled:opacity-50 sm:text-sm" />
+ <button type="button" onClick={() => void handleVerify('APPROVE')} disabled={busy} className="flex min-h-11 w-full items-center justify-center gap-1.5 bg-green-600 px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50">
+ <Checkmark size={16} aria-hidden="true" /> Verify &amp; Send to Production
  </button>
+ <button type="button" onClick={() => void handleVerify('REJECT')} disabled={busy} className="min-h-11 w-full border border-red-600 bg-red-600 px-3 py-2 text-sm font-bold text-white transition-colors hover:border-red-700 hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50">Reject &amp; Request New Receipt</button>
+ <p role="status" className="sr-only">{busy ? 'Verifying payment. Please wait.' : ''}</p>
  </div>
- </>
  )}
- </div>
+ </footer>
  </motion.div>
- </>
- )}
- </AnimatePresence>
+ </div>
  );
+};
+
+export const PaymentReviewPanel: React.FC<PaymentReviewPanelProps> = ({ isOpen, order, ...props }) => {
+ if (!isOpen || !order) return null;
+ return createPortal(<PaymentReviewDialog key={order.id} order={order} {...props} />, document.body);
 };

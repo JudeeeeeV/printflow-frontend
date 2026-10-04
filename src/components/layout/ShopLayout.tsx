@@ -361,7 +361,7 @@ export const ShopLayout: React.FC = () => {
             )}
             {/* Change Password Modal */}
             {isChangePasswordOpen && (
-                <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
+                <ChangePasswordModal showShopGcashQr onClose={() => setIsChangePasswordOpen(false)} />
             )}
         </div>
     );

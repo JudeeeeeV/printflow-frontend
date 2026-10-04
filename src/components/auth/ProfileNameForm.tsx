@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
 
-export function ProfileNameForm() {
+export function ProfileNameForm({ onReady }: { onReady?: () => void } = {}) {
   const [name, setName] = useState({ firstName: '', lastName: '' });
   const [savedName, setSavedName] = useState(name);
   const [loading, setLoading] = useState(true);
@@ -19,9 +19,9 @@ export function ProfileNameForm() {
       setSavedName(profile);
     }).catch(error => {
       if (active) setLoadError(error instanceof Error ? error.message : 'Unable to load your name.');
-    }).finally(() => { if (active) setLoading(false); });
+    }).finally(() => { if (active) { setLoading(false); onReady?.(); } });
     return () => { active = false; };
-  }, [attempt]);
+  }, [attempt, onReady]);
 
   const normalize = (value: string) => value.trim().replace(/\s+/g, ' ');
   const firstName = normalize(name.firstName);

@@ -70,39 +70,32 @@ export const AuthPage: React.FC = () => {
                 </div>
             </aside>
 
-            <main className={`${styles.authMain} relative flex min-w-0 items-start justify-center px-4 py-6 sm:px-8 sm:py-10 lg:px-12 lg:py-10 xl:px-16 ${activeView === 'register'
-                ? 'min-h-0 overflow-hidden'
-                : activeView === 'login'
-                    ? 'min-h-0 overflow-y-auto'
-                    : 'min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'}`}>
-                <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 hidden h-24 w-24 border-b border-l border-gray-300 lg:block" />
-
-                <div className={`relative z-10 min-w-0 w-full ${activeView === 'login' ? 'my-auto' : ''} ${activeView === 'register' ? 'grid h-full min-h-0 max-w-[560px] grid-rows-[minmax(0,1fr)_auto]' : 'max-w-[500px]'}`}>
-                    <div className={`border border-gray-200 border-t-4 border-t-carbon-blue-60 bg-white shadow-[0_16px_40px_rgba(22,22,22,0.10)] ${activeView === 'register' ? 'min-h-0 overflow-hidden' : ''}`}>
+            <main className={`${styles.authMain} relative flex min-w-0 items-start justify-center bg-[#F4F4F4] px-4 sm:px-8 lg:px-12 xl:px-16 ${activeView !== 'forgot-password' ? 'py-3 sm:py-4 min-h-0 overflow-hidden' : 'py-6 sm:py-10 lg:py-10 min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'}`}>
+                <div className={`relative z-10 min-w-0 w-full max-w-[500px] ${activeView !== 'forgot-password' ? 'my-auto grid h-[36rem] max-h-full min-h-0 grid-rows-[minmax(0,1fr)]' : ''}`}>
+                    <div className={`border border-gray-200 border-t-4 border-t-carbon-blue-60 bg-white shadow-[0_16px_40px_rgba(22,22,22,0.10)] ${activeView !== 'forgot-password' ? 'min-h-0 overflow-hidden' : ''}`}>
                         <div
-                            className={`${styles.authCardContent} px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10 ${activeView === 'register' ? 'h-full min-h-0 overflow-y-auto overscroll-contain' : ''}`}
-                            tabIndex={activeView === 'register' ? 0 : undefined}
-                            role={activeView === 'register' ? 'region' : undefined}
-                            aria-label={activeView === 'register' ? 'Account registration' : undefined}
+                            className={`${styles.authCardContent} px-5 sm:px-8 ${activeView !== 'forgot-password' ? 'py-4 sm:py-5 h-full min-h-0 overflow-y-auto overscroll-contain' : 'py-7 sm:py-9 lg:px-10 lg:py-10'}`}
+                            tabIndex={activeView !== 'forgot-password' ? 0 : undefined}
+                            role={activeView !== 'forgot-password' ? 'region' : undefined}
+                            aria-label={activeView === 'register' ? 'Account registration' : activeView === 'login' ? 'Account sign in' : undefined}
                         >
                             {activeView !== 'forgot-password' && (
-                                <div className="mb-7 animate-fade-in-up pl-4" style={{ animationDelay: '100ms' }}>
-                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-carbon-blue-60">Account access</p>
-                                    <h2 className="mt-1 text-3xl font-black tracking-tight text-carbon-gray-100">
+                                <div className="mb-3 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                                    <h2 className="mt-1 text-2xl font-black tracking-tight text-carbon-gray-100">
                                         {activeView === 'login' ? 'Welcome back' : 'Create your account'}
                                     </h2>
-                                    <p className="mt-2 text-sm leading-relaxed text-gray-500">
+                                    <p className="mt-1 text-sm leading-5 text-gray-500">
                                         {activeView === 'login' ? 'Sign in to continue managing your print orders.' : 'Set up your workspace in a few secure steps.'}
                                     </p>
                                 </div>
                             )}
 
                             {activeView !== 'forgot-password' && (
-                                <div className="relative mb-8 flex border border-gray-200 bg-carbon-gray-10 p-1 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                                <div className="relative mb-3 flex border border-gray-200 bg-carbon-gray-10 p-1 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                                     <button
                                         type="button"
                                         aria-pressed={activeView === 'login'}
-                                        className={`relative z-10 min-h-12 flex-1 px-3 text-sm font-bold transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-gray-100 sm:text-base ${activeView === 'login' ? 'text-white' : 'text-gray-500 hover:text-carbon-gray-100'}`}
+                                        className={`relative z-10 min-h-11 flex-1 px-3 text-sm font-bold transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-gray-100 ${activeView === 'login' ? 'text-white' : 'text-gray-500 hover:text-carbon-gray-100'}`}
                                         onClick={() => setActiveView('login')}
                                     >
                                         Sign In
@@ -110,7 +103,7 @@ export const AuthPage: React.FC = () => {
                                     <button
                                         type="button"
                                         aria-pressed={activeView === 'register'}
-                                        className={`relative z-10 min-h-12 flex-1 px-3 text-sm font-bold transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-gray-100 sm:text-base ${activeView === 'register' ? 'text-white' : 'text-gray-500 hover:text-carbon-gray-100'}`}
+                                        className={`relative z-10 min-h-11 flex-1 px-3 text-sm font-bold transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-gray-100 ${activeView === 'register' ? 'text-white' : 'text-gray-500 hover:text-carbon-gray-100'}`}
                                         onClick={() => setActiveView('register')}
                                     >
                                         Create Account
