@@ -89,7 +89,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
           localStorage.removeItem('user_role');
           window.location.assign(`${API_URL}/auth/microsoft`);
         }}
-        className="flex min-h-12 w-full items-center justify-center gap-3 border border-gray-400 bg-white px-4 py-3 text-sm font-semibold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-wait disabled:opacity-60"
+        className="flex min-h-11 w-full items-center justify-center gap-3 border border-gray-400 bg-white px-4 py-2 text-sm font-semibold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-wait disabled:opacity-60"
       >
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 21 21">
           <path fill="#f25022" d="M1 1h9v9H1z" />
@@ -99,12 +99,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
         </svg>
         {isMicrosoftLoading ? 'Opening Microsoft…' : 'Continue with Microsoft'}
       </button>
-      <div className="my-5 flex items-center gap-3 text-xs text-gray-500">
+      <div className="my-2 flex items-center gap-3 text-xs text-gray-500">
         <span className="h-px flex-1 bg-gray-200" />
         <span>or sign in with email</span>
         <span className="h-px flex-1 bg-gray-200" />
       </div>
-      <div className="mb-5">
+      <div className="mb-3 [&>div]:mb-0">
         <EmailInput
           value={email}
           hasError={hasEmailError}
@@ -163,7 +163,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
 
       <AuthErrorMessage message={error} />
 
-      <div className="mt-4">
+      <div className="mt-2 [&>button]:min-h-11 [&>button]:py-3">
         <SubmitButton
           label="Sign In"
           isLoading={isSubmitting || isMicrosoftLoading}

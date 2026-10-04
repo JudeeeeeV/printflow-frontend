@@ -148,7 +148,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
 
   return (
     <form className="flex flex-col w-full" onSubmit={handleSubmit}>
-      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label
             htmlFor="first-name"
@@ -188,7 +188,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
           />
         </div>
       </div>
-      <div className="mb-5">
+      <div className="mb-3 [&>div]:mb-0">
         <EmailInput
           value={email}
           onChange={(val, valid) => {
@@ -198,7 +198,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
         />
       </div>
 
-      <div className="mb-5">
+      <div className="mb-3">
         <label
           className={`block text-sm mb-2 ${passwordError ? "font-bold text-carbon-gray-100" : "font-semibold text-carbon-gray-100"}`}
           htmlFor="password"
@@ -273,7 +273,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
           </p>
         )}
       </div>
-      <div className="mb-5">
+      <div className="mb-3">
         <label
           htmlFor="confirm-password"
           className="block text-sm mb-2 font-semibold"
@@ -327,9 +327,9 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
       />
 
       {accountType === "Print Shop" && (
-        <div className="mb-5 border border-[#e0e0e0] p-4 bg-carbon-gray-10 mt-4">
-          <h3 className="font-bold mb-4">Print Shop Details</h3>
-          <div className="mb-4">
+        <div className="mb-3 border border-[#e0e0e0] p-3 bg-carbon-gray-10 mt-3">
+          <h3 className="font-bold mb-3">Print Shop Details</h3>
+          <div>
             <label
               className="block text-sm mb-2 font-semibold text-carbon-gray-100"
               htmlFor="shopName"
@@ -356,7 +356,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
       )}
       <AuthErrorMessage message={error} />
 
-      <div className="mt-2">
+      <div className="mt-2 [&>button]:min-h-11 [&>button]:py-3">
         <SubmitButton
           label={
             retry.seconds > 0
