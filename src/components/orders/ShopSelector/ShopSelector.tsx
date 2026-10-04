@@ -74,6 +74,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const displayedPage = Math.min(currentPage, totalPages);
  const firstShopIndex = (displayedPage - 1) * SHOPS_PER_PAGE;
  const sortedShops = useMemo(() => sortShopsByDistance(shops, userPosition), [shops, userPosition]);
+ const closestShopId = sortedShops[0]?.distance != null ? sortedShops[0].shop.id : null;
  const visibleShops = sortedShops.slice(firstShopIndex, firstShopIndex + SHOPS_PER_PAGE);
 
  const changePage = (page: number, direction: Exclude<SlideDirection, null>) => {
@@ -126,16 +127,19 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <ShopThumbnail key={shop.shop_photo_url || 'no-photo'} photoUrl={shop.shop_photo_url} />
  <div className="min-w-0 flex-1">
  <h4 className="truncate font-bold text-carbon-gray-100 text-lg" title={shop.name}>{shop.name}</h4>
- <p className="truncate text-sm text-gray-500">
- ⭐ {shop.rating} <span className="mx-2">•</span>
+ <p className="mt-1 text-xs font-medium leading-5 text-gray-600">
  <span className={shop.status === 'OPEN' ? 'text-blue-600' : 'text-carbon-gray-100'}>
  {shop.status}
  </span>
- </p>
- <p className="mt-1 text-xs font-medium text-gray-600">
- {distance !== null ? `${formatShopDistance(distance)} from your location` : userPosition ? 'Distance unavailable' : 'Location needed for distance'}
+ <span aria-hidden="true" className="mx-1.5 text-gray-400">|</span>
+ <span>{distance !== null ? `${formatShopDistance(distance)} from your location` : userPosition ? 'Distance unavailable' : 'Location needed for distance'}</span>
  </p>
  </div>
+ {shop.id === closestShopId && (
+ <span className="ml-2 shrink-0 border border-green-500 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-green-500 sm:ml-3 sm:text-xs">
+ CLOSEST
+ </span>
+ )}
  <ChevronDown size={20} aria-hidden="true" className={`ml-3 shrink-0 text-gray-600 transition-transform duration-200 motion-reduce:transition-none ${isExpanded ? 'rotate-180' : ''}`} />
  </button>
  <AnimatePresence initial={false}>
