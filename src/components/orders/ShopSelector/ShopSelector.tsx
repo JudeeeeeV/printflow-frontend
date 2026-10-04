@@ -7,7 +7,7 @@ import { ShopLocation } from '../../maps/ShopLocation';
 import { locateForDirections } from '../../../services/directionsService';
 import { formatShopDistance, sortShopsByDistance, type ShopPosition } from '../../../services/shopDistance';
 
-const SHOPS_PER_PAGE = 5;
+const SHOPS_PER_PAGE = 3;
 type SlideDirection = 'next' | 'previous' | null;
 
 interface ShopSelectorProps {
@@ -98,7 +98,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <div className="overflow-hidden">
  <div
  key={displayedPage}
- className={`flex min-h-[528px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
+ className={`flex min-h-[312px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
  >
  {visibleShops.map(({ shop, distance }) => {
  const isExpanded = expandedShopId === shop.id && selectedShopId === shop.id;
