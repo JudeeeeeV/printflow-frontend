@@ -1,9 +1,11 @@
-import React, { useId, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from '@carbon/icons-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import styles from './ShopSelector.module.css';
 import type { PrintShop } from '../../../services/orderService';
 import { ShopLocation } from '../../maps/ShopLocation';
+import { locateForDirections } from '../../../services/directionsService';
+import { formatShopDistance, sortShopsByDistance, type ShopPosition } from '../../../services/shopDistance';
 
 const SHOPS_PER_PAGE = 5;
 type SlideDirection = 'next' | 'previous' | null;
@@ -38,12 +40,41 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const [currentPage, setCurrentPage] = useState(1);
  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
  const [expandedShopId, setExpandedShopId] = useState<string | null>(null);
+ const [userPosition, setUserPosition] = useState<ShopPosition | null>(null);
+ const [locating, setLocating] = useState(true);
+ const [locationError, setLocationError] = useState('');
+ const activeLocation = useRef<AbortController | null>(null);
+ const requestLocation = useCallback(async () => {
+  activeLocation.current?.abort();
+  const controller = new AbortController();
+  activeLocation.current = controller;
+  setLocating(true);
+  setLocationError('');
+  try {
+   const position = await locateForDirections(controller.signal);
+   if (controller.signal.aborted) return;
+   setUserPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+   setCurrentPage(1);
+   setSlideDirection(null);
+   setExpandedShopId(null);
+  } catch (error) {
+   if (!controller.signal.aborted) setLocationError(error instanceof Error ? error.message : 'Your location is unavailable. Try again.');
+  } finally {
+   if (!controller.signal.aborted) setLocating(false);
+   if (activeLocation.current === controller) activeLocation.current = null;
+  }
+ }, []);
+ useEffect(() => {
+  void requestLocation();
+  return () => activeLocation.current?.abort();
+ }, [requestLocation]);
  const selectorId = useId();
  const reduceMotion = useReducedMotion();
  const totalPages = Math.max(1, Math.ceil(shops.length / SHOPS_PER_PAGE));
  const displayedPage = Math.min(currentPage, totalPages);
  const firstShopIndex = (displayedPage - 1) * SHOPS_PER_PAGE;
- const visibleShops = shops.slice(firstShopIndex, firstShopIndex + SHOPS_PER_PAGE);
+ const sortedShops = useMemo(() => sortShopsByDistance(shops, userPosition), [shops, userPosition]);
+ const visibleShops = sortedShops.slice(firstShopIndex, firstShopIndex + SHOPS_PER_PAGE);
 
  const changePage = (page: number, direction: Exclude<SlideDirection, null>) => {
   setSlideDirection(direction);
@@ -54,12 +85,22 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  return (
  <div className="mb-8">
  <h3 className="text-sm font-semibold text-gray-700 mb-3">Selected Print Shop</h3>
+ <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+ <p role="status" className="min-w-0 flex-1 text-xs text-gray-600">
+ {locating ? 'Finding your location…' : locationError || (userPosition ? 'Nearest first · Approximate straight-line distances' : 'Allow location access to find the nearest shops.')}
+ {locationError && <span className="block mt-1">{userPosition ? 'Distances still use your last location.' : 'You can still choose any shop.'}</span>}
+ </p>
+ <button type="button" disabled={locating} onClick={() => void requestLocation()}
+ className="min-h-11 shrink-0 px-2 text-xs font-bold text-carbon-blue-60 hover:underline disabled:text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">
+ {locating ? 'Locating…' : locationError ? 'Try location again' : 'Update location'}
+ </button>
+ </div>
  <div className="overflow-hidden">
  <div
  key={displayedPage}
- className={`flex min-h-[448px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
+ className={`flex min-h-[528px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
  >
- {visibleShops.map((shop) => {
+ {visibleShops.map(({ shop, distance }) => {
  const isExpanded = expandedShopId === shop.id && selectedShopId === shop.id;
  const buttonId = `${selectorId}-${shop.id}-button`;
  const panelId = `${selectorId}-${shop.id}-details`;
@@ -76,7 +117,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  aria-pressed={selectedShopId === shop.id}
  aria-expanded={isExpanded}
  aria-controls={isExpanded ? panelId : undefined}
- className={`flex h-20 w-full shrink-0 items-center p-4 text-left border-2 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${
+ className={`flex min-h-24 w-full shrink-0 items-center p-4 text-left border-2 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${
  selectedShopId === shop.id
  ? 'border-black bg-carbon-gray-10'
  : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
@@ -90,6 +131,9 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <span className={shop.status === 'OPEN' ? 'text-blue-600' : 'text-carbon-gray-100'}>
  {shop.status}
  </span>
+ </p>
+ <p className="mt-1 text-xs font-medium text-gray-600">
+ {distance !== null ? `${formatShopDistance(distance)} from your location` : userPosition ? 'Distance unavailable' : 'Location needed for distance'}
  </p>
  </div>
  <ChevronDown size={20} aria-hidden="true" className={`ml-3 shrink-0 text-gray-600 transition-transform duration-200 motion-reduce:transition-none ${isExpanded ? 'rotate-180' : ''}`} />

@@ -66,9 +66,17 @@ The map loads only after an explicit open action, for students and shop staff.
 The modal keeps actions visible with a scrollable body on small screens, traps
 focus using a native dialog, locks background scrolling, and restores focus to
 the opener on close. Shop settings stack on mobile and use two columns on desktop.
-Location permission is requested only when the location control or directions
-button is clicked. PrintFlow does not send student coordinates to its API or
-store them. Routing sends origin and destination directly to the routing provider,
+The shop selector requests location on opening to sort the full list nearest
+first, then displays five shops per page. Cards show approximate straight-line
+distances with one decimal place in metres or kilometres, not walking distances.
+Shops without valid coordinates appear last. If permission is denied or location
+is unavailable, the original list remains selectable with a retry action.
+**Update location** takes a fresh position and returns to page one without
+changing the selected shop. The location watch ends after a result or error,
+and is cancelled when the selector closes. Coordinates remain in memory only.
+The map location control and directions button can also request permission.
+PrintFlow does not send student coordinates to its API or persist them.
+Routing sends origin and destination directly to the routing provider,
 as disclosed next to **Get directions**. Device geolocation
 requires HTTPS (or localhost), permission and device/browser support.
 
