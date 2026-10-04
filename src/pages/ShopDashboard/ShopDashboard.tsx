@@ -231,8 +231,6 @@ export const ShopDashboard: React.FC = () => {
  setShopOrders(prev => prev.map(o => o.id === orderId ? { ...o, state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'AWAITING_PAYMENT' } : o));
  // Actual refresh
  refreshOrdersAfterChange();
- } catch (err: any) {
- showAlert(err.message || 'Failed to verify payment', 'error', 'Verification Failed');
  } finally {
  setIsVerifying(false);
  }
