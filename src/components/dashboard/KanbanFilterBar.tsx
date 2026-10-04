@@ -54,11 +54,11 @@ export const KanbanFilterBar: React.FC<KanbanFilterBarProps> = ({
  </div>
  <input
  type="text"
- aria-label={`Search ${contextLabel} by Order ID or Client ID`}
+ aria-label={`Search ${contextLabel} by Order ID or Client Name`}
  value={localQuery}
  onChange={(e) => handleSearchChange(e.target.value)}
  onBlur={flushPendingSearch}
- placeholder={`Search ${contextLabel} by Order or Client ID...`}
+ placeholder={`Search ${contextLabel} by Order ID or Client Name...`}
  className="block h-11 w-full border border-[#8d8d8d] bg-white py-2 pl-10 pr-3 text-base font-medium leading-5 text-carbon-gray-100 placeholder-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 sm:text-sm lg:h-10"
  />
  </div>

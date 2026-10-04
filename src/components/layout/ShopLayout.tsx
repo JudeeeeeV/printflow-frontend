@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
+import { shopService } from '../../services/shopService';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import printflowLogoDark from '../../assets/printflow-logo-dark.png';
 import printflowLogoLight from '../../assets/printflow-logo-light.png';
@@ -51,6 +52,7 @@ export const ShopLayout: React.FC = () => {
         const sidebar = sidebarRef.current;
         const focusFrame = requestAnimationFrame(() => sidebar?.querySelector<HTMLButtonElement>('button')?.focus());
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
                 setDrawerRoute(null);
@@ -84,6 +86,7 @@ export const ShopLayout: React.FC = () => {
         const controls = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), a[href]') || []).filter(el => el.getClientRects().length > 0);
         controls()[0]?.focus();
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented) return;
             if (event.key === 'Escape') {
                 setIsHelpOpen(false);
                 setIsSupportOpen(false);
@@ -118,7 +121,7 @@ export const ShopLayout: React.FC = () => {
     useEffect(() => {
         const fetchShop = async () => {
             try {
-                const data = await apiClient<{ id?: string, name?: string }>('/shops/me', { method: 'GET' });
+                const data = await shopService.getMyShop();
                 if (data && data.name) {
                     setShopName(data.name);
                 }

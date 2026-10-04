@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabaseClient';
 import { apiClient } from './apiClient';
 
 export interface RegisterPayload {
+ firstName: string;
+ lastName: string;
  email: string;
  passwordHash: string; 
  role: 'Student' | 'Print Shop';
@@ -23,14 +25,30 @@ export interface AuthResponse {
 }
 
 export const authService = {
+ getProfile(): Promise<{ firstName: string; lastName: string }> {
+   return apiClient('/auth/profile');
+ },
+
+ updateProfile(firstName: string, lastName: string): Promise<{ firstName: string; lastName: string }> {
+   return apiClient('/auth/profile', {
+     method: 'PATCH', body: JSON.stringify({ firstName, lastName }),
+   });
+ },
  async register(payload: RegisterPayload): Promise<{ requiresEmailVerification: boolean; email: string }> {
+   const firstName = payload.firstName.trim().replace(/\s+/g, ' ');
+   const lastName = payload.lastName.trim().replace(/\s+/g, ' ');
+   if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) {
+     throw new Error('Please enter your first and last name (up to 100 characters each).');
+   }
    const { error } = await supabase.auth.signUp({
      email: payload.email,
      password: payload.passwordHash,
      options: {
        data: {
+         first_name: firstName,
+         last_name: lastName,
          role: payload.role === 'Print Shop' ? 'CLERK' : 'STUDENT',
-         shopName: payload.shopName
+         shop_name: payload.shopName
        }
      }
    });

@@ -69,15 +69,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       className={`cursor-pointer bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : 'border border-[#e0e0e0] p-4 hover:border-[#8d8d8d] hover:shadow-md'}`}
     >
       <div className="flex justify-between items-start mb-3">
-        <div>
+        <div className="min-w-0 flex-1 pr-3">
           <h4 className="font-black text-carbon-gray-100">
             Order #{order.id.slice(0, 8)}
           </h4>
-          <p className="text-xs text-gray-500 font-medium">
-            Client ID: {order.client_id.slice(0, 8)}
+          <p className="text-xs text-gray-500 font-medium break-words">
+            Client: {order.client_name || 'Name unavailable'}
           </p>
         </div>
-        <div className={`px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
+        <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
           {badgeText}
         </div>
       </div>

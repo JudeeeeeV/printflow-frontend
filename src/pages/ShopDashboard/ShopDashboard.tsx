@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight } from '@carbon/icons-react';
@@ -14,6 +14,7 @@ import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgre
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 import { AlertModal } from '../../components/common/AlertModal';
 import { apiClient } from '../../services/apiClient';
+import { createRefreshQueue } from '../../services/refreshQueue';
 
 const QUEUE_PAGE_SIZE = 3;
 type QueueKey = 'new' | 'ready' | 'completed';
@@ -50,6 +51,12 @@ export const ShopDashboard: React.FC = () => {
  const [uploadQrError, setUploadQrError] = useState<string | null>(null);
 
  const [shopOrders, setShopOrders] = useState<any[]>([]);
+ const refreshOrders = useMemo(() => createRefreshQueue(
+ () => orderService.getShopOrders(), orders => setShopOrders(orders),
+ ), []);
+ const refreshOrdersAfterChange = useCallback(() => {
+ void refreshOrders().catch(console.error);
+ }, [refreshOrders]);
  const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<any | null>(null);
  const [isVerifying, setIsVerifying] = useState(false);
 
@@ -121,16 +128,16 @@ export const ShopDashboard: React.FC = () => {
  };
 
  const loadShopData = () => {
+ setError(null);
  shopService.getMyShop()
  .then(data => {
  setShopData(data);
  if (data.verification_status === 'VERIFIED' || data.verification_status === 'OPEN') {
- return orderService.getShopOrders();
+ return refreshOrders(false);
  }
- return [];
+ setShopOrders([]);
  })
- .then(orders => {
- setShopOrders(orders);
+ .then(() => {
  setIsLoading(false);
  })
  .catch(err => {
@@ -145,14 +152,19 @@ export const ShopDashboard: React.FC = () => {
 
  useEffect(() => {
  if (shopData?.verification_status === 'VERIFIED' || shopData?.verification_status === 'OPEN') {
- const timer = setInterval(() => {
- orderService.getShopOrders()
- .then(orders => setShopOrders(orders))
- .catch(console.error);
- }, 10000);
- return () => clearInterval(timer);
+ const refreshVisible = () => {
+ if (document.visibilityState === 'visible') void refreshOrders(false).catch(console.error);
+ };
+ const timer = setInterval(refreshVisible, 10000);
+ document.addEventListener('visibilitychange', refreshVisible);
+ window.addEventListener('profile-updated', refreshOrdersAfterChange);
+ return () => {
+ clearInterval(timer);
+ document.removeEventListener('visibilitychange', refreshVisible);
+ window.removeEventListener('profile-updated', refreshOrdersAfterChange);
+ };
  }
- }, [shopData?.verification_status]);
+ }, [shopData?.verification_status, refreshOrders, refreshOrdersAfterChange]);
 
  useEffect(() => {
  if (shopData?.id) {
@@ -171,7 +183,7 @@ export const ShopDashboard: React.FC = () => {
  
  // If a job completes, reload data to move it to the completed column
  if (status === 'COMPLETED' || status === 'SUCCESS') {
- loadShopData();
+ refreshOrdersAfterChange();
  }
  });
 
@@ -189,7 +201,7 @@ export const ShopDashboard: React.FC = () => {
  // disconnection managed by ShopLayout
  };
  }
- }, [shopData?.id]);
+ }, [shopData?.id, refreshOrdersAfterChange]);
 
  const handleLogout = async () => {
  await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
@@ -236,7 +248,7 @@ export const ShopDashboard: React.FC = () => {
  // Optimistic update
  setShopOrders(prev => prev.map(o => o.id === orderId ? { ...o, state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'AWAITING_PAYMENT' } : o));
  // Actual refresh
- loadShopData();
+ refreshOrdersAfterChange();
  } catch (err: any) {
  showAlert(err.message || 'Failed to verify payment', 'error', 'Verification Failed');
  } finally {
@@ -300,7 +312,7 @@ export const ShopDashboard: React.FC = () => {
  } else {
  showAlert(`Successfully downloaded ${downloadCount} asset(s). Orders marked as Ready for Pickup.`, 'success', 'Downloads Complete');
  setSelectedReadyOrders([]);
- loadShopData();
+ refreshOrdersAfterChange();
  }
  };
 
@@ -375,7 +387,7 @@ export const ShopDashboard: React.FC = () => {
  return orders.filter(order => {
  const matchSearch = !searchLower
  || order.id.slice(0, 8).toLowerCase().includes(searchLower)
- || (order.client_id || '').slice(0, 8).toLowerCase().includes(searchLower);
+ || (order.client_name || '').toLowerCase().includes(searchLower);
  const matchPaper = filters.paperSize === 'ALL' || order.paper_size === filters.paperSize;
  const matchColor = filters.colorMode === 'ALL' || order.print_color_mode === filters.colorMode;
  return matchSearch && matchPaper && matchColor;

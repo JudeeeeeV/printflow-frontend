@@ -55,7 +55,7 @@ export async function apiClient<T>(
  try {
  let response = await fetch(url, config);
 
- if (response.status === 401 && !endpoint.startsWith('/auth')) {
+ if (response.status === 401 && (!endpoint.startsWith('/auth') || endpoint === '/auth/profile')) {
  if (await refreshSession()) {
  response = await fetch(url, config);
  } else {

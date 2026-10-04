@@ -1,14 +1,43 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { View, ViewOff, Close, Checkmark } from '@carbon/icons-react';
 import { SubmitButton } from './SubmitButton/SubmitButton';
 import { authService } from '../../services/authService';
+import { ProfileNameForm } from './ProfileNameForm';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const controls = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') || []);
+    controls()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); }
+      if (event.key !== 'Tab') return;
+      const items = controls();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault(); first?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      if (previousFocus?.isConnected && !previousFocus.closest('[inert]')) previousFocus.focus();
+    };
+  }, []);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showCurrent, setShowCurrent] = useState(false);
@@ -58,7 +87,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="relative w-full max-w-md bg-white p-6 shadow-xl animate-fade-in-up"
+        ref={dialogRef}
+        className="relative max-h-[90dvh] w-full max-w-lg overflow-y-auto bg-white p-6 shadow-xl animate-fade-in-up"
         style={{ animationDuration: '300ms' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -71,7 +101,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
             <svg className="w-14 h-14 mx-auto mb-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h2 className="text-2xl font-bold text-carbon-gray-100 mb-2">Password changed!</h2>
+            <h2 id="change-password-title" className="text-2xl font-bold text-carbon-gray-100 mb-2">Password changed!</h2>
             <p className="text-sm text-gray-600 mb-8">
               Your password has been successfully updated.
             </p>
@@ -86,12 +116,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
         ) : (
           <>
             <div className="flex justify-between items-center border-b border-[#e0e0e0] pb-4 mb-6">
-              <h3 id="change-password-title" className="text-xl font-bold text-carbon-gray-100">Change Password</h3>
-              <button onClick={onClose} className="text-gray-400 hover:text-carbon-gray-100 transition-colors">
+              <h3 id="change-password-title" className="text-xl font-bold text-carbon-gray-100">Account Settings</h3>
+              <button aria-label="Close account settings" onClick={onClose} className="text-gray-400 hover:text-carbon-gray-100 transition-colors">
                 <Close className="w-6 h-6" />
               </button>
             </div>
 
+            <ProfileNameForm />
+            <h4 className="mb-4 font-bold text-carbon-gray-100">Change password</h4>
             <form onSubmit={handleSubmit} className="flex flex-col w-full">
               
               <div className="mb-5">

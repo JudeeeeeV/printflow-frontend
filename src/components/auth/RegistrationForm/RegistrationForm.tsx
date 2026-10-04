@@ -1,5 +1,8 @@
 // src/components/auth/RegistrationForm/RegistrationForm.tsx
-import { getRetrySeconds, useRetryCountdown } from "../../../hooks/useRetryCountdown";
+import {
+  getRetrySeconds,
+  useRetryCountdown,
+} from "../../../hooks/useRetryCountdown";
 import { EmailVerification } from "./EmailVerification";
 import React, { useState } from "react";
 import { View, ViewOff } from "@carbon/icons-react";
@@ -19,11 +22,12 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
   onSignIn,
 }) => {
   const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isEmailValid, setIsEmailValid] = useState(false);
 
-  const [pendingRegistration, setPendingRegistration] = useState<RegisterPayload | null>(
-    null,
-  );
+  const [pendingRegistration, setPendingRegistration] =
+    useState<RegisterPayload | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [password, setPassword] = useState("");
   const [passwordTouched, setPasswordTouched] = useState(false);
@@ -38,13 +42,15 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
   // Show progress before every registration requirement is met.
   // Strength is an estimate based on length and character variety;
   // passwordValid separately controls whether registration is allowed.
-  const characterTypes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9\s]/]
-    .filter((pattern) => pattern.test(password)).length;
-  const strength = passwordValid && password.length >= 12
-    ? 3
-    : password.length >= 8 && characterTypes >= 2
-      ? 2
-      : 1;
+  const characterTypes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9\s]/].filter(
+    (pattern) => pattern.test(password),
+  ).length;
+  const strength =
+    passwordValid && password.length >= 12
+      ? 3
+      : password.length >= 8 && characterTypes >= 2
+        ? 2
+        : 1;
   const strengthLabel = ["Weak", "Medium", "Strong"][strength - 1];
   const strengthColor = ["bg-red-500", "bg-amber-500", "bg-green-600"][
     strength - 1
@@ -95,6 +101,8 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
 
     try {
       const payload: RegisterPayload = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         email: email.trim(),
         passwordHash: password,
         role: accountType,
@@ -124,7 +132,11 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
     return (
       <EmailVerification
         registration={pendingRegistration}
-        onVerified={() => setPendingRegistration(current => current ? { ...current, passwordHash: '' } : null)}
+        onVerified={() =>
+          setPendingRegistration((current) =>
+            current ? { ...current, passwordHash: "" } : null,
+          )
+        }
         onBack={() => {
           setPendingRegistration(null);
           setPasswordTouched(false);
@@ -136,6 +148,46 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
 
   return (
     <form className="flex flex-col w-full" onSubmit={handleSubmit}>
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label
+            htmlFor="first-name"
+            className="block text-sm mb-2 font-semibold text-carbon-gray-100"
+          >
+            First name
+          </label>
+          <input
+            id="first-name"
+            type="text"
+            autoComplete="given-name"
+            required
+            maxLength={100}
+            placeholder="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="w-full px-4 py-3 text-base text-carbon-gray-100 bg-white outline-none ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="last-name"
+            className="block text-sm mb-2 font-semibold text-carbon-gray-100"
+          >
+            Last name
+          </label>
+          <input
+            id="last-name"
+            type="text"
+            autoComplete="family-name"
+            required
+            maxLength={100}
+            placeholder="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            className="w-full px-4 py-3 text-base text-carbon-gray-100 bg-white outline-none ring-1 ring-inset ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
+          />
+        </div>
+      </div>
       <div className="mb-5">
         <EmailInput
           value={email}
@@ -168,10 +220,11 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             onBlur={() => setPasswordTouched(true)}
             id="password"
             type={showPassword ? "text" : "password"}
-            className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${passwordError
+            className={`w-full pl-4 pr-12 py-3 text-base text-carbon-gray-100 bg-white outline-none transition-all duration-200 ease-out ring-inset ${
+              passwordError
                 ? "ring-4 ring-black font-bold animate-shake"
                 : "ring-1 ring-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60"
-              }`}
+            }`}
             placeholder="Create a password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -246,7 +299,11 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
             type="button"
             className="absolute right-3 bg-transparent border-none text-carbon-gray-100 cursor-pointer flex items-center justify-center p-1 transition-transform hover:scale-110 active:scale-95"
             onClick={() => setShowConfirmPassword((visible) => !visible)}
-            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+            aria-label={
+              showConfirmPassword
+                ? "Hide confirm password"
+                : "Show confirm password"
+            }
             aria-controls="confirm-password"
           >
             {showConfirmPassword ? (
@@ -293,14 +350,19 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
 
       {retry.seconds > 0 && (
         <p role="timer" className="mb-4 text-sm text-gray-500">
-          For security purposes, you can request another code in {retry.seconds} {retry.seconds === 1 ? 'second' : 'seconds'}.
+          For security purposes, you can request another code in {retry.seconds}{" "}
+          {retry.seconds === 1 ? "second" : "seconds"}.
         </p>
       )}
       <AuthErrorMessage message={error} />
 
       <div className="mt-2">
         <SubmitButton
-          label={retry.seconds > 0 ? `Try again in ${retry.seconds}s` : "Continue to verification"}
+          label={
+            retry.seconds > 0
+              ? `Try again in ${retry.seconds}s`
+              : "Continue to verification"
+          }
           isLoading={isSubmitting}
           disabled={isSubmitting || retry.seconds > 0}
         />

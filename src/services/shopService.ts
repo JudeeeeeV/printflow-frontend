@@ -1,13 +1,20 @@
 import { apiClient } from './apiClient';
 import type { PrintShop } from './orderService';
 
+type MyShop = { id: string; name: string; status: string; verification_status: string };
+let pendingShop: Promise<MyShop> | null = null;
+
 export const shopService = {
  async getShops(): Promise<PrintShop[]> {
  return apiClient<PrintShop[]>('/shops');
  },
 
- async getMyShop(): Promise<{ id: string, name: string, status: string, verification_status: string }> {
- return apiClient<{ id: string, name: string, status: string, verification_status: string }>('/shops/me');
+ getMyShop(): Promise<MyShop> {
+ // Share concurrent layout/dashboard requests, without caching private data.
+ if (!pendingShop) {
+ pendingShop = apiClient<MyShop>('/shops/me').finally(() => { pendingShop = null; });
+ }
+ return pendingShop;
  },
 
  async verifyPermit(file: File): Promise<any> {
