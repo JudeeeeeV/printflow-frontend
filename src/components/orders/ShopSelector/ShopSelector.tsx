@@ -14,6 +14,26 @@ interface ShopSelectorProps {
  onSelect: (id: string) => void;
 }
 
+function ShopThumbnail({ photoUrl }: { photoUrl?: string | null }) {
+ const [failed, setFailed] = useState(false);
+ return (
+ <div aria-hidden="true" className="mr-4 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden bg-gray-100">
+ {photoUrl && !failed ? (
+ <img
+ src={photoUrl}
+ alt=""
+ width={48}
+ height={48}
+ loading="lazy"
+ decoding="async"
+ className="h-full w-full object-cover"
+ onError={() => setFailed(true)}
+ />
+ ) : <span className="font-bold text-gray-500">Shop</span>}
+ </div>
+ );
+}
+
 export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopId, onSelect }) => {
  const [currentPage, setCurrentPage] = useState(1);
  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
@@ -62,9 +82,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
  } ${shop.status !== 'OPEN' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
  >
- <div className="flex-shrink-0 w-12 h-12 bg-gray-100 flex items-center justify-center mr-4">
- <span className="font-bold text-gray-500">Shop</span>
- </div>
+ <ShopThumbnail key={shop.shop_photo_url || 'no-photo'} photoUrl={shop.shop_photo_url} />
  <div className="min-w-0 flex-1">
  <h4 className="truncate font-bold text-carbon-gray-100 text-lg" title={shop.name}>{shop.name}</h4>
  <p className="truncate text-sm text-gray-500">
