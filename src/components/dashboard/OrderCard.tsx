@@ -15,6 +15,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
+  const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
+    ? order.page_count as number
+    : null;
 
   // Determine the state badge configuration
   let badgeText = order.state;
@@ -82,7 +85,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
         </div>
       </div>
 
-      <div className="flex gap-2 mb-3">
+      <div className="flex flex-wrap gap-2 mb-3">
         <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
           {order.paper_size || "A4"}
         </span>
@@ -95,6 +98,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
             B&W
           </span>
         )}
+        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
+          {pageCount === null ? 'Page count unavailable' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`}
+        </span>
       </div>
 
       <div className="space-y-2 mb-4">
