@@ -4,12 +4,14 @@ import { View, ViewOff, Close, Checkmark } from '@carbon/icons-react';
 import { SubmitButton } from './SubmitButton/SubmitButton';
 import { authService } from '../../services/authService';
 import { ProfileNameForm } from './ProfileNameForm';
+import { ShopGcashQrForm } from './ShopGcashQrForm';
 
 interface ChangePasswordModalProps {
   onClose: () => void;
+  showShopGcashQr?: boolean;
 }
 
-export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) => {
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose, showShopGcashQr = false }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -17,7 +19,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const controls = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') || []);
+    const controls = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])') || []).filter(control => control.getClientRects().length > 0);
     controls()[0]?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); }
@@ -123,6 +125,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
             </div>
 
             <ProfileNameForm />
+            {showShopGcashQr && <ShopGcashQrForm />}
             <h4 className="mb-4 font-bold text-carbon-gray-100">Change password</h4>
             <form onSubmit={handleSubmit} className="flex flex-col w-full">
               

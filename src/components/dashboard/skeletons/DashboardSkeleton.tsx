@@ -6,19 +6,6 @@ export const DashboardSkeleton: React.FC = () => {
             <div className="flex flex-none flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                 <div className="flex flex-none flex-col bg-gray-100/50 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                     
-                    {/* Top Bar 2 (Queue Active + GCash QR) Skeleton */}
-                    <div className="flex shrink-0 flex-col gap-2 border-b border-[#e0e0e0] bg-white p-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="h-3 w-3 bg-gray-200 animate-pulse rounded-full"></div>
-                            <div className="h-4 w-24 bg-gray-200 animate-pulse"></div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="h-4 w-16 bg-gray-200 animate-pulse"></div>
-                            <div className="h-8 w-48 bg-gray-100 animate-pulse border border-[#e0e0e0]"></div>
-                            <div className="h-8 w-16 bg-gray-200 animate-pulse"></div>
-                        </div>
-                    </div>
-
                     <div aria-hidden="true" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1.5 sm:gap-2 sm:px-2">
                         {[1, 2, 3].map(tab => (
                             <div key={tab} className={`flex h-12 items-center justify-center gap-2 border border-gray-300 shadow-[0_2px_0_rgba(22,22,22,0.12)] ${tab === 1 ? 'bg-blue-100' : 'bg-white'}`}>
