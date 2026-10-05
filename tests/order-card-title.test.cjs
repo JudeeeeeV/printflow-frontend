@@ -175,3 +175,38 @@ test('cards retain the metadata date and total without a redundant Created row',
   assert.ok(elements.some(node => node.type === 'span' && text(node) === 'Total Amount:'));
   assert.ok(!elements.some(node => text(node) === 'Created:'));
 });
+
+test('paper-size tags use their requested colors across all queues', () => {
+  for (const state of ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED']) {
+    for (const [paper_size, background] of [['SHORT', 'bg-red-500'], ['A4', 'bg-green-600'], ['LONG', 'bg-carbon-blue-60']]) {
+      const tag = nodes(renderCard(order({ state, paper_size }))).find(node => node.type === 'span' && text(node) === paper_size);
+      assert.ok(tag.props.className.includes(background));
+      assert.match(tag.props.className, /text-white/);
+    }
+  }
+});
+
+test('missing paper sizes retain green A4 and unexpected sizes use neutral white-text tags', () => {
+  for (const paper_size of [undefined, null, '']) {
+    const tag = nodes(renderCard(order({ paper_size }))).find(node => node.type === 'span' && text(node) === 'A4');
+    assert.match(tag.props.className, /bg-green-600/);
+  }
+  for (const paper_size of ['LETTER', 'toString', '__proto__']) {
+    const tag = nodes(renderCard(order({ paper_size }))).find(node => node.type === 'span' && text(node) === paper_size);
+    assert.match(tag.props.className, /bg-gray-600/);
+    assert.match(tag.props.className, /text-white/);
+  }
+});
+
+test('B&W has a visible white background and black label while COLOR uses an opaque white label over CMYK', () => {
+  for (const print_color_mode of ['BW', undefined]) {
+    const tag = nodes(renderCard(order({ print_color_mode }))).find(node => node.type === 'span' && text(node) === 'B&W');
+    assert.match(tag.props.className, /bg-white text-black/);
+    assert.match(tag.props.className, /border border-gray-300/);
+  }
+  const color = nodes(renderCard(order({ print_color_mode: 'COLOR' }))).find(node => node.type === 'span' && text(node) === 'COLOR');
+  assert.match(color.props.className, /text-white/);
+  assert.match(color.props.style.backgroundImage, /rgba\(0, 0, 0, 0\.35\)/);
+  assert.match(color.props.style.backgroundImage, /#00ffff.*#ff00ff.*#ffff00.*#000000/);
+  assert.equal(color.props.style.opacity, undefined);
+});

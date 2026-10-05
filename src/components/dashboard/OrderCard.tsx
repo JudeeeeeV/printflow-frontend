@@ -10,6 +10,12 @@ interface OrderCardProps {
   onToggleSelect?: (orderId: string) => void;
 }
 
+const paperSizeBackgrounds: Record<string, string> = {
+  SHORT: "bg-red-500",
+  A4: "bg-green-600",
+  LONG: "bg-carbon-blue-60",
+};
+
 export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected = false, onToggleSelect }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -19,6 +25,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
   const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
   const actionButtonClassName = "flex h-9 min-w-0 items-center justify-center gap-1.5 bg-carbon-gray-100 px-3 py-1 text-xs font-bold leading-4 text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
+  const paperSize = order.paper_size || "A4";
+  const paperSizeBackground = Object.hasOwn(paperSizeBackgrounds, paperSize)
+    ? paperSizeBackgrounds[paperSize]
+    : "bg-gray-600";
   const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
     ? order.page_count as number
     : null;
@@ -96,15 +106,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
-          {order.paper_size || "A4"}
+        <span className={`px-2 py-1 text-white text-[10px] font-bold border border-[#e0e0e0] ${paperSizeBackground}`}>
+          {paperSize}
         </span>
         {order.print_color_mode === "COLOR" ? (
-          <span className="px-2 py-1 bg-gray-200 text-carbon-gray-100 text-[10px] font-bold border border-gray-300">
+          <span
+            className="px-2 py-1 text-white text-[10px] font-bold border border-gray-300"
+            style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), linear-gradient(to right, #00ffff 0%, #ff00ff 33%, #ffff00 67%, #000000 100%)", textShadow: "0 1px 2px rgba(0, 0, 0, 0.9)" }}
+          >
             COLOR
           </span>
         ) : (
-          <span className="px-2 py-1 bg-carbon-gray-100 text-white text-[10px] font-bold">
+          <span className="px-2 py-1 bg-white text-black text-[10px] font-bold border border-gray-300">
             B&W
           </span>
         )}
