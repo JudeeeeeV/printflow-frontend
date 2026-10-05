@@ -633,7 +633,7 @@ export const ShopDashboard: React.FC = () => {
  <OrderCard
  key={order.id}
  order={order}
- onClick={() => activeQueue === 'new' && ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? setSelectedPaymentOrder(order) : null}
+ onReviewPayment={activeQueue === 'new' && ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? () => setSelectedPaymentOrder(order) : undefined}
  />
  ))}
  {activeOrders.length === 0 && (

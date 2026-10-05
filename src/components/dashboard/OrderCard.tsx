@@ -1,20 +1,35 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { getOrderCardTitleParts } from "./orderCardTitle";
 
 interface OrderCardProps {
   order: any;
-  onClick: () => void;
+  onClick?: () => void;
+  onReviewPayment?: () => void;
   isSelected?: boolean;
   onToggleSelect?: (orderId: string) => void;
 }
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected = false, onToggleSelect }) => {
+const paperSizeBackgrounds: Record<string, string> = {
+  SHORT: "bg-red-500",
+  A4: "bg-green-600",
+  LONG: "bg-carbon-blue-60",
+};
+
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
+  const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
+  const actionButtonClassName = "flex h-9 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none";
+  const title = getOrderCardTitleParts(order);
+  const paperSize = order.paper_size || "A4";
+  const paperSizeBackground = Object.hasOwn(paperSizeBackgrounds, paperSize)
+    ? paperSizeBackgrounds[paperSize]
+    : "bg-gray-600";
   const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
     ? order.page_count as number
     : null;
@@ -60,6 +75,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       break;
   }
 
+  const canReviewPayment = (isPaymentPending || isDisputed) && !!onReviewPayment;
+
   return (
     <motion.div
       layout
@@ -67,34 +84,43 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      whileHover={{ scale: 1.01 }}
+      whileHover={onClick ? { scale: 1.01 } : undefined}
       onClick={onClick}
-      className={`cursor-pointer bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : 'border border-[#e0e0e0] p-4 hover:border-[#8d8d8d] hover:shadow-md'}`}
+      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : `border border-[#e0e0e0] p-4 ${onClick ? 'hover:border-[#8d8d8d] hover:shadow-md' : ''}`}`}
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className="min-w-0 flex-1 pr-3">
-          <h4 className="font-black text-carbon-gray-100">
-            Order #{order.id.slice(0, 8)}
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h4 className="font-black text-carbon-gray-100 [overflow-wrap:anywhere]">
+            {title.filename}
           </h4>
+          <p className="mt-1 text-sm font-bold text-black [overflow-wrap:anywhere]">
+            {title.customer}
+          </p>
           <p className="text-xs text-gray-500 font-medium break-words">
-            Client: {order.client_name || 'Name unavailable'}
+            Order #{order.id.slice(0, 8)}
           </p>
         </div>
-        <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
-          {badgeText}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
+            {badgeText}
+          </div>
+          <p className="whitespace-nowrap text-sm font-bold text-black">{title.date}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
-          {order.paper_size || "A4"}
+        <span className={`px-2 py-1 text-white text-[10px] font-bold border border-[#e0e0e0] ${paperSizeBackground}`}>
+          {paperSize}
         </span>
         {order.print_color_mode === "COLOR" ? (
-          <span className="px-2 py-1 bg-gray-200 text-carbon-gray-100 text-[10px] font-bold border border-gray-300">
+          <span
+            className="px-2 py-1 text-white text-[10px] font-bold border border-gray-300"
+            style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), linear-gradient(to right, #00ffff 0%, #ff00ff 33%, #ffff00 67%, #000000 100%)", textShadow: "0 1px 2px rgba(0, 0, 0, 0.9)" }}
+          >
             COLOR
           </span>
         ) : (
-          <span className="px-2 py-1 bg-carbon-gray-100 text-white text-[10px] font-bold">
+          <span className="px-2 py-1 bg-white text-black text-[10px] font-bold border border-gray-300">
             B&W
           </span>
         )}
@@ -110,17 +136,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
             ₱{order.total || 0}
           </span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500 font-medium">Created:</span>
-          <span className="font-semibold text-gray-700">
-            {new Date(order.created_at).toLocaleDateString()}
-          </span>
-        </div>
       </div>
 
-      {/* Bottom bar: checkbox (if selectable) + Preview Document button */}
-      <div className="flex min-h-11 items-center justify-between gap-2 border-t border-[#e0e0e0] pt-3">
-        {onToggleSelect ? (
+      {/* Payment actions share a row; selectable cards keep their checkbox. */}
+      <div className={`gap-2 border-t border-[#e0e0e0] pt-3 ${canReviewPayment ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
+        {!canReviewPayment && (onToggleSelect ? (
           <label
             className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100"
             onClick={(e) => e.stopPropagation()}
@@ -137,9 +157,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
             />
             <span className="text-xs select-none">{isSelected ? 'Selected' : 'Select'}</span>
           </label>
-        ) : <div />}
-        {order.assets && order.assets.length > 0 && (
+        ) : <div />)}
+        {hasDocument && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsAssetLoading(true);
@@ -147,10 +168,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
               setPreviewUrl(order.assets[0].file_url);
               setIsPreviewOpen(true);
             }}
-            className="flex min-h-11 items-center gap-1.5 bg-carbon-gray-100 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+            className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6]`}
           >
             <svg
-              className="w-4 h-4"
+              className="h-4 w-4 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -168,18 +189,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
               />
             </svg>
-            Preview Document
+            <span className="min-w-0">Preview Document</span>
+          </button>
+        )}
+        {canReviewPayment && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReviewPayment?.();
+            }}
+            className={`${actionButtonClassName} bg-carbon-gray-100 text-white hover:bg-[#454545]`}
+          >
+            Review Payment
           </button>
         )}
       </div>
-
-      {isPaymentPending && (
-        <div className="mt-4 pt-3 border-t border-[#e0e0e0]">
-          <button className="w-full py-2.5 bg-carbon-gray-100 text-white font-bold text-xs hover:bg-black transition-colors">
-            Review Payment
-          </button>
-        </div>
-      )}
 
       {isDisputed && (
         <div className="mt-4 pt-3 border-t border-[#e0e0e0]">
