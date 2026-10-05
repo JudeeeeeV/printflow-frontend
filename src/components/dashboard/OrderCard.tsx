@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { getOrderCardTitleParts } from "./orderCardTitle";
 
 interface OrderCardProps {
   order: any;
@@ -15,6 +16,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
+  const title = getOrderCardTitleParts(order);
   const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
     ? order.page_count as number
     : null;
@@ -71,18 +73,23 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       onClick={onClick}
       className={`cursor-pointer bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : 'border border-[#e0e0e0] p-4 hover:border-[#8d8d8d] hover:shadow-md'}`}
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className="min-w-0 flex-1 pr-3">
-          <h4 className="font-black text-carbon-gray-100">
-            Order #{order.id.slice(0, 8)}
+      <div className="mb-3">
+        <div className="flex items-start justify-between">
+          <h4 className="min-w-0 flex-1 pr-3 font-black text-carbon-gray-100 [overflow-wrap:anywhere]">
+            {title.filename}
           </h4>
-          <p className="text-xs text-gray-500 font-medium break-words">
-            Client: {order.client_name || 'Name unavailable'}
-          </p>
+          <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
+            {badgeText}
+          </div>
         </div>
-        <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
-          {badgeText}
-        </div>
+        <p className="mt-1 flex items-baseline gap-1 text-xs font-normal text-gray-600">
+          <span className="min-w-0 [overflow-wrap:anywhere]">{title.customer}</span>
+          <span aria-hidden="true" className="shrink-0 font-bold">•</span>
+          <span className="shrink-0 whitespace-nowrap">{title.date}</span>
+        </p>
+        <p className="text-xs text-gray-500 font-medium break-words">
+          Order #{order.id.slice(0, 8)}
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
