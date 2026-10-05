@@ -16,6 +16,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
+  const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
+  const actionButtonClassName = "flex h-9 min-w-0 items-center justify-center gap-1.5 bg-carbon-gray-100 px-3 py-1 text-xs font-bold leading-4 text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
   const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
     ? order.page_count as number
@@ -73,23 +75,24 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
       onClick={onClick}
       className={`cursor-pointer bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : 'border border-[#e0e0e0] p-4 hover:border-[#8d8d8d] hover:shadow-md'}`}
     >
-      <div className="mb-3">
-        <div className="flex items-start justify-between">
-          <h4 className="min-w-0 flex-1 pr-3 font-black text-carbon-gray-100 [overflow-wrap:anywhere]">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h4 className="font-black text-carbon-gray-100 [overflow-wrap:anywhere]">
             {title.filename}
           </h4>
+          <p className="mt-1 text-sm font-bold text-black [overflow-wrap:anywhere]">
+            {title.customer}
+          </p>
+          <p className="text-xs text-gray-500 font-medium break-words">
+            Order #{order.id.slice(0, 8)}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
           <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
             {badgeText}
           </div>
+          <p className="whitespace-nowrap text-sm font-bold text-black">{title.date}</p>
         </div>
-        <p className="mt-1 flex items-baseline gap-1 text-xs font-normal text-gray-600">
-          <span className="min-w-0 [overflow-wrap:anywhere]">{title.customer}</span>
-          <span aria-hidden="true" className="shrink-0 font-bold">•</span>
-          <span className="shrink-0 whitespace-nowrap">{title.date}</span>
-        </p>
-        <p className="text-xs text-gray-500 font-medium break-words">
-          Order #{order.id.slice(0, 8)}
-        </p>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
@@ -117,17 +120,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
             ₱{order.total || 0}
           </span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500 font-medium">Created:</span>
-          <span className="font-semibold text-gray-700">
-            {new Date(order.created_at).toLocaleDateString()}
-          </span>
-        </div>
       </div>
 
-      {/* Bottom bar: checkbox (if selectable) + Preview Document button */}
-      <div className="flex min-h-11 items-center justify-between gap-2 border-t border-[#e0e0e0] pt-3">
-        {onToggleSelect ? (
+      {/* Payment actions share a row; selectable cards keep their checkbox. */}
+      <div className={`gap-2 border-t border-[#e0e0e0] pt-3 ${isPaymentPending ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
+        {!isPaymentPending && (onToggleSelect ? (
           <label
             className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100"
             onClick={(e) => e.stopPropagation()}
@@ -144,9 +141,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
             />
             <span className="text-xs select-none">{isSelected ? 'Selected' : 'Select'}</span>
           </label>
-        ) : <div />}
-        {order.assets && order.assets.length > 0 && (
+        ) : <div />)}
+        {hasDocument && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsAssetLoading(true);
@@ -154,10 +152,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
               setPreviewUrl(order.assets[0].file_url);
               setIsPreviewOpen(true);
             }}
-            className="flex min-h-11 items-center gap-1.5 bg-carbon-gray-100 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+            className={actionButtonClassName}
           >
             <svg
-              className="w-4 h-4"
+              className="h-4 w-4 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -175,18 +173,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, isSelected
                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
               />
             </svg>
-            Preview Document
+            <span className="min-w-0">Preview Document</span>
+          </button>
+        )}
+        {isPaymentPending && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className={actionButtonClassName}
+          >
+            Review Payment
           </button>
         )}
       </div>
-
-      {isPaymentPending && (
-        <div className="mt-4 pt-3 border-t border-[#e0e0e0]">
-          <button className="w-full py-2.5 bg-carbon-gray-100 text-white font-bold text-xs hover:bg-black transition-colors">
-            Review Payment
-          </button>
-        </div>
-      )}
 
       {isDisputed && (
         <div className="mt-4 pt-3 border-t border-[#e0e0e0]">

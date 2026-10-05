@@ -108,29 +108,70 @@ function nodes(tree) {
   return [tree, ...[tree.props?.children].flat().flatMap(nodes)];
 }
 
+function text(node) {
+  if (Array.isArray(node)) return Array.from(node, text).join('');
+  if (node && typeof node === 'object') return text(node.props?.children);
+  return typeof node === 'string' ? node : '';
+}
+
 test('all queue states render the new heading, supporting order ID, and status badge', () => {
   for (const state of ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED']) {
     const elements = nodes(renderCard(order({ state })));
     const heading = elements.find(node => node.type === 'h4');
     assert.equal(heading.props.children, 'Test Paper');
-    const metadata = elements.find(node => node.type === 'p' && Array.isArray(node.props.children) && node.props.children[0]?.props?.children === 'Aldrin Novabos');
-    assert.ok(metadata);
-    assert.deepEqual(Array.from(metadata.props.children, node => node.props.children), ['Aldrin Novabos', '•', '04/10/26']);
-    assert.match(metadata.props.className, /text-xs font-normal/);
+    const customer = elements.find(node => node.type === 'p' && text(node) === 'Aldrin Novabos');
+    const date = elements.find(node => node.type === 'p' && text(node) === '04/10/26');
+    assert.ok(customer && date);
+    assert.match(customer.props.className, /text-sm font-bold text-black/);
+    assert.match(date.props.className, /text-sm font-bold text-black/);
+    assert.ok(!elements.some(node => text(node) === '•'));
     assert.match(heading.props.className, /overflow-wrap:anywhere/);
-    assert.ok(elements.some(node => node.type === 'p' && node.props.children.join('') === 'Order #12345678'));
+    assert.ok(elements.some(node => node.type === 'p' && text(node) === 'Order #12345678'));
     assert.ok(elements.some(node => /shrink-0/.test(node.props.className || '')));
   }
 });
 
-test('card activation, ready selection, preview, and payment controls remain available', () => {
+test('card activation, ready selection, and preview remain available', () => {
   let activated = 0, selected;
-  const tree = renderCard(order(), () => activated++, id => { selected = id; });
+  const tree = renderCard(order({ state: 'IN_PRODUCTION' }), () => activated++, id => { selected = id; });
   tree.props.onClick();
   assert.equal(activated, 1);
   const elements = nodes(tree);
   elements.find(node => node.type === 'input').props.onChange({ stopPropagation() {} });
   assert.equal(selected, '12345678-order');
-  assert.ok(elements.some(node => node.type === 'button' && Array.isArray(node.props.children) && node.props.children.includes('Preview Document')));
-  assert.ok(elements.some(node => node.type === 'button' && node.props.children === 'Review Payment'));
+  assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
+  assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
+});
+
+test('preview does not activate payment review and Review Payment invokes the callback once', () => {
+  let activated = 0, stopped = 0;
+  const elements = nodes(renderCard(order(), () => activated++));
+  const preview = elements.find(node => node.type === 'button' && text(node) === 'Preview Document');
+  const review = elements.find(node => node.type === 'button' && text(node) === 'Review Payment');
+  preview.props.onClick({ stopPropagation() { stopped++; } });
+  assert.equal(activated, 0);
+  review.props.onClick({ stopPropagation() { stopped++; } });
+  assert.equal(activated, 1);
+  assert.equal(stopped, 2);
+  assert.equal(review.props.type, 'button');
+});
+
+test('payment review remains available without a document and other states retain their actions', () => {
+  for (const assets of [undefined, null, []]) {
+    const buttons = nodes(renderCard(order({ assets }))).filter(node => node.type === 'button');
+    assert.deepEqual(buttons.map(text), ['Review Payment']);
+  }
+  for (const state of ['AWAITING_PAYMENT', 'IN_PRODUCTION', 'READY_FOR_PICKUP', 'COMPLETED', 'ESCALATED_DISPUTE']) {
+    const elements = nodes(renderCard(order({ state })));
+    assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
+    assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
+    if (state === 'ESCALATED_DISPUTE') assert.ok(elements.some(node => node.type === 'p' && text(node) === 'Administration Reviewing Payment'));
+  }
+});
+
+test('cards retain the metadata date and total without a redundant Created row', () => {
+  const elements = nodes(renderCard(order()));
+  assert.ok(elements.some(node => node.type === 'p' && text(node) === '04/10/26'));
+  assert.ok(elements.some(node => node.type === 'span' && text(node) === 'Total Amount:'));
+  assert.ok(!elements.some(node => text(node) === 'Created:'));
 });
