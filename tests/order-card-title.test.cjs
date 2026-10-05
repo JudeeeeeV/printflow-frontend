@@ -91,7 +91,7 @@ test('uses Manila day and year boundaries and zero-padded MM/DD/YY', () => {
   }
 });
 
-function renderCard(value, onClick = () => {}, onToggleSelect) {
+function renderCard(value, onClick, onToggleSelect, onReviewPayment = () => {}) {
   const jsx = (type, props) => ({ type, props });
   const { OrderCard } = load('OrderCard.tsx', {
     react: { useState: initial => [initial, () => {}] },
@@ -100,7 +100,7 @@ function renderCard(value, onClick = () => {}, onToggleSelect) {
     'framer-motion': { motion: { div: 'div' } },
     './orderCardTitle': { getOrderCardTitleParts },
   });
-  return OrderCard({ order: value, onClick, onToggleSelect });
+  return OrderCard({ order: value, onClick, onToggleSelect, onReviewPayment });
 }
 
 function nodes(tree) {
@@ -143,9 +143,13 @@ test('card activation, ready selection, and preview remain available', () => {
   assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
 });
 
-test('preview does not activate payment review and Review Payment invokes the callback once', () => {
+test('card and preview clicks do not activate payment review; only the review button invokes its callback', () => {
   let activated = 0, stopped = 0;
-  const elements = nodes(renderCard(order(), () => activated++));
+  const tree = renderCard(order(), undefined, undefined, () => activated++);
+  assert.equal(tree.props.onClick, undefined);
+  assert.equal(tree.props.whileHover, undefined);
+  assert.match(tree.props.className, /cursor-default/);
+  const elements = nodes(tree);
   const preview = elements.find(node => node.type === 'button' && text(node) === 'Preview Document');
   const review = elements.find(node => node.type === 'button' && text(node) === 'Review Payment');
   preview.props.onClick({ stopPropagation() { stopped++; } });
@@ -161,12 +165,22 @@ test('payment review remains available without a document and other states retai
     const buttons = nodes(renderCard(order({ assets }))).filter(node => node.type === 'button');
     assert.deepEqual(buttons.map(text), ['Review Payment']);
   }
-  for (const state of ['AWAITING_PAYMENT', 'IN_PRODUCTION', 'READY_FOR_PICKUP', 'COMPLETED', 'ESCALATED_DISPUTE']) {
+  for (const state of ['AWAITING_PAYMENT', 'IN_PRODUCTION', 'READY_FOR_PICKUP', 'COMPLETED']) {
     const elements = nodes(renderCard(order({ state })));
     assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
     assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
-    if (state === 'ESCALATED_DISPUTE') assert.ok(elements.some(node => node.type === 'p' && text(node) === 'Administration Reviewing Payment'));
   }
+});
+
+test('disputed orders retain explicit receipt review and the administration notice', () => {
+  let reviewed = 0;
+  const tree = renderCard(order({ state: 'ESCALATED_DISPUTE' }), undefined, undefined, () => reviewed++);
+  assert.equal(tree.props.onClick, undefined);
+  const elements = nodes(tree);
+  assert.ok(elements.some(node => node.type === 'p' && text(node) === 'Administration Reviewing Payment'));
+  assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
+  elements.find(node => node.type === 'button' && text(node) === 'Review Payment').props.onClick({ stopPropagation() {} });
+  assert.equal(reviewed, 1);
 });
 
 test('cards retain the metadata date and total without a redundant Created row', () => {
