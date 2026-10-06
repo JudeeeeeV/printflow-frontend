@@ -1,0 +1,7 @@
+.page :is(input, textarea, button, a) {
+  scroll-margin-block-end: 7rem;
+}
+
+.page section {
+  scroll-margin-block-start: 1rem;
+}
