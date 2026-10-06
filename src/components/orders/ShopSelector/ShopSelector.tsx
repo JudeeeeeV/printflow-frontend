@@ -147,10 +147,10 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const buttonId = `${selectorId}-${shop.id}-button`;
  const panelId = `${selectorId}-${shop.id}-details`;
  return (
- <div key={shop.id} className={`min-w-0 border-2 transition-colors duration-200 motion-reduce:transition-none ${
+ <div key={shop.id} className={`min-w-0 transition-colors duration-200 motion-reduce:transition-none ${
  selectedShopId === shop.id
- ? 'border-black bg-carbon-gray-10'
- : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
+ ? 'border-4 border-carbon-blue-60 bg-carbon-gray-10'
+ : 'border-2 border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
  }`}>
  <button
  id={buttonId}

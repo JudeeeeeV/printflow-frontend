@@ -62,8 +62,25 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
                 onClick={() => setOrientation(value)}
                 disabled={isSubmitting}
                 aria-pressed={orientation === value}
-                className={`min-h-11 flex-1 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${orientation === value ? 'bg-black/90 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 px-2 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${orientation === value ? 'bg-black/90 text-white' : 'text-gray-500 hover:text-gray-700'}`}
               >
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  className="h-5 w-5 shrink-0"
+                >
+                  <rect
+                    x={value === 'PORTRAIT' ? 5 : 2}
+                    y={value === 'PORTRAIT' ? 2 : 5}
+                    width={value === 'PORTRAIT' ? 14 : 20}
+                    height={value === 'PORTRAIT' ? 20 : 14}
+                  />
+                  <path d={value === 'PORTRAIT' ? 'M8 8h8M8 12h8M8 16h5' : 'M5 9h14M5 12h14M5 15h10'} />
+                </svg>
                 {value === 'PORTRAIT' ? 'Portrait' : 'Landscape'}
               </button>
             ))}
@@ -96,7 +113,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
             <button
               onClick={() => setPrintColorMode('COLOR')}
               disabled={isSubmitting}
-              className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === 'COLOR' ? 'bg-black/90 text-white ' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === 'COLOR' ? 'text-white' : 'text-gray-500 hover:text-gray-700'}`}
+              style={printColorMode === 'COLOR' ? {
+                backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), linear-gradient(to right, #00ffff 0%, #ff00ff 33%, #ffff00 67%, #000000 100%)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.9)',
+              } : undefined}
             >
               Color
             </button>
@@ -137,14 +158,14 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
         <button
           onClick={onSubmit}
           disabled={!isReady || isSubmitting}
-          className="w-full bg-carbon-blue-60 hover:bg-carbon-blue-70 text-white font-bold py-4 mb-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full min-h-11 bg-carbon-blue-60 hover:bg-carbon-blue-70 text-white font-bold py-2 mb-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isSubmitting ? 'PROCESSING...' : 'SUBMIT ORDER'}
         </button>
         <button
           onClick={onSaveDraft}
           disabled={!isReady || isSubmitting}
-          className="w-full border-2 border-black text-carbon-gray-100 font-bold py-3 hover:bg-carbon-gray-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full min-h-11 border-2 border-black text-carbon-gray-100 font-bold py-2 hover:bg-carbon-gray-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Save as Draft
         </button>
