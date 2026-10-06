@@ -70,7 +70,7 @@ export function UnsavedSettingsModal({ busy, feedback, onDismiss, onLeave, onSav
         <button type="button" disabled={busy} aria-label="Keep editing shop settings" onClick={onDismiss} className={styles.iconButton}><Close size={20} aria-hidden="true" /></button>
       </header>
       <div className="space-y-3 p-4">
-        <p id={descriptionId} className="text-sm leading-relaxed text-gray-600">You have unsaved shop settings. Save your changes before leaving?</p>
+        <p id={descriptionId} className="text-sm leading-relaxed text-gray-600">You have unsaved changes to your shop settings. Save your changes before leaving?</p>
         {feedback && <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-sm text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">{feedback}</p>}
         {busy && <p role="status" className="text-sm text-gray-600">Saving changes before leaving...</p>}
       </div>
