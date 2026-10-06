@@ -29,3 +29,14 @@ export function isShopOpen(shop: PrintShop, now = new Date()): boolean {
     ? current >= opensAt && current < closesAt
     : current >= opensAt || current < closesAt;
 }
+
+export function sortByShopAvailability<T extends { shop: PrintShop }>(
+  entries: readonly T[],
+  now = new Date(),
+): T[] {
+  return [...entries].sort(
+    (first, second) =>
+      Number(isShopOpen(second.shop, now)) -
+      Number(isShopOpen(first.shop, now)),
+  );
+}

@@ -6,7 +6,7 @@ import type { PrintShop } from '../../../services/orderService';
 import { ShopLocation } from '../../maps/ShopLocation';
 import { locateForDirections } from '../../../services/directionsService';
 import { formatShopDistance, sortShopsByDistance, type ShopPosition } from '../../../services/shopDistance';
-import { isShopOpen } from '../../../services/shopAvailability';
+import { isShopOpen, sortByShopAvailability } from '../../../services/shopAvailability';
 
 const SHOPS_PER_PAGE = 5;
 type SlideDirection = 'next' | 'previous' | null;
@@ -91,8 +91,11 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const totalPages = Math.max(1, Math.ceil(shops.length / SHOPS_PER_PAGE));
  const displayedPage = Math.min(currentPage, totalPages);
  const firstShopIndex = (displayedPage - 1) * SHOPS_PER_PAGE;
- const sortedShops = useMemo(() => sortShopsByDistance(shops, userPosition), [shops, userPosition]);
- const closestShopId = sortedShops[0]?.distance != null ? sortedShops[0].shop.id : null;
+ const sortedShops = useMemo(
+  () => sortByShopAvailability(sortShopsByDistance(shops, userPosition), availabilityNow),
+  [availabilityNow, shops, userPosition],
+ );
+ const closestShopId = sortedShops.find(({ shop, distance }) => isShopOpen(shop, availabilityNow) && distance !== null)?.shop.id ?? null;
  const visibleShops = sortedShops.slice(firstShopIndex, firstShopIndex + SHOPS_PER_PAGE);
 
  const changePage = (page: number, direction: Exclude<SlideDirection, null>) => {
@@ -174,7 +177,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  </p>
  {shop.opens_at && shop.closes_at && (
  <p className="text-xs text-gray-500">
- Hours: {shop.opens_at.slice(0, 5)}â€“{shop.closes_at.slice(0, 5)} {shop.availability_override ? 'Â· Open override ON' : 'Â· Philippine time'}
+ Hours: {shop.opens_at.slice(0, 5)} - {shop.closes_at.slice(0, 5)} {shop.availability_override ? '| Open override ON' : '| Philippine time'}
  </p>
  )}
  </div>

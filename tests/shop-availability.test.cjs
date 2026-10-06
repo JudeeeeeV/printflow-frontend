@@ -20,7 +20,7 @@ vm.runInNewContext(
   { exports: exportsObject },
 );
 
-const { isShopOpen } = exportsObject;
+const { isShopOpen, sortByShopAvailability } = exportsObject;
 const shop = {
   status: 'OPEN',
   availability_override: false,
@@ -42,4 +42,31 @@ test('manual ON keeps a shop open after its closing time', () => {
     ),
     true,
   );
+});
+
+test('open shops sort above closed shops while preserving distance order', () => {
+  const now = new Date('2026-10-06T14:00:00Z');
+  const entries = [
+    { shop: { ...shop, id: 'closed-near' }, distance: 10 },
+    {
+      shop: { ...shop, id: 'open-near', availability_override: true },
+      distance: 20,
+    },
+    {
+      shop: { ...shop, id: 'open-far', availability_override: true },
+      distance: 30,
+    },
+    { shop: { ...shop, id: 'closed-far' }, distance: 40 },
+  ];
+
+  assert.deepEqual(
+    Array.from(sortByShopAvailability(entries, now), ({ shop: entry }) => entry.id),
+    ['open-near', 'open-far', 'closed-near', 'closed-far'],
+  );
+  assert.deepEqual(Array.from(entries, ({ shop: entry }) => entry.id), [
+    'closed-near',
+    'open-near',
+    'open-far',
+    'closed-far',
+  ]);
 });
