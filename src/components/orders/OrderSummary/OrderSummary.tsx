@@ -53,15 +53,16 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
           </select>
         </div>
         <div>
-          <label className="mb-2 block text-sm font-bold text-gray-700">Orientation</label>
-          <div className="flex bg-gray-200 p-1">
+          <div id="print-orientation-label" className="mb-2 block text-sm font-bold text-gray-700">Orientation</div>
+          <div role="group" aria-labelledby="print-orientation-label" className="flex bg-gray-200 p-1">
             {['PORTRAIT', 'LANDSCAPE'].map((value) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setOrientation(value)}
                 disabled={isSubmitting}
-                className={`flex-1 py-2 text-sm font-bold transition-all ${orientation === value ? 'bg-black/90 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                aria-pressed={orientation === value}
+                className={`min-h-11 flex-1 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${orientation === value ? 'bg-black/90 text-white' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 {value === 'PORTRAIT' ? 'Portrait' : 'Landscape'}
               </button>
