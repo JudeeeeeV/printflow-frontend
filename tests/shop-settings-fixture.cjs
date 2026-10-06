@@ -17,6 +17,7 @@ function hookFixture(file, exportName, mocks = {}, props = () => ({}), globals =
       return [hooks[index].value, value => { hooks[index].value = typeof value === 'function' ? value(hooks[index].value) : value; dirty = true; }];
     },
     useRef(initial) { const index = cursor++; if (!hooks[index]) hooks[index] = { value: { current: initial } }; return hooks[index].value; },
+    useId() { return `fixture-id-${cursor++}`; },
     useEffect(callback, deps) {
       const index = cursor++, previous = hooks[index];
       if (!previous || deps.some((value, i) => !Object.is(value, previous.deps[i]))) effects.push(() => {
@@ -53,7 +54,13 @@ function createSettingsFixture(options = {}) {
     availability_override: false, opens_at: '08:00:00', closes_at: '20:00:00', status: 'OPEN', shop_photo_url: 'saved-photo', gcash_qr_url: 'saved-qr' };
   const calls = [], created = [], revoked = [], events = [];
   const failures = {}, holds = {};
-  let reads = 0;
+  let reads = 0, logoutGuard, shouldBlock, currentPath = '/shop-dashboard/settings', pendingPath, proceeded = 0, resets = 0;
+  const blocker = { state: 'unblocked',
+    proceed() { currentPath = pendingPath; proceeded++; blocker.state = 'unblocked'; },
+    reset() { resets++; blocker.state = 'unblocked'; },
+  };
+  const registerLogoutGuard = guard => { logoutGuard = guard; };
+  const listeners = new Map();
   const mutate = async (section, payload, commit) => {
     calls.push({ section, payload });
     if (holds[section]) await holds[section].promise;
@@ -71,19 +78,30 @@ function createSettingsFixture(options = {}) {
     uploadGcashQr: file => mutate('qr', file, () => { state.gcash_qr_url = `saved-${file.name}`; return { gcash_qr_url: state.gcash_qr_url }; }),
     removeGcashQr: () => mutate('qr', 'remove', () => { state.gcash_qr_url = null; return { gcash_qr_url: null }; }),
   };
-  const globals = { document: { activeElement: {} }, window: { dispatchEvent: event => events.push(event) },
+  const globals = { document: { activeElement: {} }, window: { dispatchEvent: event => events.push(event),
+    addEventListener: (type, listener) => listeners.set(type, listener), removeEventListener: (type, listener) => { if (listeners.get(type) === listener) listeners.delete(type); } },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }, requestAnimationFrame: callback => { callback(); return 1; },
     URL: { createObjectURL: file => { const url = `blob:settings-${created.length}`; created.push({ file, url }); return url; }, revokeObjectURL: url => revoked.push(url) } };
   const f = hookFixture('pages/ShopSettingsPage/ShopSettingsPage.tsx', 'ShopSettingsPage', {
     'framer-motion': { AnimatePresence: 'presence', motion: { div: 'motion-div' }, useReducedMotion: () => false },
+    'react-router-dom': { useBlocker: predicate => { shouldBlock = predicate; return blocker; }, useOutletContext: () => ({ registerLogoutGuard }) },
     '../../services/shopService': { shopService: service },
     '../../components/maps/ShopPhotoUpload': { ShopPhotoUpload: 'photo-editor' },
     '../../components/settings/ShopGcashQrForm': { ShopGcashQrForm: 'qr-editor' },
     '../../components/maps/LocationMapModal': { LocationMapModal: 'map-dialog' },
     '../../components/maps/coordinates': { hasCoordinates: (lat, lng) => typeof lat === 'number' && Number.isFinite(lat) && Math.abs(lat) <= 90 && typeof lng === 'number' && Number.isFinite(lng) && Math.abs(lng) <= 180 },
+    './UnsavedSettingsModal': { UnsavedSettingsModal: 'navigation-modal' },
   }, undefined, globals);
   const field = id => f.find(node => node.props?.id === id);
   return { ...f, state, service, calls, created, revoked, events, failures, holds, reads: () => reads,
+    blocker, listeners, path: () => currentPath, proceeded: () => proceeded, resets: () => resets,
+    navigate(path, historyAction = 'PUSH') {
+      if (shouldBlock({ currentLocation: { pathname: currentPath }, nextLocation: { pathname: path }, historyAction })) { pendingPath = path; blocker.state = 'blocked'; }
+      else currentPath = path;
+      f.render();
+    },
+    requestLogout(logout) { if (logoutGuard) logoutGuard(logout); else logout(); f.render(); },
+    navigationModal: () => f.find(node => node.type === 'navigation-modal')?.props,
     save: () => f.find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }),
     field, edit: (id, value) => { field(id).props.onChange({ target: { value } }); f.render(); },
     photo: () => f.find(node => node.type === 'photo-editor').props, qr: () => f.find(node => node.type === 'qr-editor').props,

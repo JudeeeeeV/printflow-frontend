@@ -4,6 +4,108 @@ const { createSettingsFixture, hookFixture, image, deferred, nodes } = require('
 
 const select = (f, section, file = image()) => { f[section]().onSelect(file); f.render(); };
 
+test('only blocks leaving settings when a section has pending edits', async () => {
+  const clean = createSettingsFixture(); await clean.flush(); clean.navigate('/shop-dashboard/analytics');
+  assert.equal(clean.navigationModal(), undefined); assert.equal(clean.path(), '/shop-dashboard/analytics'); clean.unmount();
+  for (const section of ['details', 'pickup', 'availability', 'photo', 'qr']) {
+    const f = createSettingsFixture(); await f.flush();
+    if (section === 'details') f.edit('settings-shop-name', 'Changed');
+    else if (section === 'pickup') f.pin(15, 122);
+    else if (section === 'availability') f.switch();
+    else select(f, section);
+    f.navigate('/shop-dashboard/settings'); assert.equal(f.navigationModal(), undefined);
+    f.navigate('/shop-dashboard/analytics'); assert.ok(f.navigationModal()); assert.equal(f.path(), '/shop-dashboard/settings');
+    f.navigationModal().onLeave(); f.render();
+    assert.equal(f.path(), '/shop-dashboard/analytics'); assert.equal(f.proceeded(), 1); assert.equal(f.calls.length, 0);
+    f.unmount(); assert.deepEqual(f.revoked, f.created.map(item => item.url));
+  }
+});
+
+test('dismissing confirmation keeps edits and browser history navigation can be retried', async () => {
+  const f = createSettingsFixture(); await f.flush(); f.allChanges();
+  f.navigate('/shop-dashboard', 'POP'); f.navigationModal().onDismiss(); f.render();
+  assert.equal(f.navigationModal(), undefined); assert.equal(f.path(), '/shop-dashboard/settings'); assert.equal(f.resets(), 1);
+  assert.equal(f.field('settings-shop-name').props.value, 'Updated Shop'); assert.ok(f.qr().selectedFile);
+  f.navigate('/shop-dashboard/printer-agent', 'POP'); f.navigationModal().onLeave();
+  assert.equal(f.path(), '/shop-dashboard/printer-agent'); assert.equal(f.calls.length, 0); f.unmount();
+});
+
+test('Save Changes waits for every pending section before continuing navigation', async () => {
+  const f = createSettingsFixture(); await f.flush(); f.allChanges(); const hold = deferred(); f.holds.qr = hold;
+  f.navigate('/shop-dashboard/analytics'); const saving = f.navigationModal().onSave(); f.render();
+  assert.equal(f.navigationModal().busy, true); assert.equal(f.path(), '/shop-dashboard/settings');
+  f.navigationModal().onLeave(); f.navigationModal().onDismiss(); await f.navigationModal().onSave(); f.render();
+  assert.equal(f.proceeded(), 0); assert.equal(f.resets(), 0); assert.equal(f.calls.length, 5);
+  hold.resolve(); await saving; f.render();
+  assert.equal(f.path(), '/shop-dashboard/analytics'); assert.equal(f.proceeded(), 1);
+  assert.equal(f.qr().selectedFile, null); assert.equal(f.photo().selectedFile, null); f.unmount();
+});
+
+test('navigation save failures remain in the modal and retry only failed edits', async () => {
+  const f = createSettingsFixture(); await f.flush(); f.allChanges(); f.failures.qr = 'QR upload offline';
+  f.navigate('/shop-dashboard/analytics'); await f.navigationModal().onSave(); f.render();
+  assert.equal(f.path(), '/shop-dashboard/settings'); assert.equal(f.proceeded(), 0); assert.equal(f.navigationModal().busy, false);
+  assert.match(f.navigationModal().feedback, /Saved: Shop details/); assert.match(f.navigationModal().feedback, /GCash QR code: QR upload offline/);
+  assert.equal(f.qr().localUrl, 'blob:settings-1'); assert.equal(f.photo().selectedFile, null);
+  delete f.failures.qr; await f.navigationModal().onSave(); f.render();
+  assert.equal(f.path(), '/shop-dashboard/analytics'); assert.deepEqual(f.calls.slice(5).map(call => call.section), ['qr']); f.unmount();
+});
+
+test('invalid settings keep navigation blocked until the user repairs or discards them', async () => {
+  const f = createSettingsFixture(); await f.flush(); f.edit('settings-shop-name', ' '); f.navigate('/shop-dashboard');
+  await f.navigationModal().onSave(); f.render();
+  assert.match(f.navigationModal().feedback, /Enter a shop name/); assert.equal(f.calls.length, 0); assert.equal(f.proceeded(), 0);
+  f.navigationModal().onDismiss(); f.render(); f.edit('settings-shop-name', 'Repaired'); f.navigate('/shop-dashboard');
+  await f.navigationModal().onSave(); assert.equal(f.path(), '/shop-dashboard'); assert.equal(f.calls.length, 1); f.unmount();
+});
+
+test('a navigation attempt during the floating Save waits without resubmitting', async () => {
+  const f = createSettingsFixture(); await f.flush(); f.edit('settings-shop-name', 'Changed'); const hold = deferred(); f.holds.details = hold;
+  const saving = f.save(); f.render(); f.navigate('/shop-dashboard');
+  assert.equal(f.navigationModal().busy, true); f.navigationModal().onLeave(); assert.equal(f.proceeded(), 0);
+  hold.resolve(); await saving; f.render(); await f.navigationModal().onSave();
+  assert.equal(f.path(), '/shop-dashboard'); assert.equal(f.calls.length, 1); f.unmount();
+});
+
+test('logout confirmation saves before logout and does not end the session on failure or dismissal', async () => {
+  const f = createSettingsFixture(); await f.flush(); f.allChanges(); let logouts = 0;
+  const logout = () => { logouts++; f.navigate('/auth'); };
+  f.requestLogout(logout); assert.equal(logouts, 0); f.navigationModal().onDismiss(); f.render(); assert.equal(logouts, 0);
+  f.requestLogout(logout); f.failures.photo = 'Photo offline'; await f.navigationModal().onSave(); f.render();
+  assert.equal(logouts, 0); assert.match(f.navigationModal().feedback, /Photo offline/);
+  delete f.failures.photo; await f.navigationModal().onSave(); f.render(); assert.equal(logouts, 1); assert.equal(f.path(), '/auth');
+  assert.deepEqual(f.calls.slice(5).map(call => call.section), ['photo']); f.unmount();
+  const discard = createSettingsFixture(); await discard.flush(); discard.edit('settings-shop-name', 'Changed');
+  discard.requestLogout(() => discard.navigate('/auth')); discard.navigationModal().onLeave();
+  assert.equal(discard.path(), '/auth'); assert.equal(discard.calls.length, 0); discard.unmount();
+});
+
+test('browser unload protection follows pending edits and cleans up on unmount', async () => {
+  const f = createSettingsFixture(); await f.flush(); assert.equal(f.listeners.has('beforeunload'), false);
+  f.switch(); let prevented = false; const event = { preventDefault() { prevented = true; } };
+  f.listeners.get('beforeunload')(event); assert.equal(prevented, true); assert.equal(event.returnValue, '');
+  f.switch(); assert.equal(f.listeners.has('beforeunload'), false); select(f, 'qr');
+  f.unmount(); assert.equal(f.listeners.has('beforeunload'), false);
+});
+
+test('confirmation has the requested labels and blocks dismissal during saving', () => {
+  let busy = false, feedback = '', dismissals = 0, saves = 0, leaves = 0;
+  const f = hookFixture('pages/ShopSettingsPage/UnsavedSettingsModal.tsx', 'UnsavedSettingsModal', {
+    'react-dom': { createPortal: node => node },
+  }, () => ({ busy, feedback, onDismiss: () => dismissals++, onLeave: () => leaves++, onSave: () => saves++ }), { document: { body: {} } });
+  const dialog = () => f.find(node => node.type === 'dialog');
+  assert.equal(dialog().props.role, 'alertdialog'); assert.equal(dialog().props['aria-modal'], 'true');
+  f.button('Save Changes').props.onClick(); f.button('Leave without Saving').props.onClick(); assert.equal(saves, 1); assert.equal(leaves, 1);
+  dialog().props.onCancel({ preventDefault() {} }); assert.equal(dismissals, 1);
+  let prevented = false, stopped = false;
+  const escape = { key: 'Escape', preventDefault() { prevented = true; }, stopPropagation() { stopped = true; } };
+  dialog().props.onKeyDown(escape); assert.equal(dismissals, 2); assert.equal(prevented, true); assert.equal(stopped, true);
+  busy = true; f.render(); assert.equal(f.button('Save Changes').props.disabled, true); assert.equal(f.button('Leave without Saving').props.disabled, true);
+  dialog().props.onKeyDown(escape); dialog().props.onCancel({ preventDefault() {} }); assert.equal(dismissals, 2); assert.equal(dialog().props['aria-busy'], true);
+  busy = false; feedback = 'GCash QR code: offline'; f.render();
+  assert.equal(f.find(node => node.props?.role === 'alert').props.children, feedback); f.unmount();
+});
+
 test('loads one settings baseline and keeps Save hidden until an edit', async () => {
   const pending = deferred();
   const f = createSettingsFixture({ readPending: pending });

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useBlocker, useOutletContext } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Location, Save, Store, Time } from "@carbon/icons-react";
 import { shopService, type ShopSettingsValues } from "../../services/shopService";
@@ -8,6 +9,8 @@ import { LocationMapModal } from "../../components/maps/LocationMapModal";
 import { hasCoordinates } from "../../components/maps/coordinates";
 import styles from "../../components/maps/Maps.module.css";
 import pageStyles from "./ShopSettingsPage.module.css";
+import { UnsavedSettingsModal } from "./UnsavedSettingsModal";
+import type { ShopSettingsNavigation } from "../../components/layout/ShopLayout";
 
 const SECTION_LABELS = { details: "Shop details", pickup: "Pickup location", availability: "Shop availability", photo: "Shop photo", qr: "GCash QR code" };
 type Section = keyof typeof SECTION_LABELS;
@@ -37,6 +40,10 @@ export const ShopSettingsPage: React.FC = () => {
   const [errors, setErrors] = useState<Errors>({});
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isEffectivelyOpen, setIsEffectivelyOpen] = useState(false);
+  const [pendingLogout, setPendingLogout] = useState<(() => void) | null>(null);
+  const skipNavigationGuardRef = useRef(false);
+  const leavingRef = useRef(false);
+  const { registerLogoutGuard } = useOutletContext<ShopSettingsNavigation>();
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -77,6 +84,24 @@ export const ShopSettingsPage: React.FC = () => {
   const disabled = isLoading || Boolean(loadError) || isSaving;
   const hasPin = hasCoordinates(values.latitude, values.longitude);
   const errorSections = (Object.keys(SECTION_LABELS) as Section[]).filter(section => errors[section]);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    !skipNavigationGuardRef.current && (dirty || isSaving || busyRef.current) && currentLocation.pathname !== nextLocation.pathname);
+  const confirmingNavigation = blocker.state === "blocked" || pendingLogout !== null;
+
+  useEffect(() => {
+    registerLogoutGuard(dirty || isSaving ? logout => setPendingLogout(() => logout) : null);
+    return () => registerLogoutGuard(null);
+  }, [dirty, isSaving, registerLogoutGuard]);
+
+  useEffect(() => {
+    if (!dirty && !isSaving) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (skipNavigationGuardRef.current) return;
+      event.preventDefault(); event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [dirty, isSaving]);
 
   const clearFeedback = (section: Section) => {
     setMessage("");
@@ -100,9 +125,9 @@ export const ShopSettingsPage: React.FC = () => {
   };
   const focusSummary = () => requestAnimationFrame(() => { if (mountedRef.current) summaryRef.current?.focus(); });
 
-  const handleSave = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (disabled || busyRef.current || !dirty) return;
+  const saveSettings = async (fromNavigation = false): Promise<boolean> => {
+    if (disabled || busyRef.current) return false;
+    if (!dirty) return true;
     const validation: Errors = {};
     if (!values.name.trim() || values.name.length > 200 || (values.location?.length || 0) > 500 || (values.description?.length || 0) > 2000) {
       validation.details = "Enter a shop name up to 200 characters, an address up to 500 characters, and a description up to 2,000 characters.";
@@ -115,8 +140,8 @@ export const ShopSettingsPage: React.FC = () => {
       validation.availability = "Enter valid, different opening and closing times.";
     }
     setErrors(validation); setMessage("");
-    if (Object.keys(validation).length) { focusSummary(); return; }
-    const restoreFocus = document.activeElement === saveRef.current;
+    if (Object.keys(validation).length) { if (!fromNavigation) focusSummary(); return false; }
+    const restoreFocus = !fromNavigation && document.activeElement === saveRef.current;
     busyRef.current = true; setIsSaving(true);
     const operations: { section: Section; run: () => Promise<void> }[] = [];
     const saveValues = async (section: "details" | "pickup" | "availability", payload: Partial<ShopSettingsValues>) => {
@@ -144,7 +169,7 @@ export const ShopSettingsPage: React.FC = () => {
     } });
     try {
       const results = await Promise.allSettled(operations.map(operation => operation.run()));
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) return false;
       const failures: Errors = {};
       const successes: string[] = [];
       results.forEach((result, index) => {
@@ -155,15 +180,32 @@ export const ShopSettingsPage: React.FC = () => {
       setErrors(failures);
       if (Object.keys(failures).length) {
         setMessage(successes.length ? `Saved: ${successes.join(", ")}.` : "Your changes could not be saved.");
-        focusSummary();
+        if (!fromNavigation) focusSummary();
+        return false;
       } else {
         setMessage("Settings saved successfully!");
         if (restoreFocus) requestAnimationFrame(() => { if (mountedRef.current) headingRef.current?.focus(); });
+        return true;
       }
     } finally {
       busyRef.current = false;
       if (mountedRef.current) setIsSaving(false);
     }
+  };
+
+  const dismissNavigation = () => {
+    if (isSaving || busyRef.current) return;
+    setPendingLogout(null);
+    if (blocker.state === "blocked") blocker.reset();
+  };
+  const leaveSettings = () => {
+    if (isSaving || busyRef.current || leavingRef.current) return;
+    leavingRef.current = true;
+    if (pendingLogout) {
+      skipNavigationGuardRef.current = true;
+      setPendingLogout(null);
+      pendingLogout();
+    } else if (blocker.state === "blocked") blocker.proceed();
   };
 
   return (
@@ -182,7 +224,7 @@ export const ShopSettingsPage: React.FC = () => {
           ))}</ul>}
         </div>
       )}
-      <form id="shop-settings-form" onSubmit={handleSave} noValidate aria-busy={isSaving}>
+      <form id="shop-settings-form" onSubmit={async event => { event.preventDefault(); await saveSettings(); }} noValidate aria-busy={isSaving}>
         <fieldset disabled={disabled} className="min-w-0 disabled:opacity-60">
           {isLoading && <p role="status" className="mb-4 text-sm text-gray-600">Loading shop settings…</p>}
           <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
@@ -254,6 +296,9 @@ export const ShopSettingsPage: React.FC = () => {
       </AnimatePresence>
       {isMapOpen && <LocationMapModal name={values.name || "Your shop"} address={values.location} photoUrl={photoUrl} latitude={values.latitude} longitude={values.longitude}
         onClose={() => setIsMapOpen(false)} onConfirm={(latitude, longitude) => edit("pickup", { latitude, longitude })} />}
+      {confirmingNavigation && <UnsavedSettingsModal busy={isSaving}
+        feedback={errorSections.length ? `${message ? `${message} ` : ""}${errorSections.map(section => `${SECTION_LABELS[section]}: ${errors[section]}`).join(" ")} Retry Save Changes or close this dialog to keep editing.` : ""}
+        onDismiss={dismissNavigation} onLeave={leaveSettings} onSave={async () => { if (await saveSettings(true)) leaveSettings(); }} />}
     </div>
   );
 };
