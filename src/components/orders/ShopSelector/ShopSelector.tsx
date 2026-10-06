@@ -147,7 +147,11 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const buttonId = `${selectorId}-${shop.id}-button`;
  const panelId = `${selectorId}-${shop.id}-details`;
  return (
- <div key={shop.id} className="min-w-0">
+ <div key={shop.id} className={`min-w-0 border-2 transition-colors duration-200 motion-reduce:transition-none ${
+ selectedShopId === shop.id
+ ? 'border-black bg-carbon-gray-10'
+ : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
+ }`}>
  <button
  id={buttonId}
  type="button"
@@ -159,11 +163,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  aria-pressed={selectedShopId === shop.id}
  aria-expanded={isExpanded}
  aria-controls={isExpanded ? panelId : undefined}
- className={`flex min-h-24 w-full shrink-0 items-center p-4 text-left border-2 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${
- selectedShopId === shop.id
- ? 'border-black bg-carbon-gray-10'
- : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
- } ${!open ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+ className={`flex min-h-24 w-full shrink-0 items-center p-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60 ${!open ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
  >
  <ShopThumbnail key={shop.shop_photo_url || 'no-photo'} photoUrl={shop.shop_photo_url} />
  <div className="min-w-0 flex-1">

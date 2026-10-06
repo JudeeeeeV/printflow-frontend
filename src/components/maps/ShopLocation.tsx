@@ -12,22 +12,19 @@ export function ShopLocation({ shop }: { shop: PrintShop }) {
   return (
     <section
       aria-label="Selected shop location"
-      className={`${styles.locationSection} mt-4`}
+      className={styles.locationSection}
     >
       <div className={styles.locationCard}>
         <div className={styles.locationIcon}>
-          <Location size={22} />
+          <Location size={20} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
           <p className={styles.eyebrow}>Pickup location</p>
-          <h4 className="break-words text-sm font-semibold text-carbon-gray-100">
-            {shop.name}
-          </h4>
-          <p className="mt-1 break-words text-sm text-gray-600">
+          <p className="break-words text-sm leading-5 text-gray-600">
             {shop.location || "No street address provided."}
           </p>
           {!hasPin && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-1 text-xs leading-4 text-gray-600">
               The shop has not added a map pin yet.
             </p>
           )}
@@ -37,10 +34,10 @@ export function ShopLocation({ shop }: { shop: PrintShop }) {
             type="button"
             aria-haspopup="dialog"
             onClick={() => setIsMapOpen(true)}
-            className={`${styles.secondaryButton} ${styles.cardAction}`}
+            className={`${styles.primaryButton} ${styles.cardAction}`}
           >
             View on map
-            <ArrowRight size={18} />
+            <ArrowRight size={14} aria-hidden="true" />
           </button>
         )}
       </div>
