@@ -7,8 +7,8 @@ export const AnalyticsSkeleton: React.FC = () => {
       <span className="sr-only">Loading shop analytics</span>
       <div className="space-y-5 animate-pulse motion-reduce:animate-none sm:space-y-6" aria-hidden="true">
         {/* Page Header Skeleton */}
-        <div className="border border-gray-300 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)]">
-          <div className="border-t-4 border-t-carbon-blue-60 bg-carbon-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="border border-black bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)]">
+          <div className="bg-carbon-gray-100 px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">
                 <div className="h-2 w-24 bg-carbon-blue-60/70" />
@@ -24,7 +24,7 @@ export const AnalyticsSkeleton: React.FC = () => {
         </div>
 
         {/* Controls Skeleton */}
-        <div className="border border-gray-300 bg-white p-4 shadow-[0_8px_24px_rgba(22,22,22,0.05)] sm:p-5">
+        <div className="border border-black bg-white p-4 shadow-[0_8px_24px_rgba(22,22,22,0.05)] sm:p-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="min-w-0 flex-1">
               <div className="mb-3 flex items-center gap-3">
@@ -34,9 +34,9 @@ export const AnalyticsSkeleton: React.FC = () => {
                   <div className="h-3 w-48 bg-gray-200" />
                 </div>
               </div>
-              <div className="inline-flex w-fit max-w-full flex-wrap border-l border-t border-gray-300 bg-white">
+              <div className="inline-flex w-fit max-w-full flex-wrap border-l border-t border-black bg-white">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-11 flex-1 border-b border-r border-gray-300 bg-gray-100 sm:w-20 sm:flex-none" />
+                  <div key={i} className="h-11 flex-1 border-b border-r border-black bg-gray-100 sm:w-20 sm:flex-none" />
                 ))}
               </div>
             </div>
@@ -47,7 +47,7 @@ export const AnalyticsSkeleton: React.FC = () => {
         {/* KPI Cards Skeleton */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[ChartLine, Layers, Document, Activity].map((Icon, i) => (
-            <div key={i} className="min-w-0 border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-5 shadow-[0_8px_20px_rgba(22,22,22,0.05)]">
+            <div key={i} className="min-w-0 border border-black bg-white p-5 shadow-[0_8px_20px_rgba(22,22,22,0.05)]">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center bg-carbon-gray-100/20">
                   <Icon className="h-5 w-5 text-gray-400" />
@@ -63,13 +63,13 @@ export const AnalyticsSkeleton: React.FC = () => {
         </div>
 
         {/* Main Chart Skeleton */}
-        <div className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
+        <div className="border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
           <div className="flex flex-col gap-4 border-b border-gray-300 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="space-y-2">
               <div className="h-3 w-28 bg-carbon-blue-60/30" />
               <div className="h-5 w-52 bg-gray-200" />
             </div>
-            <div className="h-9 w-44 border border-gray-200 bg-gray-100" />
+            <div className="h-9 w-44 border border-black bg-gray-100" />
           </div>
           <div className="flex h-72 items-end justify-between gap-2 p-6 sm:h-80">
             {[30, 50, 40, 70, 60, 80, 45, 55, 90, 65, 35, 75].map((height, i) => (
@@ -81,7 +81,7 @@ export const AnalyticsSkeleton: React.FC = () => {
         {/* Distribution Skeletons */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
           {[1, 2].map((i) => (
-            <div key={i} className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
+            <div key={i} className="border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
               <div className="space-y-2 border-b border-gray-300 px-5 py-4">
                 <div className="h-3 w-24 bg-carbon-blue-60/30" />
                 <div className="h-5 w-48 bg-gray-200" />
@@ -94,7 +94,7 @@ export const AnalyticsSkeleton: React.FC = () => {
         </div>
 
         {/* Table Skeleton */}
-        <div className="overflow-hidden border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
+        <div className="overflow-hidden border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]">
           <div className="flex items-center justify-between border-b border-gray-300 px-4 py-4 sm:px-6">
             <div className="space-y-2">
               <div className="h-3 w-28 bg-carbon-blue-60/30" />
