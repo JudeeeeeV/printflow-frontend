@@ -55,12 +55,13 @@
 
 .printGraphic {
     @apply relative mt-4 min-h-0 flex-1 overflow-hidden bg-carbon-blue-60 text-white/25;
+    container-type: inline-size;
 }
 
 .printWord {
-    @apply absolute bottom-4 left-4 font-bold text-white;
-    font-size: clamp(22px, 2.5vw, 36px);
-    line-height: 0.98;
+    @apply absolute bottom-4 inset-x-4 font-bold text-white;
+    font-size: clamp(18px, 14cqw, 32px);
+    line-height: 1.08;
     letter-spacing: -0.05em;
 }
 

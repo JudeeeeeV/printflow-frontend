@@ -49,7 +49,7 @@ export const AuthPage: React.FC = () => {
                                 <path d="M-20 186C20 186 20 24 100 24S160 186 260 186M-20 162C20 162 20 0 100 0S160 162 260 162M-20 138C20 138 20-24 100-24S160 138 260 138M-20 114C20 114 20-48 100-48S160 114 260 114M-20 210C20 210 20 48 100 48S160 210 260 210M-20 234C20 234 20 72 100 72S160 234 260 234"
                                     stroke="currentColor" strokeWidth="11" />
                             </svg>
-                            <span className={styles.printWord}>Make<br />an impression.</span>
+                            <span className={styles.printWord}>Make<br />an<br />impression.</span>
                         </div>
                         <div className="flex items-end justify-between gap-3 pt-3">
                             <span className="text-xs leading-relaxed">Your next idea.<br />In good print.</span>
