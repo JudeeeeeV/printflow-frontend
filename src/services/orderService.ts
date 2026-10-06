@@ -10,6 +10,11 @@ export interface PrintShop {
  longitude?: number | null;
  shop_photo_url?: string | null;
  pricing_matrix?: any;
+ availability_override?: boolean;
+ opens_at?: string;
+ closes_at?: string;
+ timezone?: string;
+ is_open?: boolean;
 }
 
 export interface ValidationResult {
@@ -63,12 +68,15 @@ export const orderService = {
  /**
  * Submits the final print order.
  */
- async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string): Promise<SubmitOrderResponse> {
+ async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number): Promise<SubmitOrderResponse> {
  const formData = new FormData();
  formData.append('shopId', shopId);
  formData.append('file', file);
  formData.append('paperSize', paperSize);
  formData.append('printColorMode', printColorMode);
+ formData.append('orderName', orderName.trim());
+ formData.append('orientation', orientation);
+ formData.append('copies', String(copies));
 
  return apiClient<SubmitOrderResponse>('/orders', {
  method: 'POST',
@@ -162,13 +170,16 @@ export const orderService = {
  });
  },
 
-  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string) => {
+  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number) => {
     const formData = new FormData();
     formData.append('shopId', shopId);
     formData.append('file', file);
     formData.append('isDraft', 'true'); // THIS is the magic flag for the backend
     formData.append('paperSize', paperSize);
     formData.append('printColorMode', printColorMode);
+    formData.append('orderName', orderName.trim());
+    formData.append('orientation', orientation);
+    formData.append('copies', String(copies));
 
     // Reusing your existing POST /orders endpoint
     return await apiClient('/orders', {
@@ -177,10 +188,10 @@ export const orderService = {
     });
   },
 
-  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string) => {
+  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number) => {
     return await apiClient(`/orders/${draftId}/update-draft`, {
       method: 'PATCH',
-      body: JSON.stringify({ shopId, paperSize, printColorMode }),
+      body: JSON.stringify({ shopId, paperSize, printColorMode, orderName: orderName.trim(), orientation, copies }),
     });
   },
 

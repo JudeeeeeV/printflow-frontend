@@ -34,6 +34,9 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  const [paperSize, setPaperSize] = useState<string>(draft.paperSize || 'A4');
  const [printColorMode, setPrintColorMode] = useState<string>(draft.printColorMode || 'BLACK_AND_WHITE');
  const [pageCount, setPageCount] = useState<number>(draft.pageCount || 1);
+ const [orderName, setOrderName] = useState(draft.orderName || '');
+ const [orientation, setOrientation] = useState(draft.orientation || 'PORTRAIT');
+ const [copies, setCopies] = useState(draft.copies || 1);
 
  // Pre-fill validation so they can submit immediately without uploading a new file
  const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({
@@ -74,12 +77,12 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  }
 
  return {
- total: (base + addon) * pageCount,
+ total: (base + addon) * pageCount * copies,
  pageCount,
  basePrice: base,
  colorAdditive: addon,
  };
- }, [hasFile, pageCount, paperSize, printColorMode, selectedShopId, shops, validationResult?.passed]);
+ }, [copies, hasFile, pageCount, paperSize, printColorMode, selectedShopId, shops, validationResult?.passed]);
 
  const replacementPreviewKind = newFile ? getPreviewKind(newFile.name, newFile.type) : 'document';
  const isFileValidated = hasFile && validationResult?.passed === true;
@@ -193,7 +196,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  };
 
  const handleSubmitOrder = async () => {
- if (!selectedShopId || !isFileValidated) return;
+ if (!selectedShopId || !isFileValidated || !orderName.trim()) return;
 
  // SAFEGUARD: Prevent corrupted orders if they change shops but don't re-upload
  if (selectedShopId !== draft.shopId && !newFile) {
@@ -205,13 +208,13 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  try {
  if (newFile) {
  // They uploaded a new file! Create a brand new order, delete the old draft.
- const response = await orderService.submitOrder(selectedShopId, newFile, paperSize, printColorMode);
+ const response = await orderService.submitOrder(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies);
  await orderService.deleteDraft(draft.id);
  onSuccess(response.orderId);
  } else {
  // They changed settings but didn't upload a new file, update draft first then submit.
  if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode);
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies);
  }
  await orderService.submitDraft(draft.id);
  onSuccess(draft.id);
@@ -225,7 +228,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  };
 
  const handleSaveDraftChanges = async () => {
- if (!selectedShopId || !isFileValidated) return;
+ if (!selectedShopId || !isFileValidated || !orderName.trim()) return;
 
  if (selectedShopId !== draft.shopId && !newFile) {
  showAlert('You changed the Print Shop. Please re-upload your design file to save.', 'warning', 'Re-upload Required');
@@ -235,12 +238,12 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  setIsSubmitting(true);
  try {
  if (newFile) {
- await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode);
+ await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies);
  await orderService.deleteDraft(draft.id);
  showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
  if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode);
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies);
  showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
  showAlert('No changes were made to the draft.', 'info', 'No Changes', () => onCancel());
@@ -391,12 +394,18 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  isSubmitting={isSubmitting}
  onSubmit={handleSubmitOrder}
  onSaveDraft={handleSaveDraftChanges}
- isReady={!!selectedShopId && isFileValidated}
+ isReady={!!selectedShopId && isFileValidated && !!orderName.trim()}
  paperSize={paperSize}
  setPaperSize={setPaperSize}
  pageCount={pageCount}
  printColorMode={printColorMode}
  setPrintColorMode={setPrintColorMode}
+ orderName={orderName}
+ setOrderName={setOrderName}
+ orientation={orientation}
+ setOrientation={setOrientation}
+ copies={copies}
+ setCopies={setCopies}
  />
  </div>
  </aside>

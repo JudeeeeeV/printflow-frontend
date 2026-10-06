@@ -39,6 +39,10 @@ test('formats the complete title and retains the original order data', () => {
   assert.equal(JSON.stringify(value), before);
 });
 
+test('uses the customer order name as the operator-facing title', () => {
+  assert.equal(getOrderCardTitleParts(order({ order_name: '  Test Paper Bebedor  ' })).filename, 'Test Paper Bebedor');
+});
+
 test('removes only the final extension while preserving dots, spaces, and Unicode', () => {
   for (const [name, expected] of [
     ['Lesson.v2.final.docx', 'Lesson.v2.final'],

@@ -53,6 +53,9 @@ export const NewOrderPage: React.FC = () => {
     const [paperSize, setPaperSize] = useState<string>('A4');
     const [printColorMode, setPrintColorMode] = useState<string>('BLACK_AND_WHITE');
     const [pageCount, setPageCount] = useState<number>(1);
+    const [orderName, setOrderName] = useState('');
+    const [orientation, setOrientation] = useState('PORTRAIT');
+    const [copies, setCopies] = useState(1);
 
     const [file, setFile] = useState<File | null>(null);
     const [isValidating, setIsValidating] = useState(false);
@@ -113,7 +116,7 @@ export const NewOrderPage: React.FC = () => {
             addon = shop.pricing_matrix.color_mode_multipliers?.[mode] ?? 0.00;
         }
         setEstimate({
-            total: (base + addon) * pCount,
+            total: (base + addon) * pCount * copies,
             pageCount: pCount,
             basePrice: base,
             colorAdditive: addon
@@ -124,7 +127,7 @@ export const NewOrderPage: React.FC = () => {
         if (selectedShopId && file && validationResult?.passed) {
             updateEstimate(selectedShopId, paperSize, printColorMode, pageCount);
         }
-    }, [paperSize, printColorMode, selectedShopId, file, validationResult?.passed, shops, pageCount]);
+    }, [paperSize, printColorMode, selectedShopId, file, validationResult?.passed, shops, pageCount, copies]);
 
     const handleFileSelect = async (selectedFile: File) => {
         if (!selectedShopId) {
@@ -224,11 +227,11 @@ export const NewOrderPage: React.FC = () => {
     };
 
     const handleSubmitOrder = async () => {
-        if (!selectedShopId || !file || !validationResult?.passed) return;
+        if (!selectedShopId || !file || !validationResult?.passed || !orderName.trim()) return;
 
         setIsSubmitting(true);
         try {
-            const response = await orderService.submitOrder(selectedShopId, file, paperSize, printColorMode);
+            const response = await orderService.submitOrder(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies);
             navigate(`/checkout/${response.orderId}`);
         } catch (err: any) {
             showAlert(`Failed to submit order: ${err.message || 'Unknown error'}`, 'error', 'Submission Failed');
@@ -239,12 +242,12 @@ export const NewOrderPage: React.FC = () => {
 
     // New handler for saving a draft
     const handleSaveDraft = async () => {
-        if (!selectedShopId || !file || !validationResult?.passed) return;
+        if (!selectedShopId || !file || !validationResult?.passed || !orderName.trim()) return;
 
         setIsSubmitting(true);
         try {
             // Replaced the mock delay with the actual API call
-            await orderService.saveDraft(selectedShopId, file, paperSize, printColorMode);
+            await orderService.saveDraft(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies);
 
             showAlert('Order saved as draft!', 'success', 'Success', () => {
                 handleTabChange('drafts');
@@ -254,6 +257,9 @@ export const NewOrderPage: React.FC = () => {
             setFile(null);
             setSelectedShopId(null);
             setValidationResult(null);
+            setOrderName('');
+            setOrientation('PORTRAIT');
+            setCopies(1);
 
         } catch (err: any) {
             showAlert(`Failed to save draft: ${err.message || 'Unknown error'}`, 'error', 'Save Failed');
@@ -452,12 +458,18 @@ export const NewOrderPage: React.FC = () => {
                                     isSubmitting={isSubmitting}
                                     onSubmit={handleSubmitOrder}
                                     onSaveDraft={handleSaveDraft}
-                                    isReady={!!selectedShopId && !!validationResult?.passed}
+                                    isReady={!!selectedShopId && !!validationResult?.passed && !!orderName.trim()}
                                     paperSize={paperSize}
                                     setPaperSize={setPaperSize}
                                     pageCount={pageCount}
                                     printColorMode={printColorMode}
                                     setPrintColorMode={setPrintColorMode}
+                                    orderName={orderName}
+                                    setOrderName={setOrderName}
+                                    orientation={orientation}
+                                    setOrientation={setOrientation}
+                                    copies={copies}
+                                    setCopies={setCopies}
                                 />
                             </div>
                         </aside>

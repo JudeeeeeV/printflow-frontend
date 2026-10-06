@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowRight, Location, Save, Store } from "@carbon/icons-react";
+import { ArrowRight, Location, Save, Store, Time } from "@carbon/icons-react";
 import { apiClient } from "../../services/apiClient";
 import type { PrintShop } from "../../services/orderService";
 import { ShopPhotoUpload } from "../../components/maps/ShopPhotoUpload";
@@ -21,6 +21,10 @@ export const ShopSettingsPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [availabilityOverride, setAvailabilityOverride] = useState(false);
+  const [opensAt, setOpensAt] = useState("08:00");
+  const [closesAt, setClosesAt] = useState("20:00");
+  const [isEffectivelyOpen, setIsEffectivelyOpen] = useState(false);
   const hasPin = hasCoordinates(
     latitude.trim() === "" ? null : Number(latitude),
     longitude.trim() === "" ? null : Number(longitude),
@@ -44,6 +48,10 @@ export const ShopSettingsPage: React.FC = () => {
             latitude: data.latitude == null ? "" : String(data.latitude),
             longitude: data.longitude == null ? "" : String(data.longitude),
           });
+          setAvailabilityOverride(data.availability_override === true);
+          setOpensAt((data.opens_at || "08:00").slice(0, 5));
+          setClosesAt((data.closes_at || "20:00").slice(0, 5));
+          setIsEffectivelyOpen(data.status === "OPEN");
         }
       } catch (err) {
         console.error("Failed to fetch shop settings:", err);
@@ -80,6 +88,7 @@ export const ShopSettingsPage: React.FC = () => {
         name: string;
         latitude: number | null;
         longitude: number | null;
+        status: string;
       }>("/shops/me", {
         method: "PATCH",
         body: JSON.stringify({
@@ -88,6 +97,9 @@ export const ShopSettingsPage: React.FC = () => {
           description: description,
           latitude: lat,
           longitude: lng,
+          availability_override: availabilityOverride,
+          opens_at: opensAt,
+          closes_at: closesAt,
         }),
       });
       const savedCoordinates = {
@@ -97,6 +109,7 @@ export const ShopSettingsPage: React.FC = () => {
       setLatitude(savedCoordinates.latitude);
       setLongitude(savedCoordinates.longitude);
       setSavedPin(savedCoordinates);
+      setIsEffectivelyOpen(saved.status === "OPEN");
       setMessage("Settings saved successfully!");
       window.dispatchEvent(
         new CustomEvent("shop-settings-updated", {
@@ -212,6 +225,51 @@ export const ShopSettingsPage: React.FC = () => {
               </div>
             </section>
             <div className="min-w-0 space-y-5">
+              <section
+                aria-labelledby="shop-availability-title"
+                className="min-w-0 border border-[#e0e0e0] bg-white"
+              >
+                <div className="flex items-center gap-3 border-b border-[#e0e0e0] px-5 py-4">
+                  <Time size={20} className="text-gray-600" />
+                  <h2 id="shop-availability-title" className="text-base font-semibold">
+                    Shop availability
+                  </h2>
+                </div>
+                <div className="space-y-5 p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-carbon-gray-100">Manual open override</p>
+                      <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                        ON keeps your shop open after closing time. OFF follows your schedule.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={availabilityOverride}
+                      onClick={() => setAvailabilityOverride((current) => !current)}
+                      className={`relative h-8 w-16 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 ${availabilityOverride ? "bg-carbon-blue-60" : "bg-gray-400"}`}
+                    >
+                      <span className="sr-only">Manual open override</span>
+                      <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${availabilityOverride ? "translate-x-9" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="shop-opens-at" className="mb-1 block text-sm font-medium text-gray-700">Opens</label>
+                      <input id="shop-opens-at" type="time" step="1800" value={opensAt} onChange={(event) => setOpensAt(event.target.value)} className={styles.input} required />
+                    </div>
+                    <div>
+                      <label htmlFor="shop-closes-at" className="mb-1 block text-sm font-medium text-gray-700">Closes</label>
+                      <input id="shop-closes-at" type="time" step="1800" value={closesAt} onChange={(event) => setClosesAt(event.target.value)} className={styles.input} required />
+                    </div>
+                  </div>
+                  <div className={`border-l-2 p-3 text-sm ${isEffectivelyOpen || availabilityOverride ? "border-green-600 bg-green-50 text-green-800" : "border-gray-500 bg-carbon-gray-10 text-gray-700"}`}>
+                    <span className="font-bold">{availabilityOverride ? "OPEN (manual)" : isEffectivelyOpen ? "OPEN (scheduled)" : "CLOSED"}</span>
+                    <span className="block text-xs">Schedule uses Philippine time (Asia/Manila).</span>
+                  </div>
+                </div>
+              </section>
               <ShopPhotoUpload photoUrl={photoUrl} onUploaded={setPhotoUrl} />
               <section
                 aria-labelledby="pickup-location-title"
@@ -259,7 +317,7 @@ export const ShopSettingsPage: React.FC = () => {
           </div>
           <div className="mt-5 flex flex-col gap-4 border border-[#e0e0e0] bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-600">
-              Save your shop details and pickup location.
+              Save your shop details, availability, and pickup location.
             </p>
             <button
               disabled={isSaving}

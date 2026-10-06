@@ -2,6 +2,7 @@ interface OrderCardTitleData {
   assets?: readonly ({ original_filename?: unknown } | null)[] | null;
   client_name?: unknown;
   created_at?: unknown;
+  order_name?: unknown;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -20,6 +21,7 @@ export function getOrderCardTitleParts(order: OrderCardTitleData) {
   if (extensionIndex > 0) filename = filename.slice(0, extensionIndex).trim();
 
   const customer = typeof order.client_name === 'string' ? order.client_name.trim() : '';
+  const orderName = typeof order.order_name === 'string' ? order.order_name.trim() : '';
   const timestamp = typeof order.created_at === 'string' ? order.created_at.trim() : '';
   const date = timestamp ? new Date(timestamp) : null;
   const formattedDate = date && Number.isFinite(date.getTime())
@@ -27,7 +29,7 @@ export function getOrderCardTitleParts(order: OrderCardTitleData) {
     : 'Date unavailable';
 
   return {
-    filename: filename || 'Filename unavailable',
+    filename: orderName || filename || 'Filename unavailable',
     customer: customer || 'Name unavailable',
     date: formattedDate,
   };

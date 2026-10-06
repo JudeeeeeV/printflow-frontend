@@ -2,7 +2,17 @@ import { apiClient } from './apiClient';
 import type { PrintShop } from './orderService';
 
 type GcashQr = { gcash_qr_url: string | null };
-type MyShop = GcashQr & { id: string; name: string; status: string; verification_status: string };
+type MyShop = GcashQr & {
+ id: string;
+ name: string;
+ status: string;
+ verification_status: string;
+ availability_override?: boolean;
+ opens_at?: string;
+ closes_at?: string;
+ timezone?: string;
+ is_open?: boolean;
+};
 let pendingShop: Promise<MyShop> | null = null;
 const SHOP_LIST_TTL_MS = 30_000;
 let pendingShops: Promise<PrintShop[]> | null = null;

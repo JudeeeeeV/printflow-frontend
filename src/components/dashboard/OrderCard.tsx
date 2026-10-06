@@ -33,6 +33,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
   const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
     ? order.page_count as number
     : null;
+  const copies = Number.isInteger(order.copies) && order.copies > 0 ? order.copies as number : 1;
 
   // Determine the state badge configuration
   let badgeText = order.state;
@@ -126,6 +127,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         )}
         <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
           {pageCount === null ? 'Page count unavailable' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`}
+        </span>
+        <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-800">
+          {order.orientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT'}
+        </span>
+        <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-800">
+          {copies} {copies === 1 ? 'COPY' : 'COPIES'}
         </span>
       </div>
 

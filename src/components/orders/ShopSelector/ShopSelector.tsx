@@ -6,6 +6,7 @@ import type { PrintShop } from '../../../services/orderService';
 import { ShopLocation } from '../../maps/ShopLocation';
 import { locateForDirections } from '../../../services/directionsService';
 import { formatShopDistance, sortShopsByDistance, type ShopPosition } from '../../../services/shopDistance';
+import { isShopOpen } from '../../../services/shopAvailability';
 
 const SHOPS_PER_PAGE = 5;
 type SlideDirection = 'next' | 'previous' | null;
@@ -13,7 +14,7 @@ type SlideDirection = 'next' | 'previous' | null;
 interface ShopSelectorProps {
  shops: PrintShop[];
  selectedShopId: string | null;
- onSelect: (id: string) => void;
+ onSelect: (id: string | null) => void;
  isLoading?: boolean;
  error?: string;
  onRetry?: () => void;
@@ -46,6 +47,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  const [userPosition, setUserPosition] = useState<ShopPosition | null>(null);
  const [locating, setLocating] = useState(true);
  const [locationError, setLocationError] = useState('');
+ const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
  const activeLocation = useRef<AbortController | null>(null);
  const requestLocation = useCallback(async () => {
   activeLocation.current?.abort();
@@ -74,6 +76,16 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
    activeLocation.current?.abort();
   };
  }, [requestLocation]);
+ useEffect(() => {
+  const timer = window.setInterval(() => setAvailabilityNow(new Date()), 30_000);
+  return () => window.clearInterval(timer);
+ }, []);
+ useEffect(() => {
+  if (selectedShopId) {
+   const selected = shops.find((shop) => shop.id === selectedShopId);
+   if (selected && !isShopOpen(selected, availabilityNow)) onSelect(null);
+  }
+ }, [availabilityNow, onSelect, selectedShopId, shops]);
  const selectorId = useId();
  const reduceMotion = useReducedMotion();
  const totalPages = Math.max(1, Math.ceil(shops.length / SHOPS_PER_PAGE));
@@ -109,7 +121,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  {onRetry && <button type="button" onClick={onRetry} className="mt-2 min-h-11 px-3 font-semibold text-carbon-blue-60 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Try again</button>}
  </div>
  )}
- {!isLoading && !error && shops.length === 0 && <p role="status" className="border border-gray-300 bg-carbon-gray-10 p-4 text-sm text-gray-600">No print shops are open right now. Please check again later.</p>}
+ {!isLoading && !error && shops.length === 0 && <p role="status" className="border border-gray-300 bg-carbon-gray-10 p-4 text-sm text-gray-600">No verified print shops are available yet. Please check again later.</p>}
  {!isLoading && shops.length > 0 && <>
  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
  <p role="status" className="min-w-0 flex-1 text-xs text-gray-600">
@@ -127,6 +139,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  className={`flex min-h-[528px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
  >
  {visibleShops.map(({ shop, distance }) => {
+ const open = isShopOpen(shop, availabilityNow);
  const isExpanded = expandedShopId === shop.id && selectedShopId === shop.id;
  const buttonId = `${selectorId}-${shop.id}-button`;
  const panelId = `${selectorId}-${shop.id}-details`;
@@ -139,7 +152,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  setExpandedShopId(isExpanded ? null : shop.id);
  if (selectedShopId !== shop.id) onSelect(shop.id);
  }}
- disabled={shop.status !== 'OPEN'}
+ disabled={!open}
  aria-pressed={selectedShopId === shop.id}
  aria-expanded={isExpanded}
  aria-controls={isExpanded ? panelId : undefined}
@@ -147,18 +160,23 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  selectedShopId === shop.id
  ? 'border-black bg-carbon-gray-10'
  : 'border-[#e0e0e0] hover:border-[#8d8d8d] bg-white'
- } ${shop.status !== 'OPEN' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+ } ${!open ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
  >
  <ShopThumbnail key={shop.shop_photo_url || 'no-photo'} photoUrl={shop.shop_photo_url} />
  <div className="min-w-0 flex-1">
  <h4 className="truncate font-bold text-carbon-gray-100 text-lg" title={shop.name}>{shop.name}</h4>
  <p className="mt-1 text-xs font-medium leading-5 text-gray-600">
- <span className={shop.status === 'OPEN' ? 'text-blue-600' : 'text-carbon-gray-100'}>
- {shop.status}
+ <span className={open ? 'text-blue-600' : 'text-carbon-gray-100'}>
+ {open ? 'OPEN' : 'CLOSED'}
  </span>
  <span aria-hidden="true" className="mx-1.5 text-gray-400">|</span>
  <span>{distance !== null ? `${formatShopDistance(distance)} from your location` : userPosition ? 'Distance unavailable' : 'Location needed for distance'}</span>
  </p>
+ {shop.opens_at && shop.closes_at && (
+ <p className="text-xs text-gray-500">
+ Hours: {shop.opens_at.slice(0, 5)}â€“{shop.closes_at.slice(0, 5)} {shop.availability_override ? 'Â· Open override ON' : 'Â· Philippine time'}
+ </p>
+ )}
  </div>
  {shop.id === closestShopId && (
  <span className="ml-2 shrink-0 border border-green-500 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-green-500 sm:ml-3 sm:text-xs">

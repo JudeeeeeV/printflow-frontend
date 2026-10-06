@@ -18,6 +18,9 @@ export interface DraftOrder {
  paperSize: string;
  printColorMode: string;
  pageCount: number;
+ orderName?: string | null;
+ orientation?: string;
+ copies?: number;
 }
 
 interface MyDraftsListProps {
@@ -85,8 +88,8 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  <div key={draft.id} className="flex min-w-0 flex-col border-2 border-black bg-white p-5 transition-colors duration-200 hover:border-carbon-blue-60 motion-reduce:transition-none sm:p-6">
  <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
  <div className="min-w-0">
- <h4 className="break-words text-lg font-bold leading-snug text-carbon-gray-100" title={draft.originalFileName || undefined}>
- {draft.originalFileName || 'Original filename unavailable'}
+ <h4 className="break-words text-lg font-bold leading-snug text-carbon-gray-100" title={draft.orderName || draft.originalFileName || undefined}>
+ {draft.orderName || draft.originalFileName || 'Unnamed order'}
  </h4>
  <p className="mt-2 break-words text-sm font-medium text-gray-600">{draft.shopName}</p>
  </div>
@@ -105,6 +108,9 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  <div className="text-xs text-gray-400">
  Saved on {new Date(draft.updatedAt).toLocaleDateString()}
  </div>
+ <p className="text-xs font-medium text-gray-500">
+ {(draft.orientation || 'PORTRAIT').toLowerCase()} &middot; {draft.copies || 1} {(draft.copies || 1) === 1 ? 'copy' : 'copies'}
+ </p>
  <div className="pt-4 mt-4 border-t border-gray-100 flex justify-between items-end">
  <span className="text-sm font-bold text-gray-500">Est. Total</span>
  <span className="font-extrabold text-xl text-carbon-gray-100">₱{draft.total.toFixed(2)}</span>

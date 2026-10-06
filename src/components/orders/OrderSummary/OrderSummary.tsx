@@ -11,14 +11,34 @@ interface OrderSummaryProps {
   pageCount: number;
   printColorMode: string;
   setPrintColorMode: (mode: string) => void;
+  orderName: string;
+  setOrderName: (name: string) => void;
+  orientation: string;
+  setOrientation: (orientation: string) => void;
+  copies: number;
+  setCopies: (copies: number) => void;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady, paperSize, setPaperSize, printColorMode, setPrintColorMode }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitting, onSubmit, onSaveDraft, isReady, paperSize, setPaperSize, printColorMode, setPrintColorMode, orderName, setOrderName, orientation, setOrientation, copies, setCopies }) => {
   return (
     <div className="bg-white border-2 border-gray-100 p-6 flex flex-col min-h-[500px] h-fit">
       <h3 className="text-xl font-bold text-carbon-gray-100 mb-6">Order Summary</h3>
 
       <div className="mb-6 space-y-4">
+        <div>
+          <label htmlFor="order-name" className="mb-2 block text-sm font-bold text-gray-700">Order Name</label>
+          <input
+            id="order-name"
+            type="text"
+            maxLength={120}
+            value={orderName}
+            onChange={(event) => setOrderName(event.target.value)}
+            disabled={isSubmitting}
+            placeholder="e.g. Test Paper Bebedor"
+            className="w-full border-2 border-[#e0e0e0] bg-white p-2 font-medium text-carbon-gray-100 focus:border-black focus:outline-carbon-blue-60 disabled:bg-carbon-gray-10 disabled:opacity-50"
+          />
+          <p className="mt-1 text-xs text-gray-500">Shown prominently to the shop operator.</p>
+        </div>
         <div>
           <label className="block text-sm font-bold text-gray-700 mb-2">Paper Size</label>
           <select
@@ -31,6 +51,36 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
             <option value="SHORT">Short (Letter)</option>
             <option value="LONG">Long (Legal)</option>
           </select>
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-bold text-gray-700">Orientation</label>
+          <div className="flex bg-gray-200 p-1">
+            {['PORTRAIT', 'LANDSCAPE'].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setOrientation(value)}
+                disabled={isSubmitting}
+                className={`flex-1 py-2 text-sm font-bold transition-all ${orientation === value ? 'bg-black/90 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {value === 'PORTRAIT' ? 'Portrait' : 'Landscape'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label htmlFor="print-copies" className="mb-2 block text-sm font-bold text-gray-700">Number of Copies</label>
+          <input
+            id="print-copies"
+            type="number"
+            min={1}
+            max={99}
+            step={1}
+            value={copies}
+            onChange={(event) => setCopies(Math.min(99, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))}
+            disabled={isSubmitting}
+            className="w-full border-2 border-[#e0e0e0] bg-white p-2 font-bold text-carbon-gray-100 focus:border-black focus:outline-carbon-blue-60 disabled:bg-carbon-gray-10 disabled:opacity-50"
+          />
         </div>
         <div>
           <label className="block text-sm font-bold text-gray-700 mb-2">Color Mode</label>
@@ -66,6 +116,10 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ estimate, isSubmitti
           <div className="flex justify-between mb-4 text-sm text-gray-600 gap-2">
             <span className="truncate">Pages</span>
             <span className="whitespace-nowrap font-medium text-right">x {estimate.pageCount}</span>
+          </div>
+          <div className="mb-4 flex justify-between gap-2 text-sm text-gray-600">
+            <span>Copies</span>
+            <span className="whitespace-nowrap text-right font-medium">x {copies}</span>
           </div>
           <div className="border-t-2 border-black pt-4 mb-2 flex justify-between items-end">
             <span className="font-bold text-lg">Total</span>
