@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthPage } from './pages/AuthPage/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { UnauthorizedPage } from './pages/UnauthorizedPage/UnauthorizedPage';
@@ -24,11 +24,9 @@ const ShopInventoryPage = lazy(() => import('./pages/ShopInventoryPage/ShopInven
 const ShopSettingsPage = lazy(() => import('./pages/ShopSettingsPage/ShopSettingsPage').then(m => ({ default: m.ShopSettingsPage })));
 const ShopPrinterAgentPage = lazy(() => import('./pages/ShopPrinterAgentPage/ShopPrinterAgentPage').then(m => ({ default: m.ShopPrinterAgentPage })));
 
-export const App: React.FC = () => {
- return (
- <Router>
- <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
- <Routes>
+// A data router supports blocking sidebar and browser-history navigation.
+const router = createBrowserRouter(createRoutesFromElements(
+ <Route element={<Suspense fallback={<LoadingSpinner message="Loading page..." />}><Outlet /></Suspense>}>
  <Route path="/" element={<Navigate to="/auth" replace />} />
  <Route path="/auth" element={<AuthPage />} />
  <Route path="/auth/microsoft/callback" element={<MicrosoftCallbackPage />} />
@@ -58,10 +56,9 @@ export const App: React.FC = () => {
  <Route path="settings" element={<ShopSettingsPage />} />
  </Route>
  <Route path="*" element={<Navigate to="/auth" replace />} />
- </Routes>
- </Suspense>
- </Router>
- );
-};
+ </Route>
+));
+
+export const App: React.FC = () => <RouterProvider router={router} />;
 
 export default App;

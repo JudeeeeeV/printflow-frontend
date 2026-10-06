@@ -312,14 +312,15 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  <div className="flex min-w-0 items-center justify-between gap-4 border-b border-white/20 px-1 pb-3 text-white sm:px-2">
  <div className="flex min-w-0 items-center gap-3">
  <span className="h-2.5 w-2.5 shrink-0 bg-carbon-blue-60" />
- <span className="truncate text-xs font-bold uppercase tracking-[0.16em]">
- File preview
+ <span className="text-xs font-bold uppercase tracking-[0.16em]">
+ Uploaded file preview
  </span>
  </div>
  <span className="max-w-[55%] truncate text-xs text-gray-300" title={newFile?.name || draft.fileName}>
  {newFile?.name || draft.fileName}
  </span>
  </div>
+ <p className="mt-2 px-1 text-xs text-gray-300 sm:px-2">Printing uses the selected paper size and orientation.</p>
 
  <div className="group relative mt-3 flex h-[340px] items-center justify-center overflow-hidden bg-gray-200 sm:h-[460px] lg:h-[560px]">
  {newFile ? (

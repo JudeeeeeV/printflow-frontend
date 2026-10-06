@@ -510,7 +510,7 @@ export const ShopDashboard: React.FC = () => {
  tabIndex={isActive ? 0 : -1}
  onClick={() => handleQueueTabChange(queue)}
  onKeyDown={event => handleQueueTabKeyDown(event, queue)}
- className={`group flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm lg:min-h-9 ${isActive ? 'border-carbon-blue-60 bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'border-gray-300 bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
+ className={`group flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 border border-black px-2 text-xs font-black shadow-[0_2px_0_rgba(22,22,22,0.16)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:translate-y-px active:shadow-none sm:gap-2 sm:px-4 sm:text-sm lg:min-h-9 ${isActive ? 'bg-[#0F62FE] text-white shadow-[0_2px_0_#0043CE] hover:bg-carbon-blue-70' : 'bg-white text-carbon-gray-100 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 hover:shadow-[0_2px_0_#0F62FE]'} focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transform-none motion-reduce:transition-none`}
  >
  <span className="truncate">{QUEUE_LABELS[queue]}</span>
  <span className="min-w-7 shrink-0 border border-black bg-black px-2 py-0.5 text-center text-xs font-black tabular-nums text-white">
@@ -541,7 +541,7 @@ export const ShopDashboard: React.FC = () => {
  id={`queue-panel-${activeQueue}`}
  role="tabpanel"
  aria-labelledby={`queue-tab-${activeQueue}`}
- className="flex w-full min-w-0 flex-col overflow-hidden border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] lg:min-h-0 lg:flex-1"
+ className="flex w-full min-w-0 flex-col overflow-hidden border border-black bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] lg:min-h-0 lg:flex-1"
  initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: tabDirection * 32 }}
  animate={{ opacity: 1, x: 0 }}
  exit={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: tabDirection * -24 }}
@@ -578,7 +578,7 @@ export const ShopDashboard: React.FC = () => {
  {availablePrinters.length > 0 ? (
  <select
  aria-label="Printer for selected orders"
- className="block min-h-11 w-full min-w-0 cursor-pointer border border-gray-500 bg-carbon-gray-10 px-3 py-2 text-sm font-semibold text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 sm:flex-1 lg:min-h-10"
+ className="block min-h-11 w-full min-w-0 cursor-pointer border border-black bg-carbon-gray-10 px-3 py-2 text-sm font-semibold text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 sm:flex-1 lg:min-h-10"
  value={selectedPrinter}
  onChange={(e) => setSelectedPrinter(e.target.value)}
  >
@@ -601,7 +601,7 @@ export const ShopDashboard: React.FC = () => {
  </button>
  </div>
  ) : (
- <div className="flex min-w-0 flex-col gap-2 border border-gray-300 border-l-4 border-l-gray-500 bg-carbon-gray-10 p-2 sm:flex-row sm:items-center lg:w-full lg:max-w-xl">
+ <div className="flex min-w-0 flex-col gap-2 border border-black bg-carbon-gray-10 p-2 sm:flex-row sm:items-center lg:w-full lg:max-w-xl">
  <span role="status" className="flex min-h-10 flex-1 items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-carbon-gray-100">
  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -611,7 +611,7 @@ export const ShopDashboard: React.FC = () => {
  <button
  onClick={handleManualDownload}
  disabled={selectedReadyOrders.length === 0}
- className="min-h-11 shrink-0 border border-gray-400 bg-white px-3 py-2 text-xs font-bold text-carbon-gray-100 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
+ className="min-h-11 shrink-0 border border-black bg-white px-3 py-2 text-xs font-bold text-carbon-gray-100 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
  >
  Download Assets Manually
  </button>
@@ -637,7 +637,7 @@ export const ShopDashboard: React.FC = () => {
  />
  ))}
  {activeOrders.length === 0 && (
- <div className="flex min-h-48 items-center justify-center border border-dashed border-gray-300 bg-white px-6 text-center md:col-span-2 xl:col-span-3 lg:h-full">
+ <div className="flex min-h-48 items-center justify-center border border-dashed border-black bg-white px-6 text-center md:col-span-2 xl:col-span-3 lg:h-full">
  <p className="text-sm font-medium leading-relaxed text-gray-600">{activeEmptyMessage}</p>
  </div>
  )}

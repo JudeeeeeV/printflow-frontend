@@ -87,7 +87,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       transition={{ duration: 0.15, ease: "easeOut" }}
       whileHover={onClick ? { scale: 1.01 } : undefined}
       onClick={onClick}
-      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : `border border-[#e0e0e0] p-4 ${onClick ? 'hover:border-[#8d8d8d] hover:shadow-md' : ''}`}`}
+      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : `border border-black p-4 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

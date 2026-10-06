@@ -13,7 +13,7 @@ export const QueuePagination = ({ label, controlsId, page, pageSize, total, onPa
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const start = (page - 1) * pageSize + 1;
     const end = Math.min(page * pageSize, total);
-    const buttonClass = 'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 border border-gray-300 bg-white px-2 py-2 text-sm font-semibold text-carbon-gray-100 transition-colors duration-150 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 active:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-carbon-gray-10 disabled:text-gray-400 motion-reduce:transition-none';
+    const buttonClass = 'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 border border-black bg-white px-2 py-2 text-sm font-semibold text-carbon-gray-100 transition-colors duration-150 hover:border-carbon-blue-60 hover:bg-blue-50 hover:text-carbon-blue-70 active:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-carbon-gray-10 disabled:text-gray-400 motion-reduce:transition-none';
 
     return (
         <div className="shrink-0 space-y-2 border-t border-gray-300 bg-white p-3">

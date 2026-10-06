@@ -34,7 +34,7 @@ const InlineLoader = () => (
     role="status"
     aria-label="Refreshing analytics data"
   >
-    <div className="flex min-h-11 items-center gap-3 border border-gray-300 border-l-4 border-l-carbon-blue-60 bg-white px-4 py-2 shadow-[0_8px_20px_rgba(22,22,22,0.08)]">
+    <div className="flex min-h-11 items-center gap-3 border border-black bg-white px-4 py-2 shadow-[0_8px_20px_rgba(22,22,22,0.08)]">
       <Renew
         className="h-5 w-5 animate-spin text-carbon-blue-60 motion-reduce:animate-none"
         aria-hidden="true"
@@ -60,7 +60,7 @@ const KPICard = ({
   subtext: string;
   subtextColor?: string;
 }) => (
-  <div className="min-w-0 flex-1 border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-5 shadow-[0_8px_20px_rgba(22,22,22,0.05)]">
+  <div className="min-w-0 flex-1 border border-black bg-white p-5 shadow-[0_8px_20px_rgba(22,22,22,0.05)]">
     <div className="mb-4 flex items-center gap-3">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-carbon-gray-100 text-white">
         <Icon className="h-5 w-5" aria-hidden="true" />
@@ -242,7 +242,7 @@ type ComboTooltipProps = Partial<
 const ComboTooltip = ({ active, payload, label }: ComboTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white px-4 py-3 text-sm shadow-[0_8px_20px_rgba(22,22,22,0.12)]">
+    <div className="border border-black bg-white px-4 py-3 text-sm shadow-[0_8px_20px_rgba(22,22,22,0.12)]">
       <p className="mb-2 font-black text-carbon-gray-100">{label}</p>
       {payload.map((entry, i) => (
         <p key={i} className="flex items-center text-gray-600">
@@ -447,7 +447,7 @@ export const ShopAnalyticsPage: React.FC = () => {
     return (
       <div className="flex min-h-full items-center justify-center bg-carbon-gray-10 p-4 font-sans sm:p-8">
         <div
-          className="w-full max-w-xl border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-6 shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:p-8"
+          className="w-full max-w-xl border border-black bg-white p-6 shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:p-8"
           role="alert"
         >
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-carbon-blue-60">
@@ -470,8 +470,8 @@ export const ShopAnalyticsPage: React.FC = () => {
     >
       <div className="mx-auto w-full max-w-7xl space-y-5 p-4 sm:space-y-6 sm:p-6 lg:p-8">
         {/* ── Page Header ── */}
-        <header className="border border-gray-300 bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)]">
-          <div className="border-t-4 border-t-carbon-blue-60 bg-carbon-gray-100 px-4 py-3 text-white sm:px-6 sm:py-4">
+        <header className="border border-black bg-white shadow-[0_12px_32px_rgba(22,22,22,0.08)]">
+          <div className="bg-carbon-gray-100 px-4 py-3 text-white sm:px-6 sm:py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-carbon-blue-60">
@@ -491,7 +491,7 @@ export const ShopAnalyticsPage: React.FC = () => {
 
         {/* ── Date Range Controls ── */}
         <section
-          className="border border-gray-300 bg-white p-4 shadow-[0_8px_24px_rgba(22,22,22,0.05)] sm:p-5"
+          className="border border-black bg-white p-4 shadow-[0_8px_24px_rgba(22,22,22,0.05)] sm:p-5"
           aria-label="Analytics controls"
         >
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
@@ -511,7 +511,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                 </div>
               </div>
               <div
-                className="inline-flex w-fit max-w-full flex-wrap border-l border-t border-gray-300 bg-white"
+                className="inline-flex w-fit max-w-full flex-wrap border-l border-t border-black bg-white"
                 role="group"
                 aria-label="Date range presets"
               >
@@ -520,7 +520,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                     key={p.key}
                     onClick={() => handlePresetChange(p.key)}
                     aria-pressed={datePreset === p.key}
-                    className={`min-h-11 flex-1 whitespace-nowrap border-b border-r border-gray-300 px-3 py-2 text-xs font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 motion-reduce:transition-none sm:flex-none sm:px-4 ${
+                    className={`min-h-11 flex-1 whitespace-nowrap border-b border-r border-black px-3 py-2 text-xs font-bold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-carbon-blue-60 motion-reduce:transition-none sm:flex-none sm:px-4 ${
                       datePreset === p.key
                         ? 'bg-carbon-blue-60 text-white'
                         : 'bg-white text-gray-700 hover:bg-carbon-gray-10 hover:text-carbon-gray-100'
@@ -531,7 +531,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                 ))}
               </div>
               {datePreset === 'CUSTOM' && (
-                <div className="mt-4 grid grid-cols-1 gap-3 border border-gray-300 border-l-4 border-l-carbon-blue-60 bg-carbon-gray-10 p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-end">
+                <div className="mt-4 grid grid-cols-1 gap-3 border border-black bg-carbon-gray-10 p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-end">
                   <label className="min-w-0" htmlFor="analytics-start-date">
                     <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-gray-600">
                       Start date
@@ -541,7 +541,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                       type="date"
                       value={customStart}
                       onChange={(e) => setCustomStart(e.target.value)}
-                      className="min-h-11 w-full border border-gray-500 bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+                      className="min-h-11 w-full border border-black bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
                     />
                   </label>
                   <span className="hidden min-h-11 items-center text-xs font-bold uppercase tracking-wider text-gray-500 sm:flex">
@@ -556,7 +556,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                       type="date"
                       value={customEnd}
                       onChange={(e) => setCustomEnd(e.target.value)}
-                      className="min-h-11 w-full border border-gray-500 bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
+                      className="min-h-11 w-full border border-black bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
                     />
                   </label>
                   <button
@@ -619,7 +619,7 @@ export const ShopAnalyticsPage: React.FC = () => {
 
         {/* ── Main Combo Chart: Revenue (Line) + Pages (Bar) ── */}
         <section
-          className="relative border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
+          className="relative border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
           aria-labelledby="revenue-volume-title"
         >
           {isLoading && analyticsData && <InlineLoader />}
@@ -635,7 +635,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                 Revenue &amp; Print Volume
               </h2>
             </div>
-            <div className="flex flex-wrap items-center gap-4 border border-gray-200 bg-carbon-gray-10 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-4 border border-black bg-carbon-gray-10 px-3 py-2">
               <div className="flex items-center gap-2">
                 <span
                   className="h-3 w-3 bg-carbon-blue-60"
@@ -735,7 +735,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center border border-dashed border-gray-300 bg-carbon-gray-10 px-6 text-center">
+              <div className="flex h-full items-center justify-center border border-dashed border-black bg-carbon-gray-10 px-6 text-center">
                 <p className="text-sm font-semibold text-gray-500">
                   No data for this period.
                 </p>
@@ -748,7 +748,7 @@ export const ShopAnalyticsPage: React.FC = () => {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
           {/* Color Mode Split */}
           <section
-            className="relative border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
+            className="relative border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
             aria-labelledby="color-distribution-title"
           >
             {isLoading && analyticsData && <InlineLoader />}
@@ -801,7 +801,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="m-5 flex h-52 items-center justify-center border border-dashed border-gray-300 bg-carbon-gray-10 px-6 text-center">
+              <div className="m-5 flex h-52 items-center justify-center border border-dashed border-black bg-carbon-gray-10 px-6 text-center">
                 <p className="text-sm font-semibold text-gray-500">
                   No order data yet.
                 </p>
@@ -811,7 +811,7 @@ export const ShopAnalyticsPage: React.FC = () => {
 
           {/* Paper Size Split */}
           <section
-            className="relative border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
+            className="relative border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
             aria-labelledby="paper-distribution-title"
           >
             {isLoading && analyticsData && <InlineLoader />}
@@ -864,7 +864,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="m-5 flex h-52 items-center justify-center border border-dashed border-gray-300 bg-carbon-gray-10 px-6 text-center">
+              <div className="m-5 flex h-52 items-center justify-center border border-dashed border-black bg-carbon-gray-10 px-6 text-center">
                 <p className="text-sm font-semibold text-gray-500">
                   No order data yet.
                 </p>
@@ -887,7 +887,7 @@ export const ShopAnalyticsPage: React.FC = () => {
 
           return (
             <section
-              className="overflow-hidden border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
+              className="overflow-hidden border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.05)]"
               aria-labelledby="recent-activity-title"
             >
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 px-4 py-4 sm:px-6">
@@ -902,7 +902,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                     Recent Activity
                   </h2>
                 </div>
-                <span className="border border-gray-300 bg-carbon-gray-10 px-3 py-1.5 text-xs font-bold tabular-nums text-gray-700">
+                <span className="border border-black bg-carbon-gray-10 px-3 py-1.5 text-xs font-bold tabular-nums text-gray-700">
                   {allRecentOrders.length} orders
                 </span>
               </div>
@@ -1007,7 +1007,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                     <button
                       onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                       disabled={tablePage === 1}
-                      className="min-h-11 border border-gray-500 bg-white px-4 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
+                      className="min-h-11 border border-black bg-white px-4 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
                     >
                       Prev
                     </button>
@@ -1022,7 +1022,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                         className={`min-h-11 min-w-11 border px-3 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none ${
                           tablePage === page
                             ? 'border-carbon-blue-60 bg-carbon-blue-60 text-white'
-                            : 'border-gray-500 bg-white text-gray-700 hover:bg-gray-200'
+                            : 'border-black bg-white text-gray-700 hover:bg-gray-200'
                         }`}
                       >
                         {page}
@@ -1033,7 +1033,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                         setTablePage((p) => Math.min(totalTablePages, p + 1))
                       }
                       disabled={tablePage === totalTablePages}
-                      className="min-h-11 border border-gray-500 bg-white px-4 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
+                      className="min-h-11 border border-black bg-white px-4 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
                     >
                       Next
                     </button>

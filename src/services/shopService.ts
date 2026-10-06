@@ -2,7 +2,17 @@ import { apiClient } from './apiClient';
 import type { PrintShop } from './orderService';
 
 type GcashQr = { gcash_qr_url: string | null };
-type MyShop = GcashQr & {
+export type ShopSettingsValues = {
+ name: string;
+ location: string | null;
+ description: string | null;
+ latitude: number | null;
+ longitude: number | null;
+ availability_override: boolean;
+ opens_at: string;
+ closes_at: string;
+};
+type MyShop = GcashQr & Partial<ShopSettingsValues> & {
  id: string;
  name: string;
  status: string;
@@ -12,6 +22,7 @@ type MyShop = GcashQr & {
  closes_at?: string;
  timezone?: string;
  is_open?: boolean;
+ shop_photo_url?: string | null;
 };
 let pendingShop: Promise<MyShop> | null = null;
 const SHOP_LIST_TTL_MS = 30_000;
@@ -38,6 +49,16 @@ export const shopService = {
  pendingShop = apiClient<MyShop>('/shops/me').finally(() => { pendingShop = null; });
  }
  return pendingShop;
+ },
+
+ updateSettings(values: Partial<ShopSettingsValues>): Promise<ShopSettingsValues & { status: string }> {
+ return apiClient('/shops/me', { method: 'PATCH', body: JSON.stringify(values) });
+ },
+
+ uploadShopPhoto(file: File): Promise<{ shop_photo_url: string | null }> {
+ const formData = new FormData();
+ formData.append('photo', file);
+ return apiClient('/shops/me/photo', { method: 'POST', body: formData });
  },
 
  async verifyPermit(file: File): Promise<any> {

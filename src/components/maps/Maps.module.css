@@ -160,30 +160,39 @@
 .locationSection {
   min-width: 0;
   container-type: inline-size;
+  border-top: 1px solid #e0e0e0;
 }
 .locationCard {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid #e0e0e0;
-  background: #f4f4f4;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+.locationCard .eyebrow {
+  margin-bottom: 0.125rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+.locationCard p {
+  overflow-wrap: anywhere;
 }
 .locationIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  background: white;
   color: #0f62fe;
-  border: 1px solid #e0e0e0;
 }
 .cardAction {
-  width: 100%;
-  grid-column: 1 / -1;
+  grid-column: 2;
+  justify-self: start;
+  min-height: 32px;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
 }
 .photoPreview {
   display: flex;
@@ -287,9 +296,9 @@
   }
 }
 
-@container (min-width: 520px) {
+@container (min-width: 360px) {
   .locationCard {
-    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
   }
   .cardAction {
     grid-column: auto;

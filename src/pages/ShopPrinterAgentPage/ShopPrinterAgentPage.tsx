@@ -205,7 +205,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-7xl space-y-5 bg-carbon-gray-10 p-4 font-sans text-carbon-gray-100 sm:space-y-6 sm:p-6 lg:p-8">
-      <header className="border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-carbon-gray-100 px-4 py-3 text-white shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:px-6 sm:py-4">
+      <header className="border border-black bg-carbon-gray-100 px-4 py-3 text-white shadow-[0_8px_24px_rgba(22,22,22,0.06)] sm:px-6 sm:py-4">
         <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
           Local printing
         </p>
@@ -237,7 +237,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
 
       <section
         aria-labelledby="agent-install-title"
-        className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]"
+        className="border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]"
       >
         <div className="flex flex-col gap-4 border-b border-gray-300 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
@@ -254,7 +254,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
               <p className="mt-1 text-sm leading-relaxed text-gray-600">
                 One-time setup. Starts automatically with Windows.
               </p>
-              <p className="mt-2 inline-flex max-w-full flex-wrap items-center gap-x-2 border border-gray-300 bg-carbon-gray-10 px-2 py-1 text-xs font-semibold text-gray-700 [overflow-wrap:anywhere]">
+              <p className="mt-2 inline-flex max-w-full flex-wrap items-center gap-x-2 border border-black bg-carbon-gray-10 px-2 py-1 text-xs font-semibold text-gray-700 [overflow-wrap:anywhere]">
                 <span>Windows</span>
                 <span aria-hidden="true" className="text-gray-400">
                   /
@@ -293,7 +293,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
             <button
               type="button"
               disabled
-              className="inline-flex min-h-11 shrink-0 cursor-not-allowed items-center justify-center gap-2 border border-gray-300 bg-carbon-gray-10 px-5 py-3 text-sm font-bold text-gray-600"
+              className="inline-flex min-h-11 shrink-0 cursor-not-allowed items-center justify-center gap-2 border border-black bg-carbon-gray-10 px-5 py-3 text-sm font-bold text-gray-600"
             >
               <Download className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!isWindows
@@ -324,7 +324,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
             Get started in three steps
           </p>
           <ol className="grid list-none gap-3 lg:grid-cols-3">
-            <li className="border border-gray-300 bg-carbon-gray-10 p-4">
+            <li className="border border-black bg-carbon-gray-10 p-4">
               <span
                 aria-hidden="true"
                 className="mb-4 flex h-9 w-9 items-center justify-center bg-carbon-blue-60 text-sm font-bold tabular-nums text-white"
@@ -337,7 +337,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 physically connected to your printer.
               </p>
             </li>
-            <li className="border border-gray-300 bg-carbon-gray-10 p-4">
+            <li className="border border-black bg-carbon-gray-10 p-4">
               <span
                 aria-hidden="true"
                 className="mb-4 flex h-9 w-9 items-center justify-center bg-carbon-blue-60 text-sm font-bold tabular-nums text-white"
@@ -350,7 +350,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 setup page opens.
               </p>
             </li>
-            <li className="border border-gray-300 bg-carbon-gray-10 p-4">
+            <li className="border border-black bg-carbon-gray-10 p-4">
               <span
                 aria-hidden="true"
                 className="mb-4 flex h-9 w-9 items-center justify-center bg-carbon-blue-60 text-sm font-bold tabular-nums text-white"
@@ -380,7 +380,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
       <section
         aria-labelledby="registered-computers-title"
         aria-busy={isLoading}
-        className="border border-gray-300 bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]"
+        className="border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]"
       >
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-300 p-4 sm:p-6">
           <div className="min-w-0">
@@ -392,7 +392,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 Registered printing computers
               </h2>
               {!isLoading && (
-                <span className="border border-gray-300 bg-carbon-gray-10 px-2 py-1 text-xs font-bold tabular-nums text-gray-700">
+                <span className="border border-black bg-carbon-gray-10 px-2 py-1 text-xs font-bold tabular-nums text-gray-700">
                   {activeDevices.length}{" "}
                   {activeDevices.length === 1 ? "computer" : "computers"}
                 </span>
@@ -405,7 +405,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
           <button
             type="button"
             onClick={() => void load(true)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+            className="inline-flex min-h-11 items-center justify-center gap-2 border border-black bg-white px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
             aria-label="Refresh printer agents"
           >
             <Renew className="h-5 w-5" aria-hidden="true" />
@@ -416,8 +416,8 @@ export const ShopPrinterAgentPage: React.FC = () => {
         {isLoading ? (
           <PrinterAgentSkeleton variant="computers" />
         ) : activeDevices.length === 0 ? (
-          <div className="m-4 flex flex-col items-center border border-dashed border-gray-300 bg-carbon-gray-10 px-4 py-10 text-center sm:m-6">
-            <span className="mb-4 flex h-14 w-14 items-center justify-center border border-gray-300 bg-white text-carbon-blue-60">
+          <div className="m-4 flex flex-col items-center border border-dashed border-black bg-carbon-gray-10 px-4 py-10 text-center sm:m-6">
+            <span className="mb-4 flex h-14 w-14 items-center justify-center border border-black bg-white text-carbon-blue-60">
               <Screen className="h-7 w-7" aria-hidden="true" />
             </span>
             <h3 className="text-lg font-bold">No printer agent registered</h3>
@@ -433,14 +433,14 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 key={device.id}
                 aria-labelledby={`device-${device.id}-title`}
                 aria-busy={pendingDeviceId === device.id}
-                className="min-w-0 border border-gray-300"
+                className="min-w-0 border border-black"
               >
                 <div
-                  className={`flex min-w-0 flex-col gap-4 border-b border-gray-300 border-l-4 p-4 sm:p-5 xl:flex-row xl:items-start xl:justify-between ${device.status === "CONNECTED" ? "border-l-carbon-blue-60 bg-blue-50" : "border-l-gray-300 bg-carbon-gray-10"}`}
+                  className={`flex min-w-0 flex-col gap-4 border-b border-gray-300 p-4 sm:p-5 xl:flex-row xl:items-start xl:justify-between ${device.status === "CONNECTED" ? "bg-blue-50" : "bg-carbon-gray-10"}`}
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center ${device.status === "CONNECTED" ? "bg-carbon-blue-60 text-white" : "border border-gray-300 bg-white text-gray-600"}`}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center ${device.status === "CONNECTED" ? "bg-carbon-blue-60 text-white" : "border border-black bg-white text-gray-600"}`}
                     >
                       <Screen className="h-6 w-6" aria-hidden="true" />
                     </span>
@@ -488,7 +488,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                         device.status !== "CONNECTED" ||
                         pendingDeviceId === device.id
                       }
-                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 border border-carbon-blue-60 bg-white px-4 py-2 text-sm font-bold text-carbon-blue-60 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-carbon-gray-10 disabled:text-gray-500 motion-reduce:transition-none sm:flex-none"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 border border-black bg-white px-4 py-2 text-sm font-bold text-carbon-blue-60 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-black disabled:bg-carbon-gray-10 disabled:text-gray-500 motion-reduce:transition-none sm:flex-none"
                     >
                       <Renew className="h-4 w-4 shrink-0" aria-hidden="true" />
                       Rescan
@@ -497,7 +497,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                       type="button"
                       onClick={() => setDeviceToRevoke(device)}
                       disabled={pendingDeviceId === device.id}
-                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 border border-gray-400 bg-white px-4 py-2 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-carbon-gray-10 disabled:text-gray-500 motion-reduce:transition-none sm:flex-none"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 border border-black bg-white px-4 py-2 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:border-black disabled:bg-carbon-gray-10 disabled:text-gray-500 motion-reduce:transition-none sm:flex-none"
                     >
                       <TrashCan
                         className="h-4 w-4 shrink-0"
@@ -510,18 +510,18 @@ export const ShopPrinterAgentPage: React.FC = () => {
                 <div className="p-4 sm:p-5">
                   <h4 className="mb-3 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-600">
                     Detected printers
-                    <span className="border border-gray-300 bg-carbon-gray-10 px-2 py-0.5 tracking-normal tabular-nums">
+                    <span className="border border-black bg-carbon-gray-10 px-2 py-0.5 tracking-normal tabular-nums">
                       {device.printers.length}
                     </span>
                   </h4>
                   {device.printers.length > 0 ? (
-                    <ul className="divide-y divide-gray-200 border border-gray-300">
+                    <ul className="divide-y divide-gray-200 border border-black">
                       {device.printers.map((printer) => (
                         <li
                           key={printer}
                           className="flex min-w-0 items-center gap-3 px-3 py-4 sm:gap-4 sm:px-4"
                         >
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-gray-200 bg-carbon-gray-10 text-gray-600">
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-black bg-carbon-gray-10 text-gray-600">
                             <Printer className="h-6 w-6" aria-hidden="true" />
                           </span>
                           <span className="min-w-0 text-sm font-semibold leading-relaxed text-carbon-gray-100 [overflow-wrap:anywhere]">
@@ -531,7 +531,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
                       ))}
                     </ul>
                   ) : (
-                    <div className="flex items-center gap-3 border border-dashed border-gray-300 bg-carbon-gray-10 p-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-3 border border-dashed border-black bg-carbon-gray-10 p-4 text-sm text-gray-600">
                       <Printer
                         className="h-5 w-5 shrink-0"
                         aria-hidden="true"
@@ -560,7 +560,7 @@ export const ShopPrinterAgentPage: React.FC = () => {
             aria-labelledby="revoke-agent-title"
             aria-describedby="revoke-agent-description"
             onKeyDown={handleRevokeDialogKeyDown}
-            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto border-t-4 border-carbon-blue-60 bg-white shadow-2xl"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto border border-black bg-white shadow-2xl"
           >
             <div className="p-6 sm:p-7">
               <span className="mb-5 flex h-11 w-11 items-center justify-center bg-carbon-gray-100 text-white">

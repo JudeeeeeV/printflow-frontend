@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer } from '@carbon/icons-react';
 import { apiClient } from '../../services/apiClient';
@@ -8,6 +8,10 @@ import printflowLogoDark from '../../assets/printflow-logo-dark.png';
 import printflowLogoLight from '../../assets/printflow-logo-light.png';
 import styles from './ShopLayout.module.css';
 import { daemonSocketService, type DaemonStatus } from '../../services/daemonSocketService';
+
+export type ShopSettingsNavigation = {
+    registerLogoutGuard: (guard: ((logout: () => void) => void) | null) => void;
+};
 
 export const ShopLayout: React.FC = () => {
     const location = useLocation();
@@ -26,6 +30,8 @@ export const ShopLayout: React.FC = () => {
     const sidebarRef = useRef<HTMLElement>(null);
     const mainRef = useRef<HTMLElement>(null);
     const modalTriggerRef = useRef<HTMLElement | null>(null);
+    const logoutGuardRef = useRef<((logout: () => void) => void) | null>(null);
+    const registerLogoutGuard = useCallback<ShopSettingsNavigation['registerLogoutGuard']>(guard => { logoutGuardRef.current = guard; }, []);
     const isDrawerOpen = !isDesktop && drawerRoute === location.key;
     const collapsed = isDesktop && isDesktopCollapsed;
     const isAccountModalOpen = isHelpOpen || isSupportOpen || isChangePasswordOpen;
@@ -150,10 +156,14 @@ export const ShopLayout: React.FC = () => {
         return <Navigate to="/auth" replace />;
     }
 
-    const handleLogout = async () => {
-        await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
-        localStorage.removeItem('user_role');
-        navigate('/auth');
+    const handleLogout = () => {
+        const logout = async () => {
+            await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
+            localStorage.removeItem('user_role');
+            navigate('/auth');
+        };
+        if (logoutGuardRef.current) logoutGuardRef.current(() => { void logout(); });
+        else void logout();
     };
 
     const navItems = [
@@ -306,7 +316,7 @@ export const ShopLayout: React.FC = () => {
             <main ref={mainRef} id="shop-main-content" tabIndex={-1} inert={isDrawerOpen || isAccountModalOpen} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white focus:outline-hidden">
                 {/* Content */}
                 <div data-shop-scroll className={`relative min-h-0 min-w-0 flex-1 overflow-x-hidden bg-carbon-gray-10 ${isDrawerOpen || isAccountModalOpen ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
-                    <Outlet />
+                    <Outlet context={{ registerLogoutGuard } satisfies ShopSettingsNavigation} />
                 </div>
             </main>
             </div>
