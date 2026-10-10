@@ -7,6 +7,7 @@ import { OrderSummary } from '../../components/orders/OrderSummary/OrderSummary'
 import { MyOrdersList } from '../../components/dashboard/MyOrdersList';
 import { orderService, type OrderEstimate } from '../../services/orderService';
 import { shopService } from '../../services/shopService';
+import { useDataEvents } from '../../hooks/useDataEvents';
 import type { PrintShop } from '../../services/orderService';
 import { MyDraftsList } from '../../components/dashboard/MyDraftsList';
 import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
@@ -79,6 +80,11 @@ export const NewOrderPage: React.FC = () => {
             .finally(() => { if (active) setShopsLoading(false); });
         return () => { active = false; };
     }, [shopsAttempt]);
+
+    useDataEvents(['shops'], () => {
+        shopService.invalidateShops();
+        setShopsAttempt(attempt => attempt + 1);
+    });
 
     useEffect(() => {
         if (!file || !isFileValidated) return;

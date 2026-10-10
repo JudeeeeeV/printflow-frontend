@@ -12,7 +12,7 @@ const compile = file => ts.transpileModule(fs.readFileSync(path.join(__dirname, 
 
 function qrFixture(savedUrl = null) {
   const calls = [];
-  const props = { savedUrl, selectedFile: null, localUrl: null, pendingRemoval: false, disabled: false, onSelect: file => calls.push(file), onRemove: () => calls.push('remove') };
+  const props = { gcashNumber: '09171234567', savedUrl, selectedFile: null, localUrl: null, pendingRemoval: false, disabled: false, onNumberChange: value => calls.push(value), onSelect: file => calls.push(file), onRemove: () => calls.push('remove') };
   const f = hookFixture('components/settings/ShopGcashQrForm.tsx', 'ShopGcashQrForm', {}, () => props);
   return { ...f, props, calls };
 }
@@ -31,11 +31,20 @@ test('delegates image selection and resets the input without changing saved data
   const f = qrFixture('saved-qr'); const file = image();
   for (let attempt = 0; attempt < 2; attempt++) {
     const event = { target: { files: [file], value: 'selected' } };
-    f.find(node => node.type === 'input').props.onChange(event); assert.equal(event.target.value, ''); assert.equal(f.calls[attempt], file);
+    f.find(node => node.props?.id === 'shop-gcash-qr-image').props.onChange(event); assert.equal(event.target.value, ''); assert.equal(f.calls[attempt], file);
   }
   assert.equal(f.find(node => node.type === 'img').props.src, 'saved-qr');
   f.props.selectedFile = file; f.props.localUrl = 'blob:preview'; f.render();
   assert.equal(f.find(node => node.type === 'img').props.src, 'blob:preview'); f.unmount();
+});
+
+test('allows manual entry and normalizes the GCash number to eleven digits', () => {
+  const f = qrFixture('saved-qr');
+  const input = f.find(node => node.props?.id === 'shop-gcash-number');
+  assert.equal(input.props.value, '09171234567');
+  input.props.onChange({ target: { value: '0917 123-456789' } });
+  assert.deepEqual(f.calls, ['09171234567']);
+  f.unmount();
 });
 
 test('delegates removal and displays the pending-removal state', () => {
@@ -49,7 +58,8 @@ test('delegates removal and displays the pending-removal state', () => {
 test('disables all QR controls during a unified save', () => {
   const f = qrFixture('saved-qr'); f.props.disabled = true; f.render();
   assert.equal(f.button('Change image').props.disabled, true); assert.equal(f.button('Remove').props.disabled, true);
-  const event = { target: { files: [image()], value: 'selected' } }; f.find(node => node.type === 'input').props.onChange(event);
+  assert.equal(f.find(node => node.props?.id === 'shop-gcash-number').props.disabled, true);
+  const event = { target: { files: [image()], value: 'selected' } }; f.find(node => node.props?.id === 'shop-gcash-qr-image').props.onChange(event);
   assert.equal(event.target.value, ''); assert.equal(f.calls.length, 0); f.unmount();
 });
 

@@ -140,6 +140,26 @@ test('GET requests omit JSON headers while JSON writes and multipart uploads kee
   assert.ok(requests.every(options => options.credentials === 'include'));
 });
 
+test('GET requests share in-flight work, use a short cache, and mutations invalidate it', async () => {
+  let requests = 0;
+  const { apiClient } = loadModule('apiClient.ts', {
+    '../config/runtime': { API_URL: 'https://api.example.test' },
+    globals: { fetch: async () => {
+      requests++;
+      return new Response(JSON.stringify({ request: requests }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } },
+  });
+  const [first, overlapping] = await Promise.all([apiClient('/orders'), apiClient('/orders')]);
+  const cached = await apiClient('/orders');
+  assert.equal(requests, 1);
+  assert.equal(first.request, 1); assert.equal(overlapping.request, 1); assert.equal(cached.request, 1);
+  await apiClient('/orders/one', { method: 'PATCH', body: '{}' });
+  const refreshed = await apiClient('/orders');
+  assert.equal(requests, 3); assert.equal(refreshed.request, 3);
+});
+
 test('profile saves refresh an expired cookie session and retry the same PATCH', async () => {
   const requests = [];
   const { apiClient } = loadModule('apiClient.ts', {

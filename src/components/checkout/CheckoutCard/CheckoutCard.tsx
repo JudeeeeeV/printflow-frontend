@@ -16,7 +16,7 @@ interface PaymentReceipt {
 interface CheckoutCardProps {
  orderId: string;
  amount: number;
- gcashNumber: string;
+ gcashNumber?: string;
  gcashQrUrl?: string;
  createdAt?: string;
  expiresAt?: string;

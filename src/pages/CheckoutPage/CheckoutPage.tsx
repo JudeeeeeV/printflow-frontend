@@ -1,10 +1,11 @@
-import React, { type ReactNode, useEffect, useState } from 'react';
+import React, { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { WarningAlt } from '@carbon/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckoutCard } from '../../components/checkout/CheckoutCard/CheckoutCard';
 import { orderService } from '../../services/orderService';
 import { CheckoutSkeleton } from './CheckoutSkeleton';
 import styles from './CheckoutPage.module.css';
+import { useDataEvents } from '../../hooks/useDataEvents';
 
 interface CheckoutOrder {
  total?: number;
@@ -51,31 +52,30 @@ export const CheckoutPage: React.FC = () => {
  const [isLoading, setIsLoading] = useState(true);
  const [orderNotFound, setOrderNotFound] = useState(false);
 
- useEffect(() => {
- if (!orderId) return;
- let isMounted = true;
-
- const fetchOrder = () => {
- orderService.getOrder(orderId)
+ const fetchOrder = useCallback(() => {
+ if (!orderId) return Promise.resolve();
+ return orderService.getOrder(orderId)
  .then((data) => {
- if (!isMounted) return;
  setOrder(data);
+ setOrderNotFound(false);
  setIsLoading(false);
  })
  .catch(() => {
- if (!isMounted) return;
  setOrderNotFound(true);
  setIsLoading(false);
  });
- };
+ }, [orderId]);
 
- fetchOrder();
- const intervalId = setInterval(fetchOrder, 5000);
+ useEffect(() => {
+ if (!orderId) return;
+ void fetchOrder();
+ const intervalId = setInterval(() => void fetchOrder(), 5000);
  return () => {
- isMounted = false;
  clearInterval(intervalId);
  };
- }, [orderId]);
+ }, [fetchOrder, orderId]);
+
+ useDataEvents(['orders', 'receipts'], () => void fetchOrder());
 
  if (!orderId) {
  return (
@@ -121,7 +121,7 @@ export const CheckoutPage: React.FC = () => {
  <CheckoutCard
  orderId={orderId}
  amount={order?.total ?? 15}
- gcashNumber={order?.shops?.gcash_number || '09123456789'}
+ gcashNumber={order?.shops?.gcash_number}
  gcashQrUrl={order?.shops?.gcash_qr_url}
  createdAt={order?.created_at}
  expiresAt={order?.expires_at}

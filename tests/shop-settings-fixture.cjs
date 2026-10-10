@@ -50,7 +50,7 @@ function hookFixture(file, exportName, mocks = {}, props = () => ({}), globals =
 }
 
 function createSettingsFixture(options = {}) {
-  const state = options.state || { name: 'Campus Print Shop', location: 'Student Center', description: 'Ground floor', latitude: 14.6, longitude: 121,
+  const state = options.state || { name: 'Campus Print Shop', gcash_number: '09171234567', location: 'Student Center', description: 'Ground floor', latitude: 14.6, longitude: 121,
     availability_override: false, opens_at: '08:00:00', closes_at: '20:00:00', status: 'OPEN', shop_photo_url: 'saved-photo', gcash_qr_url: 'saved-qr' };
   const calls = [], created = [], revoked = [], events = [];
   const failures = {}, holds = {};
@@ -69,7 +69,7 @@ function createSettingsFixture(options = {}) {
   };
   const service = {
     getMyShop: async () => { reads++; if (options.readPending) await options.readPending.promise; if (options.readError?.()) throw new Error('offline'); return { ...state }; },
-    updateSettings: payload => mutate('name' in payload ? 'details' : 'latitude' in payload ? 'pickup' : 'availability', payload, () => {
+    updateSettings: payload => mutate('name' in payload ? 'details' : 'latitude' in payload ? 'pickup' : 'gcash_number' in payload ? 'qr' : 'availability', payload, () => {
       Object.assign(state, payload);
       for (const key of ['name', 'location', 'description']) if (typeof state[key] === 'string') state[key] = state[key].trim();
       return { ...state };
@@ -86,6 +86,7 @@ function createSettingsFixture(options = {}) {
     'framer-motion': { AnimatePresence: 'presence', motion: { div: 'motion-div' }, useReducedMotion: () => false },
     'react-router-dom': { useBlocker: predicate => { shouldBlock = predicate; return blocker; }, useOutletContext: () => ({ registerLogoutGuard }) },
     '../../services/shopService': { shopService: service },
+    '../../hooks/useDataEvents': { useDataEvents: () => {} },
     '../../components/maps/ShopPhotoUpload': { ShopPhotoUpload: 'photo-editor' },
     '../../components/settings/ShopGcashQrForm': { ShopGcashQrForm: 'qr-editor' },
     '../../components/maps/LocationMapModal': { LocationMapModal: 'map-dialog' },

@@ -17,6 +17,7 @@ import { apiClient } from '../../services/apiClient';
 import { createRefreshQueue } from '../../services/refreshQueue';
 import { getQueuePage, queueGridClassName } from '../../components/dashboard/liveQueueLayout';
 import { useLiveQueueLayout } from '../../components/dashboard/useLiveQueueLayout';
+import { useDataEvents } from '../../hooks/useDataEvents';
 
 type QueueKey = 'new' | 'ready' | 'completed';
 type QueueFilterState = {
@@ -150,6 +151,9 @@ export const ShopDashboard: React.FC = () => {
  useEffect(() => {
  loadShopData();
  }, []);
+
+ useDataEvents(['shops'], loadShopData);
+ useDataEvents(['orders', 'receipts', 'assets', 'print-jobs'], refreshOrdersAfterChange);
 
  useEffect(() => {
  if (shopData?.verification_status === 'VERIFIED' || shopData?.verification_status === 'OPEN') {

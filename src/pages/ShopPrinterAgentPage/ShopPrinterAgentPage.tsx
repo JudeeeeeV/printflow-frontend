@@ -14,6 +14,7 @@ import {
   type DaemonDevice,
 } from "../../services/daemonDeviceService";
 import { PrinterAgentSkeleton } from "./PrinterAgentSkeleton";
+import { useDataEvents } from "../../hooks/useDataEvents";
 
 const formatDate = (value: string | null) =>
   value
@@ -75,6 +76,8 @@ export const ShopPrinterAgentPage: React.FC = () => {
       window.removeEventListener("online", refresh);
     };
   }, [load]);
+
+  useDataEvents(["devices"], () => void load(false));
 
   useEffect(() => {
     let cancelled = false;

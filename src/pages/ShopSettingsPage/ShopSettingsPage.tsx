@@ -11,16 +11,17 @@ import styles from "../../components/maps/Maps.module.css";
 import pageStyles from "./ShopSettingsPage.module.css";
 import { UnsavedSettingsModal } from "./UnsavedSettingsModal";
 import type { ShopSettingsNavigation } from "../../components/layout/ShopLayout";
+import { useDataEvents } from "../../hooks/useDataEvents";
 
 const SECTION_LABELS = { details: "Shop details", pickup: "Pickup location", availability: "Shop availability", photo: "Shop photo", qr: "GCash QR code" };
 type Section = keyof typeof SECTION_LABELS;
 type Errors = Partial<Record<Section, string>>;
 type PendingImage = { file: File; url: string };
-const EMPTY_VALUES: ShopSettingsValues = { name: "", location: "", description: "", latitude: null, longitude: null, availability_override: false, opens_at: "08:00", closes_at: "20:00" };
+const EMPTY_VALUES: ShopSettingsValues = { name: "", gcash_number: "", location: "", description: "", latitude: null, longitude: null, availability_override: false, opens_at: "08:00", closes_at: "20:00" };
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 function normalizeValues(shop: Partial<ShopSettingsValues>): ShopSettingsValues {
-  return { name: shop.name || "", location: shop.location || "", description: shop.description || "", latitude: shop.latitude ?? null, longitude: shop.longitude ?? null,
+  return { name: shop.name || "", gcash_number: shop.gcash_number || "", location: shop.location || "", description: shop.description || "", latitude: shop.latitude ?? null, longitude: shop.longitude ?? null,
     availability_override: shop.availability_override === true, opens_at: (shop.opens_at || "08:00").slice(0, 5), closes_at: (shop.closes_at || "20:00").slice(0, 5) };
 }
 
@@ -78,9 +79,12 @@ export const ShopSettingsPage: React.FC = () => {
     pickup: Boolean(baseline && (values.latitude !== baseline.latitude || values.longitude !== baseline.longitude)),
     availability: Boolean(baseline && (values.availability_override !== baseline.availability_override || values.opens_at !== baseline.opens_at || values.closes_at !== baseline.closes_at)),
     photo: pendingPhoto !== null,
-    qr: pendingQr !== null || pendingQrRemoval,
+    qr: Boolean(baseline && values.gcash_number !== baseline.gcash_number) || pendingQr !== null || pendingQrRemoval,
   };
   const dirty = Object.values(changed).some(Boolean);
+  useDataEvents(["shops"], () => {
+    if (!dirty && !isSaving && !busyRef.current) setLoadAttempt(attempt => attempt + 1);
+  });
   const disabled = isLoading || Boolean(loadError) || isSaving;
   const hasPin = hasCoordinates(values.latitude, values.longitude);
   const errorSections = (Object.keys(SECTION_LABELS) as Section[]).filter(section => errors[section]);
@@ -139,6 +143,9 @@ export const ShopSettingsPage: React.FC = () => {
     if (!time.test(values.opens_at) || !time.test(values.closes_at) || values.opens_at === values.closes_at) {
       validation.availability = "Enter valid, different opening and closing times.";
     }
+    if (values.gcash_number && !/^09\d{9}$/.test(values.gcash_number)) {
+      validation.qr = "Enter an 11-digit Philippine mobile number starting with 09.";
+    }
     setErrors(validation); setMessage("");
     if (Object.keys(validation).length) { if (!fromNavigation) focusSummary(); return false; }
     const restoreFocus = !fromNavigation && document.activeElement === saveRef.current;
@@ -164,8 +171,18 @@ export const ShopSettingsPage: React.FC = () => {
       if (mountedRef.current) { setPhotoUrl(saved.shop_photo_url); setPendingPhoto(null); }
     } });
     if (changed.qr) operations.push({ section: "qr", run: async () => {
-      const saved = pendingQr ? await shopService.uploadGcashQr(pendingQr.file) : await shopService.removeGcashQr();
-      if (mountedRef.current) { setQrUrl(saved.gcash_qr_url); setPendingQr(null); setPendingQrRemoval(false); }
+      if (baseline && values.gcash_number !== baseline.gcash_number) {
+        const savedSettings = await shopService.updateSettings({ gcash_number: values.gcash_number });
+        if (mountedRef.current) {
+          const gcash_number = normalizeValues(savedSettings).gcash_number;
+          setValues(current => ({ ...current, gcash_number }));
+          setBaseline(current => current ? { ...current, gcash_number } : current);
+        }
+      }
+      if (pendingQr || pendingQrRemoval) {
+        const saved = pendingQr ? await shopService.uploadGcashQr(pendingQr.file) : await shopService.removeGcashQr();
+        if (mountedRef.current) { setQrUrl(saved.gcash_qr_url); setPendingQr(null); setPendingQrRemoval(false); }
+      }
     } });
     try {
       const results = await Promise.allSettled(operations.map(operation => operation.run()));
@@ -278,7 +295,8 @@ export const ShopSettingsPage: React.FC = () => {
                   {errors.availability && <p role="alert" className="text-sm text-red-700">{errors.availability}</p>}
                 </div>
               </section>
-              <ShopGcashQrForm savedUrl={qrUrl} selectedFile={pendingQr?.file || null} localUrl={pendingQr?.url || null} pendingRemoval={pendingQrRemoval} disabled={disabled} error={errors.qr}
+              <ShopGcashQrForm gcashNumber={values.gcash_number} savedUrl={qrUrl} selectedFile={pendingQr?.file || null} localUrl={pendingQr?.url || null} pendingRemoval={pendingQrRemoval} disabled={disabled} error={errors.qr}
+                onNumberChange={gcash_number => edit("qr", { gcash_number })}
                 onSelect={file => stageImage("qr", file)} onRemove={() => { if (!disabled && !busyRef.current) { clearFeedback("qr"); setPendingQr(null); setPendingQrRemoval(qrUrl !== null); } }} />
             </div>
           </div>

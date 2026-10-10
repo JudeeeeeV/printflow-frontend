@@ -132,6 +132,7 @@ function dashboardHarness() {
     '../../services/daemonSocketService': { daemonSocketService: {} },
     '../../services/apiClient': { apiClient() {} },
     '../../services/refreshQueue': { createRefreshQueue: () => () => Promise.resolve() },
+    '../../hooks/useDataEvents': { useDataEvents() {} },
     '../../components/dashboard/liveQueueLayout': layoutHelpers,
     '../../components/dashboard/useLiveQueueLayout': { useLiveQueueLayout: () => ({ layout: { ...layout, queueKey: measuredQueue }, gridRef() {} }) },
   }, { requestAnimationFrame() {}, console });

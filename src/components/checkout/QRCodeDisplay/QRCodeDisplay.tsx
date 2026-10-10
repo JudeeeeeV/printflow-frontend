@@ -2,7 +2,7 @@ import React from 'react';
 import { QrCode } from '@carbon/icons-react';
 
 interface QRCodeDisplayProps {
- gcashNumber: string;
+ gcashNumber?: string;
  gcashQrUrl?: string;
  amount: number;
 }
@@ -34,7 +34,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ gcashNumber, gcash
  </div>
  <div className="flex flex-col gap-1 px-4 py-4 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
  <dt className="text-sm font-semibold text-gray-600">GCash number</dt>
- <dd className="break-all font-mono text-base font-bold text-carbon-gray-100">{gcashNumber}</dd>
+ <dd className="break-all font-mono text-base font-bold text-carbon-gray-100">{gcashNumber || 'Not provided by the shop'}</dd>
  </div>
  </dl>
 
