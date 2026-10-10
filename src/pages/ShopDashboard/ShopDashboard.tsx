@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight } from '@carbon/icons-react';
 import { shopService } from '../../services/shopService';
 import { DashboardSkeleton } from '../../components/dashboard/skeletons/DashboardSkeleton';
@@ -15,9 +15,10 @@ import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 import { AlertModal } from '../../components/common/AlertModal';
 import { apiClient } from '../../services/apiClient';
 import { createRefreshQueue } from '../../services/refreshQueue';
+import { getQueuePage, queueGridClassName } from '../../components/dashboard/liveQueueLayout';
+import { useLiveQueueLayout } from '../../components/dashboard/useLiveQueueLayout';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
-const QUEUE_PAGE_SIZE = 3;
 type QueueKey = 'new' | 'ready' | 'completed';
 type QueueFilterState = {
  searchQuery: string;
@@ -74,6 +75,8 @@ export const ShopDashboard: React.FC = () => {
  const [tabDirection, setTabDirection] = useState(1);
  const [queueFilters, setQueueFilters] = useState<Record<QueueKey, QueueFilterState>>(INITIAL_QUEUE_FILTERS);
  const [queuePages, setQueuePages] = useState<Record<QueueKey, number>>({ new: 1, ready: 1, completed: 1 });
+ const { layout: queueLayout, gridRef } = useLiveQueueLayout();
+ const [queuePageSizes, setQueuePageSizes] = useState<Record<QueueKey, number>>(() => ({ new: queueLayout.pageSize, ready: queueLayout.pageSize, completed: queueLayout.pageSize }));
  const [pageAnnouncement, setPageAnnouncement] = useState('');
  const queueBoardRef = useRef<HTMLDivElement>(null);
  const queueTabRefs = useRef<Record<QueueKey, HTMLButtonElement | null>>({ new: null, ready: null, completed: null });
@@ -331,7 +334,7 @@ export const ShopDashboard: React.FC = () => {
  }
  };
 
- if (isLoading) return <DashboardSkeleton />;
+ if (isLoading) return <DashboardSkeleton layout={queueLayout} gridRef={gridRef} />;
  if (error) return (
  <div className="flex min-h-full items-center justify-center bg-carbon-gray-10 p-4 font-sans sm:p-8">
  <div className="w-full max-w-lg border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white p-6 shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:p-8">
@@ -386,24 +389,30 @@ export const ShopDashboard: React.FC = () => {
  const printReadyOrders = filteredQueueOrders.ready;
  const completedOrders = filteredQueueOrders.completed;
 
+ const pageSizes = queueLayout.queueKey === activeQueue ? { ...queuePageSizes, [activeQueue]: queueLayout.pageSize } : queuePageSizes;
  const pageTotals = {
- new: Math.max(1, Math.ceil(newOrders.length / QUEUE_PAGE_SIZE)),
- ready: Math.max(1, Math.ceil(printReadyOrders.length / QUEUE_PAGE_SIZE)),
- completed: Math.max(1, Math.ceil(completedOrders.length / QUEUE_PAGE_SIZE)),
+ new: Math.max(1, Math.ceil(newOrders.length / pageSizes.new)),
+ ready: Math.max(1, Math.ceil(printReadyOrders.length / pageSizes.ready)),
+ completed: Math.max(1, Math.ceil(completedOrders.length / pageSizes.completed)),
  };
+ const anchoredPages = { ...queuePages };
+ if (queuePageSizes[activeQueue] !== pageSizes[activeQueue]) {
+ anchoredPages[activeQueue] = getQueuePage(queuePages[activeQueue], queuePageSizes[activeQueue], pageSizes[activeQueue], filteredQueueOrders[activeQueue].length);
+ setQueuePageSizes(pageSizes);
+ }
 
  const pages = {
- new: Math.min(queuePages.new, pageTotals.new),
- ready: Math.min(queuePages.ready, pageTotals.ready),
- completed: Math.min(queuePages.completed, pageTotals.completed),
+ new: Math.min(anchoredPages.new, pageTotals.new),
+ ready: Math.min(anchoredPages.ready, pageTotals.ready),
+ completed: Math.min(anchoredPages.completed, pageTotals.completed),
  };
  // Store poll-driven clamps so a later refresh cannot restore an obsolete page.
  if (pages.new !== queuePages.new || pages.ready !== queuePages.ready || pages.completed !== queuePages.completed) {
  setQueuePages(pages);
  }
- const visibleNewOrders = newOrders.slice((pages.new - 1) * QUEUE_PAGE_SIZE, pages.new * QUEUE_PAGE_SIZE);
- const visibleReadyOrders = printReadyOrders.slice((pages.ready - 1) * QUEUE_PAGE_SIZE, pages.ready * QUEUE_PAGE_SIZE);
- const visibleCompletedOrders = completedOrders.slice((pages.completed - 1) * QUEUE_PAGE_SIZE, pages.completed * QUEUE_PAGE_SIZE);
+ const visibleNewOrders = newOrders.slice((pages.new - 1) * pageSizes.new, pages.new * pageSizes.new);
+ const visibleReadyOrders = printReadyOrders.slice((pages.ready - 1) * pageSizes.ready, pages.ready * pageSizes.ready);
+ const visibleCompletedOrders = completedOrders.slice((pages.completed - 1) * pageSizes.completed, pages.completed * pageSizes.completed);
  const visibleQueueOrders: Record<QueueKey, typeof shopOrders> = {
  new: visibleNewOrders,
  ready: visibleReadyOrders,
@@ -429,9 +438,7 @@ export const ShopDashboard: React.FC = () => {
  const heading = queueBoardRef.current?.querySelector<HTMLElement>(`#queue-${queue}-heading`);
  if (!heading) return;
  heading.focus({ preventScroll: true });
- if (window.matchMedia('(min-width: 1024px)').matches) {
- queueBoardRef.current?.querySelector<HTMLElement>(`#queue-${queue}-orders`)?.scrollTo({ top: 0, behavior: 'instant' });
- } else {
+ if (!queueLayout.contained) {
  const scroller = heading.closest<HTMLElement>('[data-shop-scroll]');
  if (!scroller) return;
  const headingBounds = heading.getBoundingClientRect();
@@ -443,9 +450,10 @@ export const ShopDashboard: React.FC = () => {
  });
  };
 
+ const isVerified = verification_status === 'VERIFIED' || verification_status === 'OPEN';
  return (
- <div className="flex min-h-full min-w-0 flex-col bg-carbon-gray-10 font-sans lg:h-full lg:min-h-0 lg:overflow-hidden">
- <div className="flex flex-none flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+ <div className={`flex min-h-full min-w-0 flex-col bg-carbon-gray-10 font-sans ${isVerified ? queueLayout.contained ? 'xl:h-full xl:min-h-0 xl:overflow-hidden' : '' : 'lg:h-full lg:min-h-0 lg:overflow-hidden'}`}>
+ <div className={`flex flex-none flex-col ${isVerified ? queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : '' : 'lg:min-h-0 lg:flex-1 lg:overflow-hidden'}`}>
  {verification_status === 'PENDING_REVIEW' ? (
  <div className="p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:p-8">
  <div className="relative mx-auto mt-4 flex w-full max-w-2xl flex-col items-center justify-center overflow-hidden border border-gray-300 border-t-4 border-t-carbon-blue-60 bg-white px-6 py-12 text-center shadow-[0_12px_32px_rgba(22,22,22,0.08)] sm:mt-8 sm:px-10 sm:py-16">
@@ -498,7 +506,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  ) : (
  // Kanban Board Layout
- <div className="flex flex-none flex-col bg-carbon-gray-10 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+ <div className={`flex flex-none flex-col bg-carbon-gray-10 ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`}>
  <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
  {QUEUE_ORDER.map(queue => {
  const isActive = activeQueue === queue;
@@ -538,14 +546,13 @@ export const ShopDashboard: React.FC = () => {
  />
 
  <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{pageAnnouncement}</p>
- <div ref={queueBoardRef} data-live-queue className="flex flex-none flex-col overflow-hidden p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:p-5">
- <AnimatePresence mode="wait" initial={false}>
+ <div ref={queueBoardRef} data-live-queue className={`flex flex-none flex-col overflow-hidden p-3 ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1' : ''}`}>
  <motion.section
  key={activeQueue}
  id={`queue-panel-${activeQueue}`}
  role="tabpanel"
  aria-labelledby={`queue-tab-${activeQueue}`}
- className="flex w-full min-w-0 flex-col overflow-hidden border border-black bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] lg:min-h-0 lg:flex-1"
+ className={`flex w-full min-w-0 flex-col overflow-hidden border border-black bg-gray-100 shadow-[0_8px_20px_rgba(22,22,22,0.08)] ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1' : ''}`}
  initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: tabDirection * 32 }}
  animate={{ opacity: 1, x: 0 }}
  exit={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: tabDirection * -24 }}
@@ -624,7 +631,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
 
- <div id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className="grid grid-cols-1 items-start gap-3 overflow-y-visible p-3 sm:p-4 md:grid-cols-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto xl:grid-cols-3">
+ <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
  {activeVisibleOrders.map(order => activeQueue === 'ready' ? (
  <OrderCard
  key={order.id}
@@ -641,7 +648,7 @@ export const ShopDashboard: React.FC = () => {
  />
  ))}
  {activeOrders.length === 0 && (
- <div className="flex min-h-48 items-center justify-center border border-dashed border-black bg-white px-6 text-center md:col-span-2 xl:col-span-3 lg:h-full">
+ <div className="col-span-full row-span-full flex min-h-48 items-center justify-center border border-dashed border-black bg-white px-6 text-center">
  <p className="text-sm font-medium leading-relaxed text-gray-600">{activeEmptyMessage}</p>
  </div>
  )}
@@ -651,12 +658,11 @@ export const ShopDashboard: React.FC = () => {
  label={QUEUE_LABELS[activeQueue]}
  controlsId={`queue-${activeQueue}-orders`}
  page={pages[activeQueue]}
- pageSize={QUEUE_PAGE_SIZE}
+ pageSize={pageSizes[activeQueue]}
  total={activeOrders.length}
  onPageChange={page => handleQueuePageChange(activeQueue, page)}
  />
  </motion.section>
- </AnimatePresence>
  </div>
 
  </div>
