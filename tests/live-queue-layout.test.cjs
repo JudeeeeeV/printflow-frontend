@@ -49,6 +49,28 @@ test('larger text scales the minimum row and gap before choosing a capacity', ()
   assert.equal(getLiveQueueLayout(1440, 319, 320, 15).contained, false);
 });
 
+test('loading shows six compact desktop placeholders, four on tablets, and three on phones', () => {
+  const { DashboardSkeleton } = load('components/dashboard/skeletons/DashboardSkeleton.tsx', {
+    react: {},
+    'react/jsx-runtime': { jsx, jsxs: jsx },
+    '../liveQueueLayout': layoutHelpers,
+  });
+  const gridRef = () => {};
+  for (const [width, height, count] of [[1440, 524, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 4], [375, 812, 3]]) {
+    const layout = getLiveQueueLayout(width, height);
+    const tree = DashboardSkeleton({ layout, gridRef });
+    const grid = nodes(tree).find(node => node.props?.['data-queue'] === 'new');
+    assert.equal(grid.props.children.length, count);
+    assert.equal(grid.props.ref, gridRef);
+    assert.equal(tree.props.role, 'status');
+    if (layout.contained) {
+      assert.equal(grid.props.style.gridTemplateRows, 'repeat(2, minmax(7rem, 1fr))');
+    } else {
+      assert.equal(grid.props.style, undefined);
+    }
+  }
+});
+
 test('capacity changes keep the first visible order in the resulting page and clamp totals', () => {
   assert.equal(getQueuePage(3, 6, 3, 30), 5);
   assert.equal(getQueuePage(3, 3, 6, 30), 2);
