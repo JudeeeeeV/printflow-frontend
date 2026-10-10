@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { getOrderCardTitleParts } from "./orderCardTitle";
+import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
 
 interface OrderCardProps {
   order: any;
@@ -22,9 +23,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
   const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
-  const actionButtonClassName = "flex h-9 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none";
+  const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
   const paperSize = order.paper_size || "A4";
   const paperSizeBackground = Object.hasOwn(paperSizeBackgrounds, paperSize)
@@ -85,58 +87,62 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      whileHover={onClick ? { scale: 1.01 } : undefined}
       onClick={onClick}
-      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} bg-white transition-all duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[13px] shadow-md' : `border border-black p-4 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
+      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} flex h-full min-w-0 flex-col bg-white transition-[border-color,box-shadow] duration-200 xl:min-h-64 ${isSelected ? 'border-4 border-carbon-blue-60 p-[9px] shadow-md' : `border border-black p-3 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h4 className="font-black text-carbon-gray-100 [overflow-wrap:anywhere]">
-            {title.filename}
+          <h4 className="font-black leading-5 text-carbon-gray-100 [overflow-wrap:anywhere]">
+            <button type="button" aria-label={`Show full title and customer for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
+              event.stopPropagation();
+              setIsDetailsOpen(true);
+            }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-10">
+              <span className="line-clamp-2">{title.filename}</span>
+            </button>
           </h4>
-          <p className="mt-1 text-sm font-bold text-black [overflow-wrap:anywhere]">
+          <p className="mt-1 truncate text-sm font-bold text-black leading-4">
             {title.customer}
           </p>
           <p className="text-xs text-gray-500 font-medium break-words">
             Order #{order.id.slice(0, 8)}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <div className={`shrink-0 px-2 py-1 text-[10px] font-bold ${badgeColor}`}>
+        <div className="flex max-w-[48%] shrink-0 flex-col items-end gap-1">
+          <div className={`max-w-full px-2 py-1 text-right text-[10px] font-bold leading-3 [overflow-wrap:anywhere] ${badgeColor}`}>
             {badgeText}
           </div>
-          <p className="whitespace-nowrap text-sm font-bold text-black">{title.date}</p>
+          <p className="whitespace-nowrap text-sm font-bold text-black leading-4">{title.date}</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        <span className={`px-2 py-1 text-white text-[10px] font-bold border border-[#e0e0e0] ${paperSizeBackground}`}>
+      <div className="mb-2 flex flex-wrap gap-1 [&>span]:max-w-full [&>span]:break-words [&>span]:leading-3">
+        <span className={`px-2 py-0.5 text-white text-[10px] font-bold border border-[#e0e0e0] ${paperSizeBackground}`}>
           {paperSize}
         </span>
         {order.print_color_mode === "COLOR" ? (
           <span
-            className="px-2 py-1 text-white text-[10px] font-bold border border-gray-300"
+            className="px-2 py-0.5 text-white text-[10px] font-bold border border-gray-300"
             style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), linear-gradient(to right, #00ffff 0%, #ff00ff 33%, #ffff00 67%, #000000 100%)", textShadow: "0 1px 2px rgba(0, 0, 0, 0.9)" }}
           >
             COLOR
           </span>
         ) : (
-          <span className="px-2 py-1 bg-white text-black text-[10px] font-bold border border-gray-300">
+          <span className="px-2 py-0.5 bg-white text-black text-[10px] font-bold border border-gray-300">
             B&W
           </span>
         )}
-        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
+        <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
           {pageCount === null ? 'Page count unavailable' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`}
         </span>
-        <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-800">
+        <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800">
           {order.orientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT'}
         </span>
-        <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-800">
+        <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800">
           {copies} {copies === 1 ? 'COPY' : 'COPIES'}
         </span>
       </div>
 
-      <div className="space-y-2 mb-4">
+      <div className="mb-2">
         <div className="flex justify-between text-sm">
           <span className="text-gray-500 font-medium">Total Amount:</span>
           <span className="font-bold text-carbon-gray-100">
@@ -146,10 +152,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       </div>
 
       {/* Payment actions share a row; selectable cards keep their checkbox. */}
-      <div className={`gap-2 border-t border-[#e0e0e0] pt-3 ${canReviewPayment ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
+      <div className={`mt-auto gap-2 border-t border-[#e0e0e0] pt-2 ${canReviewPayment ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
         {!canReviewPayment && (onToggleSelect ? (
           <label
-            className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100"
+            className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100 xl:min-h-9"
             onClick={(e) => e.stopPropagation()}
           >
             <input
@@ -214,12 +220,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       </div>
 
       {isDisputed && (
-        <div className="mt-4 pt-3 border-t border-[#e0e0e0]">
-          <p className="w-full py-2 bg-gray-100 text-gray-600 font-bold text-[10px] text-center uppercase tracking-wider">
+        <div className="mt-1">
+          <p className="w-full py-1 bg-gray-100 text-gray-600 font-bold text-[10px] leading-3 text-center uppercase tracking-wider">
             Administration Reviewing Payment
           </p>
         </div>
       )}
+
+      {isDetailsOpen && <OrderCardDetailsDialog orderId={order.id} filename={title.filename} customer={title.customer} onClose={() => setIsDetailsOpen(false)} />}
 
       {/* Document Preview Modal */}
       {isPreviewOpen &&

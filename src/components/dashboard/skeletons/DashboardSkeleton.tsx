@@ -1,10 +1,12 @@
 import React from 'react';
+import { queueGridClassName, type LiveQueueLayout } from '../liveQueueLayout';
 
-export const DashboardSkeleton: React.FC = () => {
+export const DashboardSkeleton: React.FC<{ layout: LiveQueueLayout; gridRef: React.Ref<HTMLDivElement> }> = ({ layout, gridRef }) => {
+    const containedClass = layout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : '';
     return (
-        <div role="status" aria-label="Loading live queue" className="flex min-h-full w-full min-w-0 flex-col font-sans lg:h-full lg:min-h-0 lg:overflow-hidden motion-reduce:[&_.animate-pulse]:animate-none">
-            <div className="flex flex-none flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-                <div className="flex flex-none flex-col bg-gray-100/50 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+        <div role="status" aria-label="Loading live queue" className={`flex min-h-full w-full min-w-0 flex-col font-sans ${layout.contained ? 'xl:h-full xl:min-h-0 xl:overflow-hidden' : ''} motion-reduce:[&_.animate-pulse]:animate-none`}>
+            <div className={`flex flex-none flex-col ${containedClass}`}>
+                <div className={`flex flex-none flex-col bg-gray-100/50 ${containedClass}`}>
                     
                     <div aria-hidden="true" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
                         {[1, 2, 3].map(tab => (
@@ -29,11 +31,11 @@ export const DashboardSkeleton: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-none flex-col overflow-hidden p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:p-5">
-                        <div className="flex w-full min-w-0 flex-col overflow-hidden border border-black bg-gray-100 lg:min-h-0 lg:flex-1">
-                            <div className="grid grid-cols-1 items-start gap-3 overflow-hidden p-3 sm:p-4 md:grid-cols-2 lg:min-h-0 lg:flex-1 xl:grid-cols-3">
-                                {Array.from({ length: 3 }).map((_, cardIndex) => (
-                                    <div key={cardIndex} className="min-w-0 animate-pulse border border-black bg-white p-3 sm:p-4">
+                    <div className={`flex flex-none flex-col overflow-hidden p-3 ${containedClass}`}>
+                        <div className={`flex w-full min-w-0 flex-col overflow-hidden border border-black bg-gray-100 ${containedClass}`}>
+                            <div ref={gridRef} data-queue="new" className={`${queueGridClassName} ${containedClass}`} style={layout.contained ? { gridTemplateRows: layout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
+                                {Array.from({ length: layout.pageSize }).map((_, cardIndex) => (
+                                    <div key={cardIndex} className="flex h-full min-w-0 flex-col animate-pulse border border-black bg-white p-3 xl:min-h-64">
                                         <div className="mb-3 flex items-start justify-between gap-2">
                                             <div className="space-y-2">
                                                 <div className="h-4 w-24 bg-gray-200" />
@@ -55,10 +57,13 @@ export const DashboardSkeleton: React.FC = () => {
                                                 <div className="h-3 w-24 bg-gray-200" />
                                             </div>
                                         </div>
+                                        <div className="mt-auto border-t border-gray-200 pt-2">
+                                            <div className="h-11 w-full bg-gray-100 xl:h-9" />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                            <div aria-hidden="true" className="shrink-0 space-y-2 border-t border-gray-300 bg-white p-3">
+                            <div aria-hidden="true" className="shrink-0 space-y-2 border-t border-gray-300 bg-white p-3 xl:flex xl:h-[57px] xl:items-center xl:justify-between xl:space-y-0 xl:py-1.5">
                                 <div className="h-5 w-32 animate-pulse bg-gray-100" />
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="h-11 w-24 animate-pulse border border-black bg-gray-100" />
