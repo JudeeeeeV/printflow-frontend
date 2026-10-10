@@ -22,6 +22,7 @@ import {
   type TooltipContentProps,
 } from 'recharts';
 import { apiClient } from '../../services/apiClient';
+import { useDataEvents } from '../../hooks/useDataEvents';
 import { orderService } from '../../services/orderService';
 import { AnalyticsSkeleton } from './AnalyticsSkeleton';
 import { Renew } from '@carbon/icons-react';
@@ -335,6 +336,11 @@ export const ShopAnalyticsPage: React.FC = () => {
       isCurrent = false;
     };
   }, []);
+
+  useDataEvents(['orders', 'receipts', 'print-jobs'], () => {
+    if (datePreset === 'CUSTOM' && (!customStart || !customEnd)) return;
+    void fetchAnalytics(datePreset, customStart || undefined, customEnd || undefined);
+  });
 
   const handlePresetChange = (preset: DatePreset) => {
     setDatePreset(preset);

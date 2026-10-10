@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { orderService } from '../../services/orderService';
 import { useNavigate } from 'react-router-dom';
 import { TableSkeleton } from '../common/TableSkeleton';
 import { ArrowDown, ArrowUp, Filter, ChevronDown } from '@carbon/icons-react';
 import { Pagination } from '../common/Pagination';
+import { useDataEvents } from '../../hooks/useDataEvents';
 
 export const MyOrdersList: React.FC = () => {
  const [orders, setOrders] = useState<any[]>([]);
@@ -20,9 +21,9 @@ export const MyOrdersList: React.FC = () => {
  return () => clearInterval(timer);
  }, []);
 
- useEffect(() => {
+ const fetchOrders = useCallback(() => {
  setIsLoading(true);
- orderService.getUserOrders(sortByDate, statusFilter, currentPage, 10)
+ return orderService.getUserOrders(sortByDate, statusFilter, currentPage, 10)
  .then(res => {
  setOrders(res.data);
  setTotalPages(res.meta.totalPages);
@@ -33,6 +34,12 @@ export const MyOrdersList: React.FC = () => {
  setIsLoading(false);
  });
  }, [sortByDate, statusFilter, currentPage]);
+
+ useEffect(() => {
+ void fetchOrders();
+ }, [fetchOrders]);
+
+ useDataEvents(['orders', 'receipts'], () => void fetchOrders());
 
  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
  setStatusFilter(e.target.value);

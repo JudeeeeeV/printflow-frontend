@@ -86,6 +86,7 @@ function createSettingsFixture(options = {}) {
     'framer-motion': { AnimatePresence: 'presence', motion: { div: 'motion-div' }, useReducedMotion: () => false },
     'react-router-dom': { useBlocker: predicate => { shouldBlock = predicate; return blocker; }, useOutletContext: () => ({ registerLogoutGuard }) },
     '../../services/shopService': { shopService: service },
+    '../../hooks/useDataEvents': { useDataEvents: () => {} },
     '../../components/maps/ShopPhotoUpload': { ShopPhotoUpload: 'photo-editor' },
     '../../components/settings/ShopGcashQrForm': { ShopGcashQrForm: 'qr-editor' },
     '../../components/maps/LocationMapModal': { LocationMapModal: 'map-dialog' },

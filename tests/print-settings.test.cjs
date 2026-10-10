@@ -49,6 +49,7 @@ function fixture(kind = 'new', busy = false) {
   const mocks = { react, 'react/jsx-runtime': runtime, '@carbon/icons-react': { ArrowLeft: component, Document: component },
     '../../services/orderService': { orderService: services }, '../../services/shopService': { shopService: { getShops: async () => [shop] } },
     '../../services/apiClient': { apiClient: async () => ({}) },
+    '../../hooks/useDataEvents': { useDataEvents: () => {} },
     'react-router-dom': { useNavigate: () => target => navigation.push(target), useSearchParams: () => [new URLSearchParams(), () => {}] },
     '../../components/orders/ShopSelector/ShopSelector': markers, '../orders/ShopSelector/ShopSelector': markers,
     '../../components/orders/FileUploadZone/FileUploadZone': markers, '../orders/FileUploadZone/FileUploadZone': markers,

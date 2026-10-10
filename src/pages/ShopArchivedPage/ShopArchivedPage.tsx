@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { orderService } from '../../services/orderService';
 import { TableSkeleton } from '../../components/common/TableSkeleton';
+import { useDataEvents } from '../../hooks/useDataEvents';
 
 export interface Order {
  id: string;
@@ -36,6 +37,8 @@ export const ShopArchivedPage: React.FC = () => {
  isCurrent = false;
  };
  }, [requestAttempt]);
+
+ useDataEvents(['orders'], () => setRequestAttempt(attempt => attempt + 1));
 
  const handleRetry = () => {
  setError(null);

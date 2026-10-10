@@ -11,6 +11,7 @@ import styles from "../../components/maps/Maps.module.css";
 import pageStyles from "./ShopSettingsPage.module.css";
 import { UnsavedSettingsModal } from "./UnsavedSettingsModal";
 import type { ShopSettingsNavigation } from "../../components/layout/ShopLayout";
+import { useDataEvents } from "../../hooks/useDataEvents";
 
 const SECTION_LABELS = { details: "Shop details", pickup: "Pickup location", availability: "Shop availability", photo: "Shop photo", qr: "GCash QR code" };
 type Section = keyof typeof SECTION_LABELS;
@@ -81,6 +82,9 @@ export const ShopSettingsPage: React.FC = () => {
     qr: pendingQr !== null || pendingQrRemoval,
   };
   const dirty = Object.values(changed).some(Boolean);
+  useDataEvents(["shops"], () => {
+    if (!dirty && !isSaving && !busyRef.current) setLoadAttempt(attempt => attempt + 1);
+  });
   const disabled = isLoading || Boolean(loadError) || isSaving;
   const hasPin = hasCoordinates(values.latitude, values.longitude);
   const errorSections = (Object.keys(SECTION_LABELS) as Section[]).filter(section => errors[section]);

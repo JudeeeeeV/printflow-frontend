@@ -15,6 +15,7 @@ import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 import { AlertModal } from '../../components/common/AlertModal';
 import { apiClient } from '../../services/apiClient';
 import { createRefreshQueue } from '../../services/refreshQueue';
+import { useDataEvents } from '../../hooks/useDataEvents';
 
 const QUEUE_PAGE_SIZE = 3;
 type QueueKey = 'new' | 'ready' | 'completed';
@@ -147,6 +148,9 @@ export const ShopDashboard: React.FC = () => {
  useEffect(() => {
  loadShopData();
  }, []);
+
+ useDataEvents(['shops'], loadShopData);
+ useDataEvents(['orders', 'receipts', 'assets', 'print-jobs'], refreshOrdersAfterChange);
 
  useEffect(() => {
  if (shopData?.verification_status === 'VERIFIED' || shopData?.verification_status === 'OPEN') {

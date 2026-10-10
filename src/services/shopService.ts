@@ -30,6 +30,10 @@ let pendingShops: Promise<PrintShop[]> | null = null;
 let cachedShops: { shops: PrintShop[]; expiresAt: number } | null = null;
 
 export const shopService = {
+ invalidateShops(): void {
+ cachedShops = null;
+ },
+
  getShops(): Promise<PrintShop[]> {
  if (cachedShops && Date.now() < cachedShops.expiresAt) {
  return Promise.resolve(cachedShops.shops);

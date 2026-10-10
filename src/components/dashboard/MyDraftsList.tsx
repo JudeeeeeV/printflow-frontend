@@ -5,6 +5,7 @@ import { MyDraftsSkeleton } from './skeletons/MyDraftsSkeleton';
 import { Pagination } from '../common/Pagination';
 import { AlertModal } from '../common/AlertModal';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { useDataEvents } from '../../hooks/useDataEvents';
 
 export interface DraftOrder {
  id: string;
@@ -57,6 +58,8 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  const timer = window.setTimeout(() => void fetchDrafts(), 0);
  return () => window.clearTimeout(timer);
  }, [fetchDrafts]);
+
+ useDataEvents(['orders', 'assets'], () => void fetchDrafts());
 
  const handleDeleteDraft = async (draftId: string) => {
  setIsActionLoading(draftId);
