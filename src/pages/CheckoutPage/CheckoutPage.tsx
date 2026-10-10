@@ -121,7 +121,7 @@ export const CheckoutPage: React.FC = () => {
  <CheckoutCard
  orderId={orderId}
  amount={order?.total ?? 15}
- gcashNumber={order?.shops?.gcash_number || '09123456789'}
+ gcashNumber={order?.shops?.gcash_number}
  gcashQrUrl={order?.shops?.gcash_qr_url}
  createdAt={order?.created_at}
  expiresAt={order?.expires_at}

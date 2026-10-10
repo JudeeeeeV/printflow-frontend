@@ -3,17 +3,19 @@ import { QrCode } from '@carbon/icons-react';
 import buttonStyles from '../maps/Maps.module.css';
 
 interface Props {
+  gcashNumber: string;
   savedUrl: string | null;
   selectedFile: File | null;
   localUrl: string | null;
   pendingRemoval: boolean;
   disabled: boolean;
   error?: string;
+  onNumberChange: (value: string) => void;
   onSelect: (file: File) => void;
   onRemove: () => void;
 }
 
-export function ShopGcashQrForm({ savedUrl, selectedFile, localUrl, pendingRemoval, disabled, error, onSelect, onRemove }: Props) {
+export function ShopGcashQrForm({ gcashNumber, savedUrl, selectedFile, localUrl, pendingRemoval, disabled, error, onNumberChange, onSelect, onRemove }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [failedPreviewUrl, setFailedPreviewUrl] = useState<string | null>(null);
   const previewUrl = selectedFile ? localUrl : pendingRemoval ? null : savedUrl;
@@ -25,7 +27,24 @@ export function ShopGcashQrForm({ savedUrl, selectedFile, localUrl, pendingRemov
         <h2 id="shop-gcash-qr-title" className="text-base font-semibold text-carbon-gray-100">GCash QR code</h2>
       </div>
       <div className="space-y-4 p-4">
-        <p id="shop-gcash-qr-help" className="text-sm text-gray-600">Students use this QR code to pay your shop. Choose a JPEG, PNG, or WebP image up to 10 MB, then save your changes.</p>
+        <div>
+          <label htmlFor="shop-gcash-number" className="mb-1 block text-sm font-medium text-gray-700">GCash mobile number</label>
+          <input
+            id="shop-gcash-number"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={11}
+            disabled={disabled}
+            value={gcashNumber}
+            onChange={event => onNumberChange(event.target.value.replace(/\D/g, '').slice(0, 11))}
+            placeholder="09XXXXXXXXX"
+            aria-describedby="shop-gcash-number-help"
+            className={buttonStyles.input}
+          />
+          <p id="shop-gcash-number-help" className="mt-2 text-xs leading-relaxed text-gray-600">Enter the 11-digit number registered to your GCash account, starting with 09.</p>
+        </div>
+        <p id="shop-gcash-qr-help" className="text-sm text-gray-600">You can also upload a QR code. Choose a JPEG, PNG, or WebP image up to 10 MB, then save your changes.</p>
         <div className="mx-auto flex h-44 w-44 max-w-full items-center justify-center border border-gray-300 bg-white p-2">
           {previewUrl ? failedPreviewUrl === previewUrl ? (
             <p role="alert" className="p-2 text-center text-sm text-red-700">Unable to display this image. Choose another image or reload settings to try again.</p>

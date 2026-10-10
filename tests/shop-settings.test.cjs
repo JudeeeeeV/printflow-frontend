@@ -120,6 +120,29 @@ test('loads one settings baseline and keeps Save hidden until an edit', async ()
   f.unmount();
 });
 
+test('saves a manually typed GCash number without changing the QR image', async () => {
+  const f = createSettingsFixture(); await f.flush();
+  f.qr().onNumberChange('09987654321'); f.render();
+  assert.ok(f.button('Save Changes'));
+  await f.save(); f.render();
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].section, 'qr');
+  assert.deepEqual({ ...f.calls[0].payload }, { gcash_number: '09987654321' });
+  assert.equal(f.qr().savedUrl, 'saved-qr');
+  assert.equal(f.qr().gcashNumber, '09987654321');
+  assert.equal(f.button('Save Changes'), undefined);
+  f.unmount();
+});
+
+test('rejects an incomplete manually typed GCash number', async () => {
+  const f = createSettingsFixture(); await f.flush();
+  f.qr().onNumberChange('0917123'); f.render();
+  await f.save(); f.render();
+  assert.equal(f.calls.length, 0);
+  assert.match(f.qr().error, /11-digit/);
+  f.unmount();
+});
+
 test('tracks and reverts text, availability, and coordinate edits independently', async () => {
   const f = createSettingsFixture(); await f.flush();
   for (const [id, value] of [['settings-shop-name', 'Changed'], ['settings-location', 'New address'], ['settings-description', 'New description'], ['shop-opens-at', '09:00'], ['shop-closes-at', '21:00']]) {

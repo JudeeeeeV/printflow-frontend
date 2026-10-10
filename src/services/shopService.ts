@@ -4,6 +4,7 @@ import type { PrintShop } from './orderService';
 type GcashQr = { gcash_qr_url: string | null };
 export type ShopSettingsValues = {
  name: string;
+ gcash_number: string;
  location: string | null;
  description: string | null;
  latitude: number | null;
