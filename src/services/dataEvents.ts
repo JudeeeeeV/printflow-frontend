@@ -1,4 +1,5 @@
 import { API_URL } from '../config/runtime';
+import { invalidateApiCache } from './apiClient';
 
 export type DataResource = 'assets' | 'devices' | 'notifications' | 'orders' | 'print-jobs' | 'receipts' | 'shops' | 'users';
 type Listener = { resources: Set<DataResource>; callback: () => void };
@@ -27,6 +28,7 @@ class DataEvents {
       try {
         const resources = new Set<DataResource>(JSON.parse(event.data).resources || []);
         if (resources.size === 0) return;
+        invalidateApiCache();
         for (const listener of this.listeners) {
           if ([...listener.resources].some((resource) => resources.has(resource))) this.pending.add(listener);
         }
