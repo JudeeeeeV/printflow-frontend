@@ -95,16 +95,17 @@ test('uses Manila day and year boundaries and zero-padded MM/DD/YY', () => {
   }
 });
 
-function renderCard(value, onClick, onToggleSelect, onReviewPayment = () => {}) {
+function renderCard(value, onClick, onToggleSelect, onReviewPayment = () => {}, stateChanges = [], isSelected = false) {
   const jsx = (type, props) => ({ type, props });
   const { OrderCard } = load('OrderCard.tsx', {
-    react: { useState: initial => [initial, () => {}] },
+    react: { useState: initial => [initial, next => stateChanges.push(next)] },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-dom': { createPortal: node => node },
     'framer-motion': { motion: { div: 'div' } },
     './orderCardTitle': { getOrderCardTitleParts },
+    './OrderCardDetailsDialog': { OrderCardDetailsDialog: 'OrderCardDetailsDialog' },
   });
-  return OrderCard({ order: value, onClick, onToggleSelect, onReviewPayment });
+  return OrderCard({ order: value, onClick, onToggleSelect, onReviewPayment, isSelected });
 }
 
 function nodes(tree) {
@@ -122,11 +123,13 @@ test('all queue states render the new heading, supporting order ID, and status b
   for (const state of ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED']) {
     const elements = nodes(renderCard(order({ state })));
     const heading = elements.find(node => node.type === 'h4');
-    assert.equal(heading.props.children, 'Test Paper');
+    assert.equal(text(heading), 'Test Paper');
+    assert.ok(elements.some(node => /line-clamp-2/.test(node.props.className || '')));
     const customer = elements.find(node => node.type === 'p' && text(node) === 'Aldrin Novabos');
     const date = elements.find(node => node.type === 'p' && text(node) === '04/10/26');
     assert.ok(customer && date);
     assert.match(customer.props.className, /text-sm font-bold text-black/);
+    assert.match(customer.props.className, /truncate/);
     assert.match(date.props.className, /text-sm font-bold text-black/);
     assert.ok(!elements.some(node => text(node) === '•'));
     assert.match(heading.props.className, /overflow-wrap:anywhere/);
@@ -166,7 +169,7 @@ test('card and preview clicks do not activate payment review; only the review bu
 
 test('payment review remains available without a document and other states retain their actions', () => {
   for (const assets of [undefined, null, []]) {
-    const buttons = nodes(renderCard(order({ assets }))).filter(node => node.type === 'button');
+    const buttons = nodes(renderCard(order({ assets }))).filter(node => node.type === 'button' && !node.props['aria-haspopup']);
     assert.deepEqual(buttons.map(text), ['Review Payment']);
   }
   for (const state of ['AWAITING_PAYMENT', 'IN_PRODUCTION', 'READY_FOR_PICKUP', 'COMPLETED']) {
@@ -174,6 +177,32 @@ test('payment review remains available without a document and other states retai
     assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
     assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
   }
+});
+
+test('the full-title disclosure opens independently of selection and payment review', () => {
+  let selected = 0, reviewed = 0, stopped = 0;
+  const changes = [];
+  const tree = renderCard(order({ order_name: 'A long complete order title', client_name: 'A long complete customer name' }), () => selected++, undefined, () => reviewed++, changes);
+  const button = nodes(tree).find(node => node.type === 'button' && node.props['aria-haspopup'] === 'dialog');
+  assert.equal(text(button), 'A long complete order title');
+  assert.equal(button.props['aria-expanded'], false);
+  button.props.onClick({ stopPropagation() { stopped++; } });
+  assert.deepEqual(changes, [true]);
+  assert.equal(stopped, 1);
+  assert.equal(selected, 0);
+  assert.equal(reviewed, 0);
+});
+
+test('compact cards preserve their bounds, selected borders, and responsive actions', () => {
+  const normal = renderCard(order({ state: 'IN_PRODUCTION' }), () => {});
+  const selected = renderCard(order({ state: 'IN_PRODUCTION' }), () => {}, () => {}, undefined, [], true);
+  assert.match(normal.props.className, /border border-black p-3/);
+  assert.match(selected.props.className, /border-4 border-carbon-blue-60 p-\[9px\]/);
+  assert.equal(normal.props.whileHover, undefined);
+  assert.match(normal.props.className, /xl:min-h-64/);
+  const preview = nodes(normal).find(node => node.type === 'button' && text(node) === 'Preview Document');
+  assert.match(preview.props.className, /h-11/);
+  assert.match(preview.props.className, /xl:h-9/);
 });
 
 test('disputed orders retain explicit receipt review and the administration notice', () => {

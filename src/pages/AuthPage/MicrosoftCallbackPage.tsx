@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { apiClient } from '../../services/apiClient';
+import { apiClient, setAuthTokens } from '../../services/apiClient';
 
 const messages: Record<string, string> = {
   not_configured: 'Microsoft sign-in is not configured yet. Please use email and password for now.',
@@ -21,9 +21,10 @@ export function MicrosoftCallbackPage() {
     localStorage.removeItem('user_role');
     if (providerError) return;
     let active = true;
-    apiClient<{ user: { role: string } }>('/auth/me')
-      .then(({ user }) => {
+    apiClient<{ user: { role: string }; token?: string }>('/auth/me')
+      .then(({ user, token }) => {
         if (!active) return;
+        if (token) setAuthTokens(token);
         if (!['STUDENT', 'CLERK', 'MANAGER'].includes(user.role)) {
           throw new Error('Unsupported account role');
         }

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { List, ChartBar, Help, HelpDesk, Settings, Logout, Close, UserProfile, Printer } from '@carbon/icons-react';
-import { apiClient } from '../../services/apiClient';
+import { apiClient, clearAuthTokens } from '../../services/apiClient';
 import { shopService } from '../../services/shopService';
 import { ChangePasswordModal } from '../auth/ChangePasswordModal';
 import printflowLogoDark from '../../assets/printflow-logo-dark.png';
@@ -159,6 +159,7 @@ export const ShopLayout: React.FC = () => {
     const handleLogout = () => {
         const logout = async () => {
             await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
+            clearAuthTokens();
             localStorage.removeItem('user_role');
             navigate('/auth');
         };

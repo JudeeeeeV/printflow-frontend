@@ -1,5 +1,5 @@
 import { API_URL } from '../config/runtime';
-import { invalidateApiCache } from './apiClient';
+import { invalidateApiCache, getAccessToken } from './apiClient';
 
 export type DataResource = 'assets' | 'devices' | 'notifications' | 'orders' | 'print-jobs' | 'receipts' | 'shops' | 'users';
 type Listener = { resources: Set<DataResource>; callback: () => void };
@@ -23,7 +23,9 @@ class DataEvents {
 
   private connect() {
     if (this.source || this.listeners.size === 0) return;
-    this.source = new EventSource(`${API_URL}/events/user`, { withCredentials: true });
+    const token = getAccessToken();
+    const url = token ? `${API_URL}/events/user?token=${encodeURIComponent(token)}` : `${API_URL}/events/user`;
+    this.source = new EventSource(url, { withCredentials: true });
     this.source.onmessage = (event) => {
       try {
         const resources = new Set<DataResource>(JSON.parse(event.data).resources || []);

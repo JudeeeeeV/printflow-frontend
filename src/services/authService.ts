@@ -1,6 +1,6 @@
 // src/services/authService.ts
 import { supabase } from '../lib/supabaseClient';
-import { apiClient } from './apiClient';
+import { apiClient, setAuthTokens } from './apiClient';
 
 export interface RegisterPayload {
  firstName: string;
@@ -22,6 +22,8 @@ export interface AuthResponse {
    email: string;
    roleTag: string;
  };
+ token?: string;
+ refreshToken?: string;
 }
 
 export const authService = {
@@ -79,10 +81,14 @@ export const authService = {
  },
 
  async login(payload: LoginPayload): Promise<AuthResponse> {
-   return apiClient<AuthResponse>('/auth/login', {
+   const response = await apiClient<AuthResponse>('/auth/login', {
      method: 'POST',
      body: JSON.stringify({ email: payload.email, password: payload.passwordHash }),
    });
+   if (response.token || response.refreshToken) {
+     setAuthTokens(response.token, response.refreshToken);
+   }
+   return response;
  },
 
  async sendPasswordReset(email: string): Promise<{ message: string }> {

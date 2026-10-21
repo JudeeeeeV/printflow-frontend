@@ -14,7 +14,7 @@ import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
 import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
 import { AlertModal } from '../../components/common/AlertModal';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
-import { apiClient } from '../../services/apiClient';
+import { apiClient, clearAuthTokens } from '../../services/apiClient';
 import printflowLogoDark from '../../assets/printflow-logo-dark.png';
 import styles from './NewOrderPage.module.css';
 
@@ -28,6 +28,7 @@ export const NewOrderPage: React.FC = () => {
 
     const handleLogout = async () => {
         await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
+        clearAuthTokens();
         localStorage.removeItem('user_role');
         navigate('/auth');
     };

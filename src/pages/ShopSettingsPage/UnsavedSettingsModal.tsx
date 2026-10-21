@@ -75,7 +75,7 @@ export function UnsavedSettingsModal({ busy, feedback, onDismiss, onLeave, onSav
         {busy && <p role="status" className="text-sm text-gray-600">Saving changes before leaving...</p>}
       </div>
       <footer className="flex flex-col gap-2 border-t border-gray-200 p-4 sm:flex-row">
-        <button type="button" disabled={busy} onClick={onLeave} className={`${styles.secondaryButton} sm:flex-1`}>Leave Without Saving</button>
+        <button type="button" disabled={busy} onClick={onLeave} className={`${styles.secondaryButton} sm:flex-1`}>Leave without Saving</button>
         <button ref={saveRef} type="button" disabled={busy} onClick={onSave} className={`${styles.primaryButton} sm:flex-1`}>Save Changes</button>
       </footer>
     </dialog>, document.body,
