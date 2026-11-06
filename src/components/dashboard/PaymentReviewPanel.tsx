@@ -8,14 +8,17 @@ interface PaymentReviewOrder {
  id: string;
  state: string;
  total?: number | string | null;
- payment_receipts?: { reference_number?: string | null; receipt_url?: string | null }[] | null;
+ payment_status?: string;
+ acceptance_status?: string;
+ current_receipt_id?: string | null;
+ payment_receipts?: { id: string | number; reference_number?: string | null; receipt_url?: string | null }[] | null;
 }
 
 interface PaymentReviewPanelProps {
  isOpen: boolean;
  order: PaymentReviewOrder | null;
  onClose: () => void;
- onVerify: (orderId: string, action: 'APPROVE' | 'REJECT', reason?: string) => Promise<void>;
+ onVerify: (orderId: string, action: 'APPROVE' | 'REJECT', reason: string | undefined, receiptId: string, confirmed: boolean) => Promise<void>;
  isVerifying: boolean;
 }
 
@@ -35,6 +38,7 @@ const ReceiptPreview: React.FC<{ url: string }> = ({ url }) => {
 
 const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'order'> & { order: PaymentReviewOrder }> = ({ order, onClose, onVerify, isVerifying }) => {
  const [rejectReason, setRejectReason] = useState('');
+ const [confirmed, setConfirmed] = useState(false);
  const [error, setError] = useState<string | null>(null);
  const [isSubmitting, setIsSubmitting] = useState(false);
  const pendingRef = useRef(false);
@@ -44,8 +48,9 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  const latestRef = useRef({ onClose, isVerifying });
  const prefersReducedMotion = useReducedMotion();
  const busy = isVerifying || isSubmitting;
- const receiptUrl = order.payment_receipts?.[0]?.receipt_url;
- const escalated = order.state === 'ESCALATED_DISPUTE';
+ const receipt = order.payment_receipts?.find(item => String(item.id) === order.current_receipt_id);
+ const receiptUrl = receipt?.receipt_url;
+ const escalated = order.payment_status === 'DISPUTED' || order.state === 'ESCALATED_DISPUTE';
 
  useEffect(() => { latestRef.current = { onClose, isVerifying }; }, [onClose, isVerifying]);
  useEffect(() => {
@@ -98,8 +103,11 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  setIsSubmitting(true);
  setError(null);
  try {
- if (action === 'REJECT') await onVerify(order.id, action, rejectReason);
- else await onVerify(order.id, action);
+ if (!receipt || !order.current_receipt_id) throw new Error('The current receipt is unavailable. Refresh the order before reviewing.');
+ if (action === 'APPROVE' && !confirmed) throw new Error('Confirm the receipt, reference and amount against shop records first.');
+ if (action === 'APPROVE' && (!receipt.reference_number?.trim() || !receipt.receipt_url)) throw new Error('A receipt image and reference are required. Request a replacement receipt.');
+ if (action === 'REJECT' && !rejectReason.trim()) throw new Error('A rejection reason is required.');
+ await onVerify(order.id, action, action === 'REJECT' ? rejectReason.trim() : undefined, order.current_receipt_id, confirmed);
  } catch (err: unknown) {
  setError(err instanceof Error && err.message ? err.message : 'Failed to verify payment. Please try again.');
  } finally {
@@ -135,12 +143,14 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
 
  <div className="min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3">
  <div className="flex items-center justify-between gap-3 border border-gray-300 bg-carbon-gray-10 p-3">
- <p className="text-sm font-bold text-gray-600">Amount Due</p>
+ <p className="text-sm font-bold text-gray-600">Order total</p>
  <p className="break-all text-xl font-black">₱{order.total || 0}</p>
  </div>
  <div>
  <p className="mb-1 text-sm font-bold">GCash Reference Number</p>
- <p className="break-all border border-[#8d8d8d] p-2 font-mono text-base">{order.payment_receipts?.[0]?.reference_number || 'Not provided'}</p>
+ <p className="break-all border border-[#8d8d8d] p-2 font-mono text-base">{receipt?.reference_number || 'Not provided'}</p>
+ <p className="mt-2 text-xs text-gray-600">Shop acceptance: {order.acceptance_status || 'PENDING'}. Payment verification does not accept the order.</p>
+ {['CANCELLED', 'REJECTED', 'EXPIRED'].includes(order.state) && <p className="mt-2 text-sm font-bold text-amber-800">This order is closed. Verifying payment creates a manual refund obligation and does not reopen production.</p>}
  </div>
  <div>
  <p className="mb-1 text-sm font-bold">Uploaded Receipt</p>
@@ -161,10 +171,11 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  <p className="border border-blue-200 bg-blue-50 p-3 text-center text-sm font-bold text-blue-800">This payment is under review by Platform Administration.</p>
  ) : (
  <div className="space-y-2">
- <label htmlFor="payment-rejection-reason" className="block text-sm font-bold">Rejection reason (optional)</label>
+ <label className="flex min-h-11 items-start gap-2 text-sm font-medium"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={busy} className="mt-1 h-5 w-5 shrink-0 accent-carbon-blue-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60" /><span>I checked this receipt, reference and full amount against the shop’s transaction records.</span></label>
+ <label htmlFor="payment-rejection-reason" className="block text-sm font-bold">Rejection reason (required when rejecting)</label>
  <input id="payment-rejection-reason" type="text" placeholder="e.g. Blurry, Wrong Amount" value={rejectReason} onChange={event => setRejectReason(event.target.value)} disabled={busy} className="min-h-11 w-full border border-[#8d8d8d] bg-white px-3 py-2 text-base focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-carbon-blue-60 disabled:opacity-50 sm:text-sm" />
  <button type="button" onClick={() => void handleVerify('APPROVE')} disabled={busy} className={`${buttonStyles.primaryButton} w-full`}>
- <Checkmark size={16} aria-hidden="true" /> Verify &amp; Send to Production
+ <Checkmark size={16} aria-hidden="true" /> Verify payment
  </button>
  <button type="button" onClick={() => void handleVerify('REJECT')} disabled={busy} className={`${buttonStyles.secondaryButton} w-full`}>Reject &amp; Request New Receipt</button>
  <p role="status" className="sr-only">{busy ? 'Verifying payment. Please wait.' : ''}</p>
@@ -178,5 +189,5 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
 
 export const PaymentReviewPanel: React.FC<PaymentReviewPanelProps> = ({ isOpen, order, ...props }) => {
  if (!isOpen || !order) return null;
- return createPortal(<PaymentReviewDialog key={order.id} order={order} {...props} />, document.body);
+ return createPortal(<PaymentReviewDialog key={`${order.id}:${order.current_receipt_id || 'missing'}`} order={order} {...props} />, document.body);
 };

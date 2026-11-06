@@ -53,14 +53,16 @@ export const MyOrdersList: React.FC = () => {
 
  const formatState = (state: string, hasReceipts: boolean) => {
  switch (state) {
- case 'OPEN_INQUIRY': return { text: 'Pending Checkout', color: 'bg-yellow-100 text-yellow-800' };
+ case 'OPEN_INQUIRY': return { text: 'Awaiting shop / payment', color: 'bg-yellow-100 text-yellow-800' };
  case 'AWAITING_PAYMENT': return hasReceipts 
  ? { text: 'Payment Denied', color: 'bg-gray-200 text-carbon-gray-100' }
  : { text: 'Awaiting Payment', color: 'bg-blue-100 text-blue-800' };
  case 'AWAITING_PAYMENT_VERIFICATION': return { text: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800' };
  case 'PROOF_APPROVED': return { text: 'Proof Approved', color: 'bg-indigo-100 text-indigo-800' };
+ case 'COMPLETED': return { text: 'Handed over', color: 'bg-gray-200 text-carbon-gray-100 font-bold' };
+ case 'READY_FOR_PICKUP': return { text: 'Ready for pickup', color: 'bg-blue-100 text-blue-800' };
  case 'IN_PRODUCTION': return { text: 'In Production', color: 'bg-purple-100 text-purple-800' };
- case 'PRINTED': return { text: 'Completed', color: 'bg-gray-200 text-carbon-gray-100 font-bold' };
+ case 'PRINTED': return { text: 'Printed; awaiting output confirmation', color: 'bg-gray-200 text-carbon-gray-100 font-bold' };
  case 'ESCALATED_DISPUTE': return { text: 'Dispute Under Review', color: 'bg-blue-100 text-blue-800' };
  default: return { text: state, color: 'bg-gray-100 text-gray-800' };
  }
@@ -96,13 +98,20 @@ export const MyOrdersList: React.FC = () => {
  className="bg-white border border-[#8d8d8d] text-carbon-gray-100 text-sm focus:outline-carbon-blue-60 focus:border-black block w-48 py-2 pl-3 pr-8 font-medium appearance-none cursor-pointer"
  >
  <option value="All">All Statuses</option>
- <option value="OPEN_INQUIRY">Pending Checkout</option>
+ <option value="OPEN_INQUIRY">Awaiting shop / payment</option>
  <option value="AWAITING_PAYMENT">Awaiting Payment</option>
  <option value="AWAITING_PAYMENT_VERIFICATION">Verifying Payment</option>
- <option value="PROOF_APPROVED">Proof Approved</option>
  <option value="IN_PRODUCTION">In Production</option>
- <option value="PRINTED">Completed / Printed</option>
+ <option value="PRINTED">Printed; awaiting output confirmation</option>
  <option value="ESCALATED_DISPUTE">Dispute Under Review</option>
+ <option value="READY_FOR_PICKUP">Ready for pickup</option>
+ <option value="COMPLETED">Handed over</option>
+ <option value="DUE_AT_PICKUP">Cash due at pickup</option>
+ <option value="REFUND_DUE">Refund due</option>
+ <option value="REFUNDED">Refund recorded</option>
+ <option value="CANCELLED">Cancelled</option>
+ <option value="REJECTED">Shop rejected</option>
+ <option value="EXPIRED">Expired</option>
  </select>
  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
  </div>
@@ -166,12 +175,17 @@ export const MyOrdersList: React.FC = () => {
  <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold ${badge.color}`}>
  {badge.text}
  </span>
- {order.state === 'OPEN_INQUIRY' && (
+ <span className="mt-2 text-xs font-bold text-gray-800">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} ? {order.payment_status?.replaceAll('_', ' ')}</span>
+ <span className="mt-1 text-xs text-gray-600">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</span>
+ {order.acceptance_reason && <span className="mt-1 max-w-xs whitespace-normal text-xs text-red-700">{order.acceptance_reason}</span>}
+ {order.payment_status === 'REFUND_DUE' && <span className="mt-1 max-w-xs whitespace-normal text-xs text-amber-800">Contact the shop for your full manual refund.</span>}
+ {order.is_unclaimed && <span className="mt-1 max-w-xs whitespace-normal text-xs text-amber-800">Unclaimed: {order.unclaimed_reason}. Contact the shop to collect.</span>}
+ {order.payment_method === 'GCASH' && order.payment_status === 'UNPAID' && order.expires_at && (
  <span className="text-[10px] text-carbon-gray-100 font-bold mt-1.5 ml-1">
- Expires in {getRemainingTime(order.created_at, true)}
+ Expires in {getRemainingTime(order.expires_at, false)}
  </span>
  )}
- {order.state === 'AWAITING_PAYMENT' && order.expires_at && (
+ {order.payment_method === 'GCASH' && order.payment_status === 'REJECTED' && order.expires_at && (
  <span className="text-[10px] text-carbon-gray-100 font-bold mt-1.5 ml-1">
  Expires in {getRemainingTime(order.expires_at, false)}
  </span>
@@ -179,12 +193,12 @@ export const MyOrdersList: React.FC = () => {
  </div>
  </td>
  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
- {(order.state === 'OPEN_INQUIRY' || order.state === 'AWAITING_PAYMENT') && (
+ {(
  <button 
  onClick={() => navigate(`/checkout/${order.id}`)}
  className={`text-white px-4 py-1.5 transition-colors ${order.state === 'AWAITING_PAYMENT' ? 'bg-carbon-gray-100 hover:bg-carbon-gray-100' : 'bg-carbon-blue-60 hover:bg-carbon-blue-70 '}`}
  >
- {order.state === 'AWAITING_PAYMENT' ? 'Review & Appeal' : 'Checkout'}
+ View order
  </button>
  )}
  </td>

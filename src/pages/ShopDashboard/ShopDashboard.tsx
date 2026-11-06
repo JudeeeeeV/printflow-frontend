@@ -7,6 +7,8 @@ import { DashboardSkeleton } from '../../components/dashboard/skeletons/Dashboar
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
+import { ShopOrderActions } from '../../components/dashboard/ShopOrderActions';
+import type { OrderDecisionResponse } from '../../services/orderService';
 import { QueuePagination } from '../../components/dashboard/QueuePagination';
 import { daemonSocketService } from '../../services/daemonSocketService';
 import type { DaemonStatus } from '../../services/daemonSocketService';
@@ -26,8 +28,14 @@ type QueueFilterState = {
  colorMode: string;
 };
 
+function isEligibleForProduction(order: { state: string; acceptance_status?: string; payment_method?: string; payment_status?: string; assets?: { file_url?: string | null }[] }) {
+ return order.state === 'IN_PRODUCTION' && order.acceptance_status === 'ACCEPTED'
+ && (order.payment_method === 'CASH_ON_PICKUP' ? ['DUE_AT_PICKUP', 'COLLECTED'].includes(order.payment_status || '') : order.payment_status === 'VERIFIED')
+ && Boolean(order.assets?.some(asset => asset.file_url));
+}
+
 const QUEUE_ORDER: QueueKey[] = ['new', 'ready', 'completed'];
-const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', completed: 'Completed' };
+const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', completed: 'Pickup & completed' };
 const QUEUE_EMPTY_LABELS: Record<QueueKey, string> = {
  new: 'No new orders.',
  ready: 'No orders in production.',
@@ -83,7 +91,7 @@ export const ShopDashboard: React.FC = () => {
  const prefersReducedMotion = useReducedMotion();
 
  // Prune only orders that left production, not selections hidden by filters or pagination.
- const readyOrderIds = new Set(shopOrders.filter(order => order.state === 'IN_PRODUCTION').map(order => order.id));
+ const readyOrderIds = new Set(shopOrders.filter(isEligibleForProduction).map(order => order.id));
  const validSelectedReadyOrders = selectedReadyOrders.filter(id => readyOrderIds.has(id));
  if (validSelectedReadyOrders.length !== selectedReadyOrders.length) {
  setSelectedReadyOrders(validSelectedReadyOrders);
@@ -230,18 +238,18 @@ export const ShopDashboard: React.FC = () => {
  }
  };
 
- const handleVerifyPayment = async (orderId: string, action: 'APPROVE' | 'REJECT', reason?: string) => {
+ const handleOrderUpdated = (order: OrderDecisionResponse['order']) => {
+ setShopOrders(previous => previous.map(existing => existing.id === order.id ? { ...existing, ...order } : existing));
+ refreshOrdersAfterChange();
+ };
+
+ const handleVerifyPayment = async (orderId: string, action: 'APPROVE' | 'REJECT', reason: string | undefined, receiptId: string, confirmed: boolean) => {
  setIsVerifying(true);
  try {
- await orderService.verifyPayment(orderId, action, reason);
+ const response = await orderService.verifyPayment(orderId, action, reason, receiptId, confirmed);
+ handleOrderUpdated(response.order);
  setSelectedPaymentOrder(null);
- // Optimistic update
- setShopOrders(prev => prev.map(o => o.id === orderId ? { ...o, state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'AWAITING_PAYMENT' } : o));
- // Actual refresh
- refreshOrdersAfterChange();
- } finally {
- setIsVerifying(false);
- }
+ } finally { setIsVerifying(false); }
  };
 
  const handleToggleReadySelection = (orderId: string) => {
@@ -288,17 +296,13 @@ export const ShopDashboard: React.FC = () => {
  window.open(assetUrl, '_blank', 'noopener,noreferrer');
  }
  downloadCount++;
- try {
- await orderService.updateOrderState(orderId, 'READY_FOR_PICKUP');
- } catch(updateErr) {
- console.error('Failed to update state for order:', orderId, updateErr);
- }
+
  }
  }
  if (downloadCount === 0) {
  showAlert("No assets found for the selected orders.", 'warning', 'No Assets Found');
  } else {
- showAlert(`Successfully downloaded ${downloadCount} asset(s). Orders marked as Ready for Pickup.`, 'success', 'Downloads Complete');
+ showAlert(`Successfully downloaded ${downloadCount} asset(s). Confirm physical output before marking orders ready for pickup.`, 'success', 'Downloads Complete');
  setSelectedReadyOrders([]);
  refreshOrdersAfterChange();
  }
@@ -350,15 +354,15 @@ export const ShopDashboard: React.FC = () => {
 
  // Derived queue data. Counts stay unfiltered while each queue owns its filter state.
  const unfilteredNewOrders = shopOrders
- .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state))
+ .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state) || (o.state === 'IN_PRODUCTION' && !isEligibleForProduction(o)) || (['CANCELLED', 'REJECTED', 'EXPIRED'].includes(o.state) && ['PENDING_VERIFICATION', 'DISPUTED', 'REFUND_DUE', 'REVIEW_REQUIRED'].includes(o.payment_status)))
  .sort((a, b) => {
- if (a.state === 'AWAITING_PAYMENT_VERIFICATION' && b.state !== 'AWAITING_PAYMENT_VERIFICATION') return -1;
- if (b.state === 'AWAITING_PAYMENT_VERIFICATION' && a.state !== 'AWAITING_PAYMENT_VERIFICATION') return 1;
+ if (a.payment_status === 'PENDING_VERIFICATION' && b.payment_status !== 'PENDING_VERIFICATION') return -1;
+ if (b.payment_status === 'PENDING_VERIFICATION' && a.payment_status !== 'PENDING_VERIFICATION') return 1;
  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
  });
 
  const unfilteredPrintReadyOrders = shopOrders
- .filter(o => ['IN_PRODUCTION'].includes(o.state))
+ .filter(isEligibleForProduction)
  .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
  const unfilteredCompletedOrders = shopOrders
@@ -632,11 +636,12 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
 
- <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
+ <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-y-auto' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? 'minmax(22rem, max-content)' : 'repeat(2, minmax(22rem, max-content))' } : undefined}>
  {activeVisibleOrders.map(order => activeQueue === 'ready' ? (
  <OrderCard
  key={order.id}
  order={order}
+ footer={<ShopOrderActions order={order} onUpdated={handleOrderUpdated} />}
  onClick={() => handleToggleReadySelection(order.id)}
  isSelected={selectedReadyOrders.includes(order.id)}
  onToggleSelect={handleToggleReadySelection}
@@ -645,7 +650,8 @@ export const ShopDashboard: React.FC = () => {
  <OrderCard
  key={order.id}
  order={order}
- onReviewPayment={activeQueue === 'new' && ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? () => setSelectedPaymentOrder(order) : undefined}
+ onReviewPayment={['PENDING_VERIFICATION', 'DISPUTED'].includes(order.payment_status) ? () => setSelectedPaymentOrder(order) : undefined}
+ footer={<ShopOrderActions order={order} onUpdated={handleOrderUpdated} />}
  />
  ))}
  {activeOrders.length === 0 && (

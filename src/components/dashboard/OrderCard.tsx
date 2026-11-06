@@ -5,6 +5,7 @@ import { getOrderCardTitleParts } from "./orderCardTitle";
 import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
 
 interface OrderCardProps {
+  footer?: React.ReactNode;
   order: any;
   onClick?: () => void;
   onReviewPayment?: () => void;
@@ -18,13 +19,13 @@ const paperSizeBackgrounds: Record<string, string> = {
   LONG: "bg-carbon-blue-60",
 };
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect, footer }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
+  const isPaymentPending = order.payment_status === 'PENDING_VERIFICATION' || order.state === "AWAITING_PAYMENT_VERIFICATION";
   const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
   const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
@@ -52,7 +53,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       badgeColor = "bg-gray-100 text-gray-600";
       break;
     case "OPEN_INQUIRY":
-      badgeText = "Pending Checkout";
+      badgeText = order.acceptance_status === 'ACCEPTED' ? 'Awaiting payment' : 'Awaiting shop decision';
       badgeColor = "bg-gray-100 text-gray-600";
       break;
     case "PROOF_APPROVED":
@@ -68,7 +69,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       badgeColor = "bg-carbon-gray-100 text-white";
       break;
     case "COMPLETED":
-      badgeText = "Completed";
+      badgeText = "Handed over";
       badgeColor = "bg-gray-100 text-gray-500";
       break;
     case "ESCALATED_DISPUTE":
@@ -77,6 +78,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       isDisputed = true;
       break;
   }
+
+  if (order.payment_status === 'DISPUTED') isDisputed = true;
 
   const canReviewPayment = (isPaymentPending || isDisputed) && !!onReviewPayment;
 
@@ -152,6 +155,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       </div>
 
       {/* Payment actions share a row; selectable cards keep their checkbox. */}
+      {order.payment_method && <div className="mb-3 space-y-1 text-xs leading-relaxed text-gray-700">
+        <p><strong>{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'}</strong> · {order.payment_status?.replaceAll('_', ' ')}</p>
+        <p>Shop: {order.acceptance_status?.replaceAll('_', ' ')}</p>
+        {order.acceptance_reason && <p className="text-red-700">{order.acceptance_reason}</p>}
+      </div>}
       <div className={`mt-auto gap-2 border-t border-[#e0e0e0] pt-2 ${canReviewPayment ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
         {!canReviewPayment && (onToggleSelect ? (
           <label
@@ -226,6 +234,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
           </p>
         </div>
       )}
+
+      {footer}
 
       {isDetailsOpen && <OrderCardDetailsDialog orderId={order.id} filename={title.filename} customer={title.customer} onClose={() => setIsDetailsOpen(false)} />}
 

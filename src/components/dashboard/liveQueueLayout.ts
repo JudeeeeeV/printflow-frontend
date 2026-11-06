@@ -1,4 +1,4 @@
-export const MIN_QUEUE_CARD_HEIGHT = 256;
+export const MIN_QUEUE_CARD_HEIGHT = 352;
 export const QUEUE_GRID_GAP = 12;
 
 export interface LiveQueueLayout {

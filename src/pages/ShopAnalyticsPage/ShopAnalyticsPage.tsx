@@ -85,7 +85,7 @@ const StatusBadge = ({ state }: { state: string }) => {
   let cls = 'border border-gray-300 bg-gray-100 text-gray-800';
   switch (state) {
     case 'COMPLETED':
-      label = 'Completed';
+      label = 'Handed over';
       cls = 'border border-gray-300 bg-gray-100 text-gray-700';
       break;
     case 'PRINTED':
@@ -136,6 +136,9 @@ const StatusBadge = ({ state }: { state: string }) => {
 type DatePreset = 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL' | 'CUSTOM';
 
 interface AnalyticsOrder {
+  paymentMethod?: string;
+  paymentStatus?: string;
+  acceptanceStatus?: string;
   id: string;
   fileName: string;
   state: string;
@@ -167,6 +170,9 @@ interface AnalyticsData {
 }
 
 interface ShopOrderExport {
+  payment_method?: string;
+  payment_status?: string;
+  acceptance_status?: string;
   id: string;
   client_id?: string | null;
   state: string;
@@ -367,6 +373,9 @@ export const ShopAnalyticsPage: React.FC = () => {
         'Order ID',
         'Client ID',
         'Status',
+        'Payment Method',
+        'Payment Status',
+        'Shop Acceptance',
         'Total',
         'Pages',
         'Date Created',
@@ -384,6 +393,9 @@ export const ShopAnalyticsPage: React.FC = () => {
           o.id,
           o.client_id || '',
           o.state,
+          o.payment_method || '',
+          o.payment_status || '',
+          o.acceptance_status || '',
           o.total,
           o.page_count || 0,
           new Date(o.created_at).toLocaleString(),
@@ -598,7 +610,7 @@ export const ShopAnalyticsPage: React.FC = () => {
             icon={ChartLine}
             title="Total Revenue"
             value={`₱${Number(analyticsData?.totalRevenue || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
-            subtext={`₱${Number(analyticsData?.pendingRevenue || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })} pending`}
+            subtext={`₱${Number(analyticsData?.pendingRevenue || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })} outstanding`}
             subtextColor="text-gray-500"
           />
           <KPICard
@@ -984,6 +996,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                           </td>
                           <td className="px-6 py-4">
                             <StatusBadge state={order.state} />
+                            <p className="mt-1 text-xs text-gray-600">{order.paymentMethod === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} ? {order.paymentStatus?.replaceAll('_', ' ')}</p>
                           </td>
                         </tr>
                       ))

@@ -36,17 +36,17 @@ function text(node) {
 test('responsive capacities use exact width and desktop fit boundaries', () => {
   for (const width of [375, 667, 767]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 3, rows: 3, contained: false });
   for (const width of [768, 820, 1024, 1180, 1279]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 4, rows: 2, contained: false });
-  assert.deepEqual(plain(getLiveQueueLayout(1280, 524)), { pageSize: 6, rows: 2, contained: true });
-  assert.deepEqual(plain(getLiveQueueLayout(1440, 523.99)), { pageSize: 3, rows: 1, contained: true });
-  assert.equal(getLiveQueueLayout(1280, 256).contained, true);
-  assert.equal(getLiveQueueLayout(1280, 255.99).contained, false);
+  assert.deepEqual(plain(getLiveQueueLayout(1280, 716)), { pageSize: 6, rows: 2, contained: true });
+  assert.deepEqual(plain(getLiveQueueLayout(1440, 715.99)), { pageSize: 3, rows: 1, contained: true });
+  assert.equal(getLiveQueueLayout(1280, 352).contained, true);
+  assert.equal(getLiveQueueLayout(1280, 351.99).contained, false);
   assert.equal(getLiveQueueLayout(1920, -10).pageSize, 3);
 });
 
 test('larger text scales the minimum row and gap before choosing a capacity', () => {
-  assert.equal(getLiveQueueLayout(1440, 524, 320, 15).pageSize, 3);
-  assert.equal(getLiveQueueLayout(1440, 655, 320, 15).pageSize, 6);
-  assert.equal(getLiveQueueLayout(1440, 319, 320, 15).contained, false);
+  assert.equal(getLiveQueueLayout(1440, 716, 440, 15).pageSize, 3);
+  assert.equal(getLiveQueueLayout(1440, 895, 440, 15).pageSize, 6);
+  assert.equal(getLiveQueueLayout(1440, 439, 440, 15).contained, false);
 });
 
 test('loading shows six compact desktop placeholders, four on tablets, and three on phones', () => {
@@ -56,7 +56,7 @@ test('loading shows six compact desktop placeholders, four on tablets, and three
     '../liveQueueLayout': layoutHelpers,
   });
   const gridRef = () => {};
-  for (const [width, height, count] of [[1440, 524, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 4], [375, 812, 3]]) {
+  for (const [width, height, count] of [[1440, 716, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 4], [375, 812, 3]]) {
     const layout = getLiveQueueLayout(width, height);
     const tree = DashboardSkeleton({ layout, gridRef });
     const grid = nodes(tree).find(node => node.props?.['data-queue'] === 'new');
@@ -101,12 +101,13 @@ test('pagination renders correct ranges, controls, and a stable desktop footer',
 });
 
 function dashboardHarness() {
-  let cursor, dirty, layout = getLiveQueueLayout(1440, 524);
+  let cursor, dirty, layout = getLiveQueueLayout(1440, 716);
   let measuredQueue = 'new';
   const states = [];
   const componentMocks = {
     '../../components/dashboard/skeletons/DashboardSkeleton': { DashboardSkeleton: 'Skeleton' },
     '../../components/dashboard/OrderCard': { OrderCard: 'Card' },
+    '../../components/dashboard/ShopOrderActions': { ShopOrderActions: 'ShopOrderActions' },
     '../../components/dashboard/PaymentReviewPanel': { PaymentReviewPanel: 'PaymentReview' },
     '../../components/dashboard/QueuePagination': { QueuePagination: 'Pagination' },
     '../../components/dashboard/PrintJobProgressModal': { PrintJobProgressModal: 'Progress' },
@@ -146,7 +147,7 @@ function dashboardHarness() {
   }
   render();
   const orders = ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED'].flatMap((state, queue) => Array.from({ length: 13 }, (_, index) => ({
-    id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR',
+    id: `queue-${queue}-${index}`, state, acceptance_status: queue === 0 ? 'PENDING' : 'ACCEPTED', payment_method: 'GCASH', payment_status: queue === 0 ? 'PENDING_VERIFICATION' : 'VERIFIED', assets: [{ file_url: 'private/document.pdf' }], client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR',
   })));
   states[0] = { verification_status: 'VERIFIED' }; states[1] = false; states[7] = orders;
   return {
@@ -205,7 +206,7 @@ test('switching queues does not re-anchor a saved page using the outgoing grid c
   app.resize(1366, 400); app.tab('ready');
   app.find('Pagination').props.onPageChange(2);
   const first = app.cards()[0].props.order.id;
-  app.tab('new'); app.resize(1440, 524);
+  app.tab('new'); app.resize(1440, 716);
   assert.equal(app.find('Pagination').props.pageSize, 6);
   app.pendingTab('ready');
   assert.equal(app.find('Pagination').props.pageSize, 3);

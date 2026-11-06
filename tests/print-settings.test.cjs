@@ -24,7 +24,7 @@ function text(node) { return Array.isArray(node) ? Array.from(node, text).join('
 const button = (tree, label) => nodes(tree).find(node => node.type === 'button' && text(node).trim() === label);
 const shop = { id: 'shop', pricing_matrix: { paper_sizes: { A4: 3 }, color_mode_multipliers: { COLOR: 3, BLACK_AND_WHITE: 0 } } };
 
-function fixture(kind = 'new', busy = false) {
+function fixture(kind = 'new', busy = false, draftOverrides = {}) {
   const hooks = []; let cursor = 0, effects = [], dirty = false, tree;
   const calls = [], navigation = [];
   const react = {
@@ -61,7 +61,7 @@ function fixture(kind = 'new', busy = false) {
     '../../assets/printflow-logo-dark.png': { default: 'logo.png' }, './NewOrderPage.module.css': { default: {} },
     'pdf-lib': { PDFDocument: { load: async () => ({ getPageCount: () => 4, getPage: () => ({ getSize: () => ({ width:400,height:800 }) }) }) } },
   };
-  const draft = { id: 'draft', shopId: 'shop', fileUrl: 'stored.pdf', fileName: 'four.pdf', paperSize: 'A4', printColorMode: 'COLOR', pageCount: 4, orderName: 'Saved', orientation: 'LANDSCAPE', copies: 2 };
+  const draft = { id: 'draft', shopId: 'shop', fileUrl: 'stored.pdf', fileName: 'four.pdf', paperSize: 'A4', printColorMode: 'COLOR', pageCount: 4, orderName: 'Saved', orientation: 'LANDSCAPE', copies: 2, ...draftOverrides };
   const globals = { URLSearchParams, console, setTimeout: callback => { queueMicrotask(callback); return 1; }, URL: { createObjectURL: () => 'blob:fixture', revokeObjectURL() {} } };
   const module = kind === 'new' ? load('pages/NewOrderPage/NewOrderPage.tsx', mocks, globals) : load('components/dashboard/EditDraftPanel.tsx', mocks, globals);
   const render = () => {
@@ -116,7 +116,7 @@ test('new-order estimate and submissions carry selected orientation and copies',
   assert.equal(f.summary().estimate.pageCount,4);
   assert.equal(f.summary().isReady,true);
   await f.summary().onSubmit();
-  assert.deepEqual(f.calls[0].slice(-3),['New order','LANDSCAPE',3]);
+  assert.deepEqual(f.calls[0].slice(-4),['New order','LANDSCAPE',3,'GCASH']);
   assert.deepEqual(f.navigation,['/checkout/created']);
   assert.ok(text(f.tree()).includes('Uploaded file preview'));
   assert.ok(text(f.tree()).includes('Printing uses the selected paper size and orientation.'));
@@ -126,7 +126,7 @@ test('saving a new draft carries settings and resets orientation and copies', as
   const f = fixture(); await f.flush(); f.selectShop(); await f.selectFile();
   f.summary().setOrderName('Draft'); f.summary().setOrientation('LANDSCAPE'); f.summary().setCopies(2); f.render();
   await f.summary().onSaveDraft(); f.render();
-  assert.deepEqual(f.calls[0].slice(-3),['Draft','LANDSCAPE',2]);
+  assert.deepEqual(f.calls[0].slice(-4),['Draft','LANDSCAPE',2,'GCASH']);
   assert.equal(f.summary().orientation,'PORTRAIT'); assert.equal(f.summary().copies,1);
 });
 
@@ -137,7 +137,7 @@ test('draft editing retains settings, reprices, and updates before submission wi
   f.summary().setOrientation('PORTRAIT'); f.summary().setCopies(3); f.render();
   assert.equal(f.summary().estimate.total,72);
   await f.summary().onSaveDraft();
-  assert.deepEqual(f.calls[0].slice(-3),['Saved','PORTRAIT',3]);
+  assert.deepEqual(f.calls[0].slice(-4),['Saved','PORTRAIT',3,'GCASH']);
   await f.summary().onSubmit();
   assert.deepEqual(f.calls.map(call=>call[0]),['update','update','submitDraft']);
   assert.ok(text(f.tree()).includes('Uploaded file preview'));
@@ -163,5 +163,35 @@ test('order service serializes orientation and copies in multipart and draft JSO
   await orderService.updateDraftWithoutFile('draft','shop','SHORT','COLOR',' Edited ','LANDSCAPE',3);
   assert.equal(calls[0].body.get('orientation'),'LANDSCAPE'); assert.equal(calls[0].body.get('copies'),'99'); assert.equal(calls[0].body.get('orderName'),'Name');
   assert.equal(calls[1].body.get('orientation'),'PORTRAIT'); assert.equal(calls[1].body.get('copies'),'2'); assert.equal(calls[1].body.get('isDraft'),'true');
-  assert.deepEqual(JSON.parse(calls[2].body),{shopId:'shop',paperSize:'SHORT',printColorMode:'COLOR',orderName:'Edited',orientation:'LANDSCAPE',copies:3});
+  assert.deepEqual(JSON.parse(calls[2].body),{shopId:'shop',paperSize:'SHORT',printColorMode:'COLOR',orderName:'Edited',orientation:'LANDSCAPE',copies:3,paymentMethod:'GCASH'});
+});
+
+test('cash choice is retained in new orders, saved drafts and draft replacement files', async () => {
+  for (const operation of ['onSubmit','onSaveDraft']) {
+    const f = fixture(); await f.flush(); f.selectShop(); await f.selectFile();
+    f.summary().setOrderName('Cash order'); f.summary().setPaymentMethod('CASH_ON_PICKUP'); f.render();
+    await f.summary()[operation]();
+    assert.equal(f.calls[0].at(-1),'CASH_ON_PICKUP');
+  }
+  for (const replacement of [false,true]) {
+    for (const operation of ['onSubmit','onSaveDraft']) {
+      const f = fixture('edit', false, { paymentMethod:'CASH_ON_PICKUP' });
+      assert.equal(f.summary().paymentMethod,'CASH_ON_PICKUP');
+      if (replacement) { button(f.tree(),'Remove file').props.onClick(); f.render(); await f.selectFile(); }
+      await f.summary()[operation]();
+      assert.equal(f.calls[0].at(-1),'CASH_ON_PICKUP');
+    }
+  }
+});
+
+test('order service serializes cash choice in multipart and draft JSON payloads', async () => {
+  const calls = [];
+  const {orderService} = load('services/orderService.ts', { './apiClient': { apiClient:async(endpoint,options)=>calls.push({endpoint,...options}) } }, {FormData});
+  const file = new Blob(['%PDF-fixture'],{type:'application/pdf'});
+  await orderService.submitOrder('shop',file,'A4','COLOR','Cash','PORTRAIT',1,'CASH_ON_PICKUP');
+  await orderService.saveDraft('shop',file,'A4','COLOR','Cash','PORTRAIT',1,'CASH_ON_PICKUP');
+  await orderService.updateDraftWithoutFile('draft','shop','A4','COLOR','Cash','PORTRAIT',1,'CASH_ON_PICKUP');
+  assert.equal(calls[0].body.get('paymentMethod'),'CASH_ON_PICKUP');
+  assert.equal(calls[1].body.get('paymentMethod'),'CASH_ON_PICKUP');
+  assert.equal(JSON.parse(calls[2].body).paymentMethod,'CASH_ON_PICKUP');
 });
