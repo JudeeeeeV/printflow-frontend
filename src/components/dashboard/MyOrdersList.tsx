@@ -127,7 +127,7 @@ export const MyOrdersList: React.FC = () => {
  
  {isLoading ? (
  <div className="py-12">
-        <TableSkeleton columns={5} rows={5} />
+        <TableSkeleton columns={7} rows={5} />
  </div>
  ) : orders.length === 0 ? (
  <div className="bg-white p-12 text-center">
@@ -144,12 +144,13 @@ export const MyOrdersList: React.FC = () => {
  <table className="min-w-full divide-y divide-gray-200">
  <thead className="bg-carbon-gray-10">
  <tr>
- <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Order ID</th>
- <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Shop</th>
- <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Date</th>
- <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Total</th>
- <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
- <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Actions</th>
+ <th className="px-6 py-4 text-left text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Order Name</th>
+ <th className="px-6 py-4 text-left text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Order ID</th>
+ <th className="px-6 py-4 text-left text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Shop</th>
+ <th className="px-6 py-4 text-left text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Date</th>
+ <th className="px-6 py-4 text-left text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Total</th>
+ <th className="px-6 py-4 text-left text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Status</th>
+ <th className="px-6 py-4 text-right text-xs font-bold text-carbon-gray-100 uppercase tracking-wider">Actions</th>
  </tr>
  </thead>
  <tbody className="bg-white divide-y divide-gray-200">
@@ -158,6 +159,9 @@ export const MyOrdersList: React.FC = () => {
  const badge = formatState(order.state, hasReceipts);
  return (
  <tr key={order.id} className="hover:bg-carbon-gray-10 transition-colors">
+ <td className="max-w-xs px-6 py-4 whitespace-normal break-words text-sm font-bold text-carbon-gray-100">
+ {order.order_name?.trim() || 'Unnamed order'}
+ </td>
  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-carbon-gray-100">
  {order.id.slice(0, 8)}...
  </td>
