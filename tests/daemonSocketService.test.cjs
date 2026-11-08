@@ -179,3 +179,31 @@ test('switches shops without keeping the old socket or printer list', () => {
   assert.deepEqual(h.printerLists.at(-1), []);
   assert.equal(next.sent[0].data.shopId, 'shop-2');
 });
+
+test('reports an older agent as update-required and clears it when offline or replaced', () => {
+  const h = setup();
+  const required = [];
+  h.service.onUpdateRequired((value) => required.push(value));
+  h.service.connect('shop-1');
+  const socket = h.sockets[0];
+  socket.receive('connect');
+  socket.receive('daemon_status', { status: 'CONNECTED', agentUpdateRequired: true });
+  assert.equal(required.at(-1), true);
+  assert.equal(h.statuses.at(-1), 'CONNECTED');
+  socket.receive('daemon_status', { status: 'OFFLINE' });
+  assert.equal(required.at(-1), false);
+  socket.receive('daemon_status', { status: 'CONNECTED', agentUpdateRequired: true });
+  socket.receive('daemon_status', { status: 'CONNECTED' });
+  assert.equal(required.at(-1), false);
+});
+
+test('forwards only attempt-bound progress events', () => {
+  const h = setup();
+  const progress = [];
+  h.service.onJobProgress((value) => progress.push(value));
+  h.service.connect('shop-1');
+  const socket = h.sockets[0];
+  socket.receive('job_progress', { orderId: 'order', status: 'COMPLETED' });
+  socket.receive('job_progress', { attemptId: 'attempt', orderId: 'order', status: 'SUBMITTED', attemptNumber: 1, updatedAt: '2026-11-08T00:00:00Z' });
+  assert.deepEqual(progress.map((item) => item.attemptId), ['attempt']);
+});

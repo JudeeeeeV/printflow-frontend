@@ -1,69 +1,83 @@
-import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import { useDialogFocus } from '../common/useDialogFocus';
+import { attemptHelp, attemptLabel, TONE_CLASSES as toneClassName, type AttemptProgress } from './printFulfillment';
 
 interface PrintJobProgressModalProps {
  isOpen: boolean;
  onClose: () => void;
- jobs: { orderId: string; status: string }[];
+ jobs: AttemptProgress[];
+ /** Recognizable labels per order ID (title and customer). */
+ orderLabels: Record<string, string>;
 }
 
-export const PrintJobProgressModal: React.FC<PrintJobProgressModalProps> = ({
- isOpen,
- onClose,
- jobs,
-}) => {
+const formatTime = (value?: string) => {
+ if (!value) return '';
+ const date = new Date(value);
+ return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+};
+
+export const PrintJobProgressModal: React.FC<PrintJobProgressModalProps> = ({ isOpen, onClose, jobs, orderLabels }) => {
+ const dialogRef = useRef<HTMLDivElement>(null);
+ const prefersReducedMotion = useReducedMotion();
+ useDialogFocus(dialogRef, isOpen, onClose);
  if (!isOpen) return null;
 
- return (
- <AnimatePresence>
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+ return createPortal(
+ <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
  <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 10 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 10 }}
- className="bg-white w-full max-w-md overflow-hidden flex flex-col"
+ ref={dialogRef}
+ role="dialog"
+ aria-modal="true"
+ aria-labelledby="print-progress-title"
+ aria-describedby="print-progress-note"
+ initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+ animate={{ opacity: 1, y: 0 }}
+ transition={{ duration: prefersReducedMotion ? 0 : 0.18 }}
+ className="flex max-h-[calc(100dvh-32px)] w-full max-w-lg flex-col overflow-hidden border-t-4 border-carbon-blue-60 bg-white shadow-2xl"
  >
- <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-carbon-gray-10">
- <h3 className="text-xl font-black text-carbon-gray-100">Batch Spooling Progress</h3>
- <button
- onClick={onClose}
- className="text-gray-400 hover:text-gray-600 transition-colors p-1"
- >
- <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
- </svg>
+ <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-carbon-gray-10 p-4 sm:p-6">
+ <div className="min-w-0">
+ <h3 id="print-progress-title" className="text-xl font-black text-carbon-gray-100">Print progress</h3>
+ <p id="print-progress-note" className="mt-1 text-sm text-gray-600">A submission report means the job reached Windows. Check each printed output before marking it ready.</p>
+ </div>
+ <button type="button" onClick={onClose} aria-label="Close print progress" className="flex h-11 w-11 shrink-0 items-center justify-center text-gray-600 hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">
+ <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
  </button>
  </div>
 
- <div className="p-6 max-h-[60vh] overflow-y-auto flex flex-col gap-3">
+ <ul className="flex flex-col gap-3 overflow-y-auto p-4 sm:p-6" aria-live="polite">
  {jobs.length === 0 ? (
- <p className="text-gray-500 text-center font-medium">No jobs in current batch.</p>
- ) : (
- jobs.map((job) => (
- <div key={job.orderId} className="flex justify-between items-center p-3 bg-white border border-[#e0e0e0] ">
- <span className="font-bold text-gray-700 text-sm">Order #{job.orderId.substring(0, 8)}...</span>
- <span className={`text-xs font-bold px-2 py-1 ${
- job.status === 'COMPLETED' || job.status === 'SUCCESS' ? 'bg-green-100 text-green-700' :
- job.status === 'FAILED' ? 'bg-gray-200 text-carbon-gray-100' :
- 'bg-blue-100 text-blue-700 animate-pulse'
- }`}>
- {job.status}
- </span>
+ <li className="text-center font-medium text-gray-500">No attempts in this batch.</li>
+ ) : jobs.map(job => {
+ const label = attemptLabel(job);
+ const help = attemptHelp(job);
+ return (
+ <li key={job.attemptId} className="border border-[#e0e0e0] bg-white p-3">
+ <div className="flex flex-wrap items-start justify-between gap-2">
+ <div className="min-w-0">
+ <p className="font-bold text-carbon-gray-100 [overflow-wrap:anywhere]">{orderLabels[job.orderId] || `Order #${job.orderId.slice(0, 8)}`}</p>
+ <p className="text-xs text-gray-600">
+ Attempt {job.attemptNumber}{job.kind === 'RETRY' ? ' · retry' : job.kind === 'REPRINT' ? ' · reprint' : ''} · {job.mode === 'MANUAL' ? 'manual' : job.printerName || 'default printer'}
+ {formatTime(job.updatedAt) && <> · updated {formatTime(job.updatedAt)}</>}
+ </p>
  </div>
- ))
- )}
+ <span className={`shrink-0 px-2 py-1 text-xs font-bold ${toneClassName[label.tone]}`}>{label.text}</span>
  </div>
- 
- <div className="p-4 border-t border-gray-100 bg-carbon-gray-10">
- <button
- onClick={onClose}
- className="w-full py-2.5 bg-gray-200 text-gray-800 font-bold hover:bg-gray-300 transition-colors"
- >
+ {help && <p className="mt-2 border-l-4 border-[#f1c21b] bg-carbon-gray-10 px-3 py-2 text-xs text-carbon-gray-100">{help}</p>}
+ </li>
+ );
+ })}
+ </ul>
+
+ <div className="border-t border-gray-200 bg-carbon-gray-10 p-4">
+ <button type="button" onClick={onClose} className="min-h-11 w-full bg-gray-200 py-2.5 font-bold text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none">
  Dismiss
  </button>
  </div>
  </motion.div>
- </div>
- </AnimatePresence>
+ </div>,
+ document.body,
  );
 };

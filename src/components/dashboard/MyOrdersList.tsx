@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { studentStage } from './printFulfillment';
 import { orderService } from '../../services/orderService';
 import { useNavigate } from 'react-router-dom';
 import { TableSkeleton } from '../common/TableSkeleton';
@@ -51,7 +52,18 @@ export const MyOrdersList: React.FC = () => {
  setCurrentPage(1);
  };
 
- const formatState = (state: string, hasReceipts: boolean) => {
+ const formatState = (order: { state: string; fulfillment_stage?: string | null }, hasReceipts: boolean) => {
+ const state = order.state;
+ // Production stages come from the shop's recorded progress; device errors stay internal.
+ const stage = studentStage(order);
+ if (stage) {
+ const color = stage.label === 'Completed'
+ ? 'bg-gray-200 text-carbon-gray-100 font-bold'
+ : stage.label === 'Ready for pickup'
+ ? 'bg-green-100 text-green-800 font-bold'
+ : 'bg-purple-100 text-purple-800';
+ return { text: stage.label, color };
+ }
  switch (state) {
  case 'OPEN_INQUIRY': return { text: 'Pending Checkout', color: 'bg-yellow-100 text-yellow-800' };
  case 'AWAITING_PAYMENT': return hasReceipts 
@@ -59,8 +71,6 @@ export const MyOrdersList: React.FC = () => {
  : { text: 'Awaiting Payment', color: 'bg-blue-100 text-blue-800' };
  case 'AWAITING_PAYMENT_VERIFICATION': return { text: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800' };
  case 'PROOF_APPROVED': return { text: 'Proof Approved', color: 'bg-indigo-100 text-indigo-800' };
- case 'IN_PRODUCTION': return { text: 'In Production', color: 'bg-purple-100 text-purple-800' };
- case 'PRINTED': return { text: 'Completed', color: 'bg-gray-200 text-carbon-gray-100 font-bold' };
  case 'ESCALATED_DISPUTE': return { text: 'Dispute Under Review', color: 'bg-blue-100 text-blue-800' };
  default: return { text: state, color: 'bg-gray-100 text-gray-800' };
  }
@@ -101,7 +111,8 @@ export const MyOrdersList: React.FC = () => {
  <option value="AWAITING_PAYMENT_VERIFICATION">Verifying Payment</option>
  <option value="PROOF_APPROVED">Proof Approved</option>
  <option value="IN_PRODUCTION">In Production</option>
- <option value="PRINTED">Completed / Printed</option>
+ <option value="READY_FOR_PICKUP">Ready for Pickup</option>
+ <option value="COMPLETED">Completed</option>
  <option value="ESCALATED_DISPUTE">Dispute Under Review</option>
  </select>
  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -146,7 +157,7 @@ export const MyOrdersList: React.FC = () => {
  <tbody className="bg-white divide-y divide-gray-200">
  {orders.map(order => {
  const hasReceipts = true; // In the DB, order might not return receipts here if not joined, but AWAITING_PAYMENT means it had receipts rejected because initial is OPEN_INQUIRY
- const badge = formatState(order.state, hasReceipts);
+ const badge = formatState(order, hasReceipts);
  return (
  <tr key={order.id} className="hover:bg-carbon-gray-10 transition-colors">
  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-carbon-gray-100">
