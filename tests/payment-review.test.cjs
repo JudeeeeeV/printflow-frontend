@@ -300,6 +300,37 @@ test('cash modal shows pickup payment and shop decisions without GCash receipt c
   assert.equal(f.find(node => f.text(node).includes('then confirm handover')), undefined);
 });
 
+test('cash review shows the print job and keeps the preview pinned across refreshes', () => {
+  const cash = (file_url = 'https://example.test/doc.pdf?token=first') => order({
+    payment_method: 'CASH_ON_PICKUP', payment_status: 'DUE_AT_PICKUP', state: 'OPEN_INQUIRY',
+    order_name: 'Thesis', paper_size: 'LONG', print_color_mode: 'COLOR', orientation: 'LANDSCAPE', page_count: 12, copies: 3,
+    assets: [{ file_url, original_filename: 'thesis.docx' }],
+  });
+  const f = fixture({ order: cash() });
+  const shown = f.text(f.find(node => node.props['aria-label'] === 'Print job'));
+  for (const value of ['Thesis', 'thesis.docx', 'LONG', 'Color', 'Landscape', '12', '3']) assert.ok(shown.includes(value), value);
+  assert.equal(f.find(node => node.type === 'iframe'), undefined);
+  f.button('Preview document').props.onClick(); f.render();
+  assert.equal(f.find(node => node.type === 'iframe').props.src, 'https://example.test/doc.pdf?token=first');
+  f.update({ order: cash('https://example.test/doc.pdf?token=second') });
+  assert.equal(f.find(node => node.type === 'iframe').props.src, 'https://example.test/doc.pdf?token=first');
+  assert.equal(f.find(node => node.type === 'a').props.href, 'https://example.test/doc.pdf?token=second');
+  f.button('Hide document').props.onClick(); f.render();
+  assert.equal(f.find(node => node.type === 'iframe'), undefined);
+});
+
+test('review explains a document that cannot be loaded', () => {
+  const f = fixture({ order: order({ payment_method: 'CASH_ON_PICKUP', payment_status: 'DUE_AT_PICKUP', state: 'OPEN_INQUIRY', assets: [{ file_url: null }] }) });
+  assert.ok(f.find(node => f.text(node).includes('The document could not be loaded')));
+  assert.equal(f.button('Preview document'), undefined);
+});
+
+test('the content security policy allows stored and local document previews', () => {
+  const policy = fs.readFileSync(path.join(__dirname, '../render.yaml'), 'utf8').match(/frame-src ([^;]+);/);
+  assert.ok(policy, 'render.yaml must declare frame-src');
+  for (const source of ["'self'", 'blob:', 'https://*.supabase.co']) assert.ok(policy[1].split(' ').includes(source), source);
+});
+
 test('settled GCash orders retain fulfillment actions and receipt inspection without repeat verification', () => {
   const f = fixture({ order: order({ payment_method: 'GCASH', payment_status: 'VERIFIED', state: 'OPEN_INQUIRY' }), onUpdated() {} });
   assert.ok(f.find(node => node.type === 'img'));

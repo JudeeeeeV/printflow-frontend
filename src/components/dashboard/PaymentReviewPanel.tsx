@@ -17,7 +17,13 @@ export interface PaymentReviewOrder {
  payment_method?: string;
  acceptance_reason?: string;
  is_unclaimed?: boolean;
- assets?: { file_url?: string | null }[];
+ order_name?: string | null;
+ paper_size?: string | null;
+ print_color_mode?: string | null;
+ orientation?: string | null;
+ page_count?: number | null;
+ copies?: number | null;
+ assets?: { file_url?: string | null; original_filename?: string | null }[];
  current_receipt_id?: string | null;
  payment_receipts?: { id: string | number; reference_number?: string | null; receipt_url?: string | null }[] | null;
 }
@@ -43,6 +49,44 @@ const ReceiptPreview: React.FC<{ url: string }> = ({ url }) => {
  <img src={url} alt="Payment receipt" onLoad={() => setStatus('loaded')} onError={() => setStatus('failed')} className={`h-full w-full object-contain ${status === 'loading' ? 'opacity-0' : ''}`} />
  )}
  </div>
+ );
+};
+
+const PrintJobDetails: React.FC<{ order: PaymentReviewOrder }> = ({ order }) => {
+ // Order refreshes re-sign file URLs, so pin the URL to keep the preview from reloading.
+ const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+ const asset = order.assets?.find(item => item.file_url);
+ const documentUrl = asset?.file_url;
+ const fileName = asset?.original_filename;
+ const copies = Number.isInteger(order.copies) && Number(order.copies) > 0 ? Number(order.copies) : 1;
+ const settings: [string, string][] = [
+ ['Paper size', order.paper_size || 'Not set'],
+ ['Color', order.print_color_mode === 'COLOR' ? 'Color' : 'B&W'],
+ ['Orientation', order.orientation === 'LANDSCAPE' ? 'Landscape' : 'Portrait'],
+ ['Pages', Number.isInteger(order.page_count) && Number(order.page_count) > 0 ? String(order.page_count) : 'Unavailable'],
+ ['Copies', String(copies)],
+ ];
+ return (
+ <section aria-label="Print job" className="space-y-2 border border-gray-300 p-3">
+ <div className="min-w-0">
+ <p className="text-sm font-bold">What to print</p>
+ {order.order_name && <p className="break-words text-sm">{order.order_name}</p>}
+ {fileName && <p className="break-words text-xs text-gray-600">{fileName}</p>}
+ </div>
+ <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm sm:grid-cols-3">
+ {settings.map(([label, value]) => <div key={label}><dt className="text-xs text-gray-600">{label}</dt><dd className="font-bold">{value}</dd></div>)}
+ </dl>
+ {documentUrl ? (
+ <div className="flex flex-wrap items-center gap-x-4">
+ <button type="button" onClick={() => setPreviewUrl(previewUrl ? null : documentUrl)} className="min-h-11 text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">{previewUrl ? 'Hide document' : 'Preview document'}</button>
+ <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open in new tab</a>
+ </div>
+ ) : <p className="border border-dashed border-[#8d8d8d] bg-carbon-gray-10 p-3 text-center text-sm text-gray-600">The document could not be loaded. Refresh the order and try again.</p>}
+ {previewUrl && <div className="relative h-[min(360px,45dvh)] overflow-hidden border border-gray-300 bg-carbon-gray-10">
+ <p role="status" className="absolute inset-0 flex items-center justify-center text-sm text-gray-600">Loading document…</p>
+ <iframe src={previewUrl} title={`Document for order ${order.id.slice(0, 8)}`} referrerPolicy="no-referrer" tabIndex={-1} className="relative h-full w-full border-none" />
+ </div>}
+ </section>
  );
 };
 
@@ -168,6 +212,7 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  <p className="text-sm font-bold text-gray-600">Order total</p>
  <p className="break-all text-xl font-black">₱{order.total || 0}</p>
  </div>
+ <PrintJobDetails order={order} />
  {isCash ? (
  <p className="border border-gray-300 bg-carbon-gray-10 p-3 text-sm leading-relaxed">
  {['CANCELLED', 'REJECTED', 'EXPIRED'].includes(order.state) ? 'This order is closed. No pickup payment is due.' : order.payment_status === 'COLLECTED' ? order.state === 'COMPLETED' ? 'Cash payment has been collected. This order is complete.' : 'Cash payment has been collected.' : `Amount due at pickup: ₱${Number(order.total || 0).toFixed(2)}. Collect payment when the student arrives. Recording cash collection completes the order.`}

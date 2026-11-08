@@ -117,7 +117,7 @@ export const ShopOrdersPage: React.FC = () => {
  <p className="mt-2 text-xs">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} · {order.payment_status?.replaceAll('_', ' ')}</p>
  {order.payment_method === 'CASH_ON_PICKUP' && <p className="mt-1 text-xs">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</p>}
  </td>
- <td className="px-6 py-4"><button type="button" onClick={() => setSelectedOrderId(order.id)} className="min-h-11 border border-black px-4 py-2 font-bold hover:bg-gray-100 focus-visible:outline-carbon-blue-60">Review order</button></td>
+ <td className="px-6 py-4"><button type="button" onClick={() => { setSelectedOrderId(order.id); setRequestAttempt(attempt => attempt + 1); }} className="min-h-11 border border-black px-4 py-2 font-bold hover:bg-gray-100 focus-visible:outline-carbon-blue-60">Review order</button></td>
  </tr>
  ))}
  </tbody>
