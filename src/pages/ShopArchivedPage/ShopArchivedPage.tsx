@@ -22,8 +22,8 @@ export const ShopArchivedPage: React.FC = () => {
  const fetchArchived = async () => {
  try {
  const data = await orderService.getShopOrders();
- // Filter for only completed/printed orders
- if (isCurrent) setOrders(data.filter(o => o.state === 'PRINTED'));
+ // Archived orders are the ones handed over to the customer.
+ if (isCurrent) setOrders(data.filter(o => o.state === 'COMPLETED'));
  } catch (err: unknown) {
  if (isCurrent) {
  setError(err instanceof Error ? err.message : 'Unable to load archived orders. Please try again.');

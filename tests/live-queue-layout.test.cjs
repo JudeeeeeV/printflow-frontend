@@ -44,9 +44,9 @@ test('responsive capacities use exact width and desktop fit boundaries', () => {
 });
 
 test('larger text scales the minimum row and gap before choosing a capacity', () => {
-  assert.equal(getLiveQueueLayout(1440, 716, 440, 15).pageSize, 3);
-  assert.equal(getLiveQueueLayout(1440, 895, 440, 15).pageSize, 6);
-  assert.equal(getLiveQueueLayout(1440, 439, 440, 15).contained, false);
+  assert.equal(getLiveQueueLayout(1440, 524, 320, 15).pageSize, 3);
+  assert.equal(getLiveQueueLayout(1440, 655, 320, 15).pageSize, 6);
+  assert.equal(getLiveQueueLayout(1440, 319, 320, 15).contained, false);
 });
 
 test('loading shows six compact desktop placeholders, four on tablets, and three on phones', () => {
@@ -56,7 +56,7 @@ test('loading shows six compact desktop placeholders, four on tablets, and three
     '../liveQueueLayout': layoutHelpers,
   });
   const gridRef = () => {};
-  for (const [width, height, count] of [[1440, 716, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 4], [375, 812, 3]]) {
+  for (const [width, height, count] of [[1440, 524, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 4], [375, 812, 3]]) {
     const layout = getLiveQueueLayout(width, height);
     const tree = DashboardSkeleton({ layout, gridRef });
     const grid = nodes(tree).find(node => node.props?.['data-queue'] === 'new');
@@ -101,17 +101,24 @@ test('pagination renders correct ranges, controls, and a stable desktop footer',
 });
 
 function dashboardHarness() {
-  let cursor, dirty, layout = getLiveQueueLayout(1440, 716);
+  let cursor, dirty, layout = getLiveQueueLayout(1440, 524);
   let measuredQueue = 'new';
   const states = [];
   const componentMocks = {
     '../../components/dashboard/skeletons/DashboardSkeleton': { DashboardSkeleton: 'Skeleton' },
     '../../components/dashboard/OrderCard': { OrderCard: 'Card' },
     '../../components/dashboard/PaymentReviewPanel': { PaymentReviewPanel: 'PaymentReview' },
+    '../../components/dashboard/ShopOrderActions': { ShopOrderActions: 'ShopOrderActions' },
     '../../components/dashboard/QueuePagination': { QueuePagination: 'Pagination' },
     '../../components/dashboard/PrintJobProgressModal': { PrintJobProgressModal: 'Progress' },
     '../../components/dashboard/KanbanFilterBar': { KanbanFilterBar: 'Filters' },
     '../../components/common/AlertModal': { AlertModal: 'Alert' },
+    '../../components/common/ConfirmModal': { ConfirmModal: 'Confirm' },
+    '../../components/dashboard/FulfillmentDialog': { FulfillmentDialog: 'Fulfillment' },
+    '../../components/dashboard/FulfillmentFooter': { FulfillmentFooter: 'FulfillmentFooter' },
+    '../../components/dashboard/orderCardTitle': load('components/dashboard/orderCardTitle.ts'),
+    '../../components/dashboard/printFulfillment': load('components/dashboard/printFulfillment.ts'),
+    '../../services/printFulfillmentService': { printFulfillmentService: {}, newRequestId: () => 'request', downloadPinnedFile() {} },
   };
   const { ShopDashboard } = load('pages/ShopDashboard/ShopDashboard.tsx', {
     ...componentMocks,
@@ -124,13 +131,13 @@ function dashboardHarness() {
       useMemo: fn => fn(), useCallback: fn => fn, useRef: value => ({ current: value }), useEffect() {},
     },
     'react/jsx-runtime': { jsx, jsxs: jsx },
-    'react-router-dom': { useNavigate: () => () => {} },
+    'react-router-dom': { useNavigate: () => () => {}, Link: 'Link' },
     'framer-motion': { AnimatePresence: 'AnimatePresence', motion: { section: 'section' }, useReducedMotion: () => true },
     '@carbon/icons-react': { ChevronRight: 'right' },
     '../../services/shopService': { shopService: {} },
     '../../services/orderService': { orderService: {} },
     '../../services/daemonSocketService': { daemonSocketService: {} },
-    '../../services/apiClient': { apiClient() {} },
+    '../../services/apiClient': { apiClient() {}, ApiError: class ApiError extends Error {} },
     '../../services/refreshQueue': { createRefreshQueue: () => () => Promise.resolve() },
     '../../hooks/useDataEvents': { useDataEvents() {} },
     '../../components/dashboard/liveQueueLayout': layoutHelpers,
@@ -146,7 +153,7 @@ function dashboardHarness() {
   }
   render();
   const orders = ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED'].flatMap((state, queue) => Array.from({ length: 13 }, (_, index) => ({
-    id: `queue-${queue}-${index}`, state, acceptance_status: queue === 0 ? 'PENDING' : 'ACCEPTED', payment_method: 'GCASH', payment_status: queue === 0 ? 'PENDING_VERIFICATION' : 'VERIFIED', assets: [{ file_url: 'private/document.pdf' }], client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR',
+    id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'ACCEPTED', assets: [{file_url: 'file.pdf'}],
   })));
   states[0] = { verification_status: 'VERIFIED' }; states[1] = false; states[7] = orders;
   return {
@@ -205,7 +212,7 @@ test('switching queues does not re-anchor a saved page using the outgoing grid c
   app.resize(1366, 400); app.tab('ready');
   app.find('Pagination').props.onPageChange(2);
   const first = app.cards()[0].props.order.id;
-  app.tab('new'); app.resize(1440, 716);
+  app.tab('new'); app.resize(1440, 524);
   assert.equal(app.find('Pagination').props.pageSize, 6);
   app.pendingTab('ready');
   assert.equal(app.find('Pagination').props.pageSize, 3);
@@ -230,23 +237,37 @@ test('ready selections persist across pagination, resizing, and queues', () => {
   assert.match(text(app.render()), /1 not on this page/);
 });
 
-test('every queue opens its order modal from the card without an appended action section', () => {
+test('attempt state decides Print Ready versus Pickup, selection and the offered actions', () => {
   const app = dashboardHarness();
-  for (const queue of ['new', 'ready', 'completed']) {
-    app.tab(queue);
-    const card = app.cards()[0];
-    assert.equal(card.props.footer, undefined);
-    card.props.onReviewOrder();
-    const modal = app.find('PaymentReview');
-    assert.equal(modal.props.isOpen, true);
-    assert.equal(modal.props.order.id, card.props.order.id);
-    assert.equal(typeof modal.props.onUpdated, 'function');
-    // An accepted/collected order stays in the modal for the next decision.
-    // The confirmation closes before the parent dialog can be dismissed.
-    modal.props.onUpdated({ id: card.props.order.id, payment_status: 'COLLECTED' });
-    assert.equal(app.find('PaymentReview').props.order.payment_status, 'COLLECTED');
-    assert.equal(app.find('PaymentReview').props.isOpen, true);
-    modal.props.onClose();
-    assert.equal(app.find('PaymentReview').props.isOpen, false);
-  }
+  const base = { client_name: 'Customer', created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'ACCEPTED', assets: [{file_url: 'file.pdf'}] };
+  const attempt = (status) => ({ attemptId: `a-${status}`, orderId: status, attemptNumber: 1, kind: 'INITIAL', mode: 'AGENT', status, printerName: 'Desk', resolvedAt: null, updatedAt: new Date().toISOString() });
+  app.poll([
+    { ...base, id: 'fresh', state: 'IN_PRODUCTION', current_attempt: null },
+    { ...base, id: 'failed', state: 'IN_PRODUCTION', current_attempt: attempt('FAILED_PRE_SUBMISSION') },
+    { ...base, id: 'printing', state: 'IN_PRODUCTION', current_attempt: attempt('DOWNLOADING') },
+    { ...base, id: 'submitted', state: 'IN_PRODUCTION', current_attempt: attempt('SUBMITTED') },
+    { ...base, id: 'legacy', state: 'PRINTED' },
+    { ...base, id: 'ready', state: 'READY_FOR_PICKUP', output_confirmed_at: '2026-04-10T01:00:00Z', payment_receipts: [{ verified: true }] },
+    { ...base, id: 'done', state: 'COMPLETED', handed_over_at: '2026-04-10T02:00:00Z' },
+  ]);
+  app.tab('ready');
+  const ready = Object.fromEntries(app.cards().map((card) => [card.props.order.id, card.props]));
+  assert.deepEqual(Object.keys(ready).sort(), ['failed', 'fresh', 'printing']);
+  assert.equal(typeof ready.fresh.onToggleSelect, 'function');
+  assert.equal(ready.failed.onToggleSelect, undefined, 'unresolved attempts cannot be re-sent');
+  assert.deepEqual([...ready.failed.footer.props.children[0].props.actions], ['retry']);
+  assert.deepEqual([...ready.printing.footer.props.children[0].props.actions], []);
+  assert.equal(ready.failed.statusBadge.text, 'Failed before printing');
+
+  app.tab('pickup');
+  const pickup = Object.fromEntries(app.cards().map((card) => [card.props.order.id, card.props]));
+  assert.deepEqual(Object.keys(pickup).sort(), ['legacy', 'ready', 'submitted']);
+  assert.match(pickup.submitted.statusBadge.text, /^Submission reported . check output$/);
+  assert.deepEqual([...pickup.submitted.footer.props.children[0].props.actions], ['confirm', 'reprint']);
+  assert.deepEqual([...pickup.ready.footer.props.children[0].props.actions], ['handover', 'reprint']);
+  assert.equal(pickup.legacy.statusBadge.text, 'Awaiting output check');
+
+  app.tab('completed');
+  assert.deepEqual(app.cards().map((card) => card.props.order.id), ['done']);
+  assert.match(text(app.render()), /Pickup/);
 });

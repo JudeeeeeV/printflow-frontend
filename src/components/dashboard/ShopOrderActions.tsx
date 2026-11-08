@@ -13,11 +13,10 @@ interface ActionOrder {
   is_unclaimed?: boolean;
   assets?: { file_url?: string | null }[];
 }
-type Action = ShopDecision | 'READY_FOR_PICKUP' | 'COMPLETED';
+type Action = ShopDecision;
 const labels: Record<Action, string> = {
   ACCEPT: 'Accept order', REJECT_ORDER: 'Reject order', COLLECT_CASH: 'Record cash collected',
   RECORD_REFUND: 'Record manual refund', FLAG_UNCLAIMED: 'Flag unclaimed', CLEAR_UNCLAIMED: 'Clear unclaimed',
-  READY_FOR_PICKUP: 'Mark ready for pickup', COMPLETED: 'Confirm handover',
 };
 
 export const ShopOrderActions = ({ order, onUpdated, disabled = false, onBusyChange }: {
@@ -44,10 +43,8 @@ export const ShopOrderActions = ({ order, onUpdated, disabled = false, onBusyCha
     actions.push('REJECT_ORDER');
     if (hasAsset && order.acceptance_status === 'PENDING' && (cash || ['PENDING_VERIFICATION', 'VERIFIED'].includes(order.payment_status))) actions.push('ACCEPT');
   }
-  if (hasAsset && ['IN_PRODUCTION', 'PRINTED'].includes(order.state) && order.acceptance_status === 'ACCEPTED' && paymentEligible) actions.push('READY_FOR_PICKUP');
   if (order.state === 'READY_FOR_PICKUP') {
     if (hasAsset && order.acceptance_status === 'ACCEPTED' && cash && order.payment_status === 'DUE_AT_PICKUP') actions.push('COLLECT_CASH');
-    if (hasAsset && order.acceptance_status === 'ACCEPTED' && !cash && order.payment_status === 'VERIFIED') actions.push('COMPLETED');
     actions.push(order.is_unclaimed ? 'CLEAR_UNCLAIMED' : 'FLAG_UNCLAIMED');
   }
   if (order.payment_status === 'REFUND_DUE') actions.push('RECORD_REFUND');
@@ -72,9 +69,7 @@ export const ShopOrderActions = ({ order, onUpdated, disabled = false, onBusyCha
     }
     pending.current = true; setBusy(true); setError('');
     try {
-      const result = decision === 'READY_FOR_PICKUP' || decision === 'COMPLETED'
-        ? await orderService.updateOrderState(order.id, decision, true)
-        : await orderService.decideOrder(order.id, decision, { reason: decisionNeedsReason ? reason.trim() : undefined, reference: decision === 'RECORD_REFUND' ? reference.trim() : undefined, confirmed: true });
+      const result = await orderService.decideOrder(order.id, decision, { reason: decisionNeedsReason ? reason.trim() : undefined, reference: decision === 'RECORD_REFUND' ? reference.trim() : undefined, confirmed: true });
       onUpdated(result.order);
       setAction(null); setConfirmOpen(false);
     } catch (requestError) {
@@ -95,10 +90,10 @@ export const ShopOrderActions = ({ order, onUpdated, disabled = false, onBusyCha
           void confirm(value);
         } else {
           setAction(value);
-          if (value === 'READY_FOR_PICKUP' || value === 'COLLECT_CASH') setConfirmOpen(true);
+          if (value === 'COLLECT_CASH') setConfirmOpen(true);
         }
       }}>{labels[value]}</button>)}</div>
-      {action && action !== 'READY_FOR_PICKUP' && action !== 'COLLECT_CASH' && <div className="space-y-2 border-l-4 border-carbon-blue-60 bg-carbon-gray-10 p-3">
+      {action && action !== 'COLLECT_CASH' && <div className="space-y-2 border-l-4 border-carbon-blue-60 bg-carbon-gray-10 p-3">
         <p className="text-sm font-bold">{labels[action]}</p>
         {needsReason && <label className="block text-xs font-bold">Reason (required)<textarea value={reason} onChange={event => setReason(event.target.value)} maxLength={500} disabled={busy} className="mt-1 min-h-20 w-full border border-gray-500 bg-white p-2 text-sm focus:outline-carbon-blue-60" /></label>}
         {needsReference && <label className="block text-xs font-bold">Manual refund reference (required)<input value={reference} onChange={event => setReference(event.target.value)} maxLength={120} disabled={busy} className="mt-1 min-h-11 w-full border border-gray-500 bg-white p-2 text-sm focus:outline-carbon-blue-60" /><span className="mt-1 block font-normal">Record the full ₱{Number(order.total).toFixed(2)} refund after sending it outside PrintFlow. This action does not transfer money.</span></label>}
@@ -107,8 +102,8 @@ export const ShopOrderActions = ({ order, onUpdated, disabled = false, onBusyCha
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       {busy && <p role="status" className="text-xs text-gray-600">Saving decision…</p>}
       <ConfirmModal isOpen={confirmOpen} title={action ? `${labels[action]}?` : 'Confirm decision'}
-        message={`${action ? labels[action] : 'Apply decision'} for order #${order.id.slice(0, 8)} (₱${Number(order.total).toFixed(2)}). ${reason || reference || (action === 'COLLECT_CASH' ? `Confirm you received the full ₱${Number(order.total).toFixed(2)} in cash. This will also mark the order completed.` : action === 'READY_FOR_PICKUP' ? 'Check the physical output, document, paper, copies and print quality before confirming.' : action === 'COMPLETED' ? 'Confirm payment is settled and the customer is receiving the correct prints.' : 'Confirm you have reviewed the order and the required evidence.')}`}
-        confirmLabel="Confirm decision" isBusy={busy} onConfirm={() => void confirm()} onCancel={() => { if (!pending.current) { setConfirmOpen(false); if (action === 'READY_FOR_PICKUP' || action === 'COLLECT_CASH') setAction(null); } }} />
+        message={`${action ? labels[action] : 'Apply decision'} for order #${order.id.slice(0, 8)} (₱${Number(order.total).toFixed(2)}). ${reason || reference || (action === 'COLLECT_CASH' ? `Confirm you received the full ₱${Number(order.total).toFixed(2)} in cash. This will also mark the order completed.` : 'Confirm you have reviewed the order and the required evidence.')}`}
+        confirmLabel="Confirm decision" isBusy={busy} onConfirm={() => void confirm()} onCancel={() => { if (!pending.current) { setConfirmOpen(false); if (action === 'COLLECT_CASH') setAction(null); } }} />
     </fieldset>
   );
 };

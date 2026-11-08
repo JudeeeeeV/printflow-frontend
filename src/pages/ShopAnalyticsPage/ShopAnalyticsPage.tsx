@@ -89,7 +89,7 @@ const StatusBadge = ({ state }: { state: string }) => {
       cls = 'border border-gray-300 bg-gray-100 text-gray-700';
       break;
     case 'PRINTED':
-      label = 'Printed';
+      label = 'Awaiting Check';
       cls = 'border border-carbon-gray-100 bg-carbon-gray-100 text-white';
       break;
     case 'READY_FOR_PICKUP':
@@ -996,7 +996,7 @@ export const ShopAnalyticsPage: React.FC = () => {
                           </td>
                           <td className="px-6 py-4">
                             <StatusBadge state={order.state} />
-                            <p className="mt-1 text-xs text-gray-600">{order.paymentMethod === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} ? {order.paymentStatus?.replaceAll('_', ' ')}</p>
+                            <p className="mt-1 text-xs text-gray-600">{order.paymentMethod === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} · {order.paymentStatus?.replaceAll('_', ' ')}</p>
                           </td>
                         </tr>
                       ))

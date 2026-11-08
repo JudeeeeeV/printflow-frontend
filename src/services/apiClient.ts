@@ -114,7 +114,9 @@ export async function apiClient<T>(
   const url = `${BASE_URL}${endpoint}`;
   const method = (options.method || 'GET').toUpperCase();
   const requestGeneration = cacheGeneration;
-  if (method === 'GET' && requestGeneration === cacheGeneration) {
+  // cache: 'no-store' is for live views that must never reuse a response.
+  const usesCache = method === 'GET' && options.cache !== 'no-store';
+  if (usesCache) {
     const cached = responseCache.get(endpoint);
     if (cached && cached.expiresAt > Date.now()) return cached.value as T;
     if (cached) responseCache.delete(endpoint);
@@ -176,12 +178,15 @@ export async function apiClient<T>(
         );
       }
 
-      if (method === 'GET') {
-        responseCache.set(endpoint, {
-          expiresAt: Date.now() + GET_CACHE_TTL_MS,
-          value: data,
-        });
-      } else {
+      if (usesCache) {
+        // A response that started before an invalidation may already be stale.
+        if (requestGeneration === cacheGeneration) {
+          responseCache.set(endpoint, {
+            expiresAt: Date.now() + GET_CACHE_TTL_MS,
+            value: data,
+          });
+        }
+      } else if (method !== 'GET') {
         invalidateApiCache();
       }
       return data as T;
@@ -194,7 +199,7 @@ export async function apiClient<T>(
     }
   })();
 
-  if (method === 'GET') {
+  if (usesCache) {
     pendingGets.set(endpoint, request);
     request.finally(() => {
       if (pendingGets.get(endpoint) === request) pendingGets.delete(endpoint);
