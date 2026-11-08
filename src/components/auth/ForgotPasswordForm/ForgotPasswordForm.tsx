@@ -4,6 +4,7 @@ import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService } from '../../../services/authService';
+import { EMAIL_RESEND_SECONDS, useRetryCountdown } from '../../../hooks/useRetryCountdown';
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void;
@@ -20,14 +21,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-
-  // Cooldown timer
-  React.useEffect(() => {
-    if (cooldown <= 0) return;
-    const interval = setInterval(() => setCooldown(c => c - 1), 1000);
-    return () => clearInterval(interval);
-  }, [cooldown]);
+  const { seconds: cooldown, start: startCooldown } = useRetryCountdown();
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +36,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
     setIsSubmitting(true);
     try {
       await authService.sendPasswordReset(email);
+      startCooldown(EMAIL_RESEND_SECONDS);
       setStep('reset');
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -61,8 +56,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
     setIsSubmitting(true);
     try {
       await authService.sendPasswordReset(email);
-      setCooldown(60);
-      setMessage('A new code has been sent to your email.');
+      startCooldown(EMAIL_RESEND_SECONDS);
+      setMessage('If an account exists for this email, a new code has been sent.');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Could not resend code.');
@@ -138,7 +133,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-carbon-gray-100 mb-2">Reset password</h2>
           <p className="text-base text-gray-600 mb-2">
-            We sent an 8-digit reset code to <span className="font-bold">{email}</span>.
+            If an account exists for <span className="font-bold">{email}</span>, we sent an 8-digit reset code.
           </p>
           <p className="text-sm font-bold text-carbon-gray-100">
             (If you don't see it, check your spam or junk folder)

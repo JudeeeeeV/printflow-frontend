@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
 
+// Matches the minimum interval between emails to one address in Supabase Auth.
+export const EMAIL_RESEND_SECONDS = 60;
+
+export function getEmailSendError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+  if (/email rate limit exceeded/i.test(error.message)) {
+    return 'Too many emails have been sent recently. Please wait a few minutes and try again.';
+  }
+  return error.message || fallback;
+}
+
 // Supabase includes the remaining wait in its email rate-limit message.
 export function getRetrySeconds(error: unknown): number | null {
   if (!(error instanceof Error)) return null;

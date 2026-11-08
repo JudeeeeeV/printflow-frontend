@@ -1,4 +1,4 @@
-import { getRetrySeconds, useRetryCountdown } from '../../../hooks/useRetryCountdown';
+import { EMAIL_RESEND_SECONDS, getEmailSendError, getRetrySeconds, useRetryCountdown } from '../../../hooks/useRetryCountdown';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { authService, type RegisterPayload } from '../../../services/authService';
@@ -12,7 +12,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('Enter the 8-digit code sent to your email. Check your spam folder too.');
-  const { seconds: cooldown, start: startCooldown } = useRetryCountdown(60);
+  const { seconds: cooldown, start: startCooldown } = useRetryCountdown(EMAIL_RESEND_SECONDS);
   const [rateLimited, setRateLimited] = useState(false);
   async function verify(e: React.FormEvent) {
     e.preventDefault();
@@ -30,13 +30,13 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
     setBusy(true); setError('');
     try {
       const result = await authService.resendCode(email);
-      setMessage(result.message); setCode(''); startCooldown(60); setRateLimited(false);
+      setMessage(result.message); setCode(''); startCooldown(EMAIL_RESEND_SECONDS); setRateLimited(false);
     } catch (err) {
       const wait = getRetrySeconds(err);
       if (wait !== null) {
         startCooldown(wait); setRateLimited(true);
       } else {
-        setError(err instanceof Error ? err.message : 'Could not send a code.');
+        setError(getEmailSendError(err, 'Could not send a code.'));
       }
     }
     finally { setBusy(false); }

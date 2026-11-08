@@ -1,5 +1,6 @@
 // src/components/auth/RegistrationForm/RegistrationForm.tsx
 import {
+  getEmailSendError,
   getRetrySeconds,
   useRetryCountdown,
 } from "../../../hooks/useRetryCountdown";
@@ -119,7 +120,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
       if (wait !== null) {
         retry.start(wait);
       } else if (err instanceof Error) {
-        setError(err.message || "Registration failed. Please try again.");
+        setError(getEmailSendError(err, "Registration failed. Please try again."));
       } else {
         setError("Registration failed. Please try again.");
       }
