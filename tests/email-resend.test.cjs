@@ -300,7 +300,7 @@ test('the security check shows a clean badge and hides Cloudflare\'s box unless 
   options.callback('fresh-token');
   const verified = module.widget(onToken);
   assert.match(text(verified), /Verification successful/);
-  assert.match(text(verified), /CloudflareTurnstile/);
+  assert.match(text(verified), /Cloudflare$/);
   assert.ok(nodes(verified).some(node => node.type === 'CheckIcon'));
   assert.deepEqual(tokens, ['fresh-token']);
 
