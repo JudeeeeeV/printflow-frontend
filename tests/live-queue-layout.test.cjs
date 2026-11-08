@@ -33,30 +33,31 @@ function text(node) {
   return typeof node === 'string' || typeof node === 'number' ? String(node) : '';
 }
 
-test('responsive capacities use exact width and desktop fit boundaries', () => {
-  for (const width of [375, 667, 767]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 3, rows: 3, contained: false });
-  for (const width of [768, 820, 1024, 1180, 1279]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 4, rows: 2, contained: false });
-  assert.deepEqual(plain(getLiveQueueLayout(1280, 524)), { pageSize: 6, rows: 2, contained: true });
-  assert.deepEqual(plain(getLiveQueueLayout(1440, 523.99)), { pageSize: 3, rows: 1, contained: true });
-  assert.equal(getLiveQueueLayout(1280, 256).contained, true);
-  assert.equal(getLiveQueueLayout(1280, 255.99).contained, false);
-  assert.equal(getLiveQueueLayout(1920, -10).pageSize, 3);
+test('six-card pages use three columns and two rows on desktop with a scrolling fallback', () => {
+  for (const width of [375, 667, 767]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 6, rows: 6, contained: false });
+  for (const width of [768, 820, 1024, 1180, 1279]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 6, rows: 3, contained: false });
+  assert.deepEqual(plain(getLiveQueueLayout(1280, 428)), { pageSize: 6, rows: 2, contained: true });
+  assert.deepEqual(plain(getLiveQueueLayout(1440, 427.99)), { pageSize: 6, rows: 2, contained: false });
+  assert.equal(getLiveQueueLayout(1920, -10).pageSize, 6);
+  assert.match(layoutHelpers.queueGridClassName, /md:grid-cols-2/);
+  assert.match(layoutHelpers.queueGridClassName, /xl:grid-cols-3/);
 });
 
-test('larger text scales the minimum row and gap before choosing a capacity', () => {
-  assert.equal(getLiveQueueLayout(1440, 524, 320, 15).pageSize, 3);
-  assert.equal(getLiveQueueLayout(1440, 655, 320, 15).pageSize, 6);
+test('larger text enables scrolling rather than reducing the page capacity', () => {
+  assert.equal(getLiveQueueLayout(1440, 654, 320, 15).contained, false);
+  assert.equal(getLiveQueueLayout(1440, 655, 320, 15).contained, true);
+  assert.equal(getLiveQueueLayout(1440, 319, 320, 15).pageSize, 6);
   assert.equal(getLiveQueueLayout(1440, 319, 320, 15).contained, false);
 });
 
-test('loading shows six compact desktop placeholders, four on tablets, and three on phones', () => {
+test('loading shows six placeholders with the same layout as loaded cards', () => {
   const { DashboardSkeleton } = load('components/dashboard/skeletons/DashboardSkeleton.tsx', {
     react: {},
     'react/jsx-runtime': { jsx, jsxs: jsx },
     '../liveQueueLayout': layoutHelpers,
   });
   const gridRef = () => {};
-  for (const [width, height, count] of [[1440, 524, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 4], [375, 812, 3]]) {
+  for (const [width, height, count] of [[1440, 428, 6], [1366, 400, 6], [1280, 0, 6], [1024, 768, 6], [375, 812, 6]]) {
     const layout = getLiveQueueLayout(width, height);
     const tree = DashboardSkeleton({ layout, gridRef });
     const grid = nodes(tree).find(node => node.props?.['data-queue'] === 'new');
@@ -64,7 +65,7 @@ test('loading shows six compact desktop placeholders, four on tablets, and three
     assert.equal(grid.props.ref, gridRef);
     assert.equal(tree.props.role, 'status');
     if (layout.contained) {
-      assert.equal(grid.props.style.gridTemplateRows, 'repeat(2, minmax(7rem, 1fr))');
+      assert.equal(grid.props.style.gridTemplateRows, 'repeat(2, minmax(13rem, 1fr))');
     } else {
       assert.equal(grid.props.style, undefined);
     }
@@ -152,7 +153,7 @@ function dashboardHarness() {
     throw new Error('Dashboard state did not settle');
   }
   render();
-  const orders = ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED'].flatMap((state, queue) => Array.from({ length: 13 }, (_, index) => ({
+  const orders = ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED', 'READY_FOR_PICKUP'].flatMap((state, queue) => Array.from({ length: 13 }, (_, index) => ({
     id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'ACCEPTED', assets: [{file_url: 'file.pdf'}],
   })));
   states[0] = { verification_status: 'VERIFIED' }; states[1] = false; states[7] = orders;
@@ -174,23 +175,27 @@ function dashboardHarness() {
   };
 }
 
-test('all queues use the responsive capacity and keep independent anchored pages', () => {
+test('all four queues show six cards per page and preserve pages on resize', () => {
   const app = dashboardHarness();
-  assert.equal(app.cards().length, 6);
-  app.find('Pagination').props.onPageChange(2);
-  const first = app.cards()[0].props.order.id;
-  app.resize(1366, 400);
-  assert.equal(app.find('Pagination').props.page, 3);
-  assert.equal(app.cards().length, 3);
-  assert.equal(app.cards()[0].props.order.id, first);
-  app.tab('ready'); assert.equal(app.cards().length, 3);
-  app.find('Pagination').props.onPageChange(2);
-  app.tab('completed'); assert.equal(app.cards().length, 3);
-  app.resize(1024, 900); assert.equal(app.cards().length, 4);
+  for (const queue of ['new', 'ready', 'pickup', 'completed']) {
+    app.tab(queue);
+    assert.equal(app.cards().length, 6);
+    assert.equal(app.find('Pagination').props.pageSize, 6);
+    app.find('Pagination').props.onPageChange(2);
+    const first = app.cards()[0].props.order.id;
+    for (const [width, height] of [[1366, 400], [1024, 900], [375, 812], [1440, 428]]) {
+      app.resize(width, height);
+      assert.equal(app.find('Pagination').props.page, 2);
+      assert.equal(app.cards().length, 6);
+      assert.equal(app.cards()[0].props.order.id, first);
+    }
+    const grid = nodes(app.render()).find(node => node.props?.['data-queue'] === queue);
+    assert.equal(grid.props.style.gridTemplateRows, 'repeat(2, minmax(13rem, 1fr))');
+    app.find('Pagination').props.onPageChange(3);
+    assert.equal(app.cards().length, 1);
+  }
   app.tab('new');
-  assert.equal(app.find('Pagination').props.page, 2);
-  assert.ok(app.cards().some(card => card.props.order.id === first));
-  app.resize(375, 812); assert.equal(app.cards().length, 3);
+  assert.equal(app.find('Pagination').props.page, 3);
 });
 
 test('filters reset pagination and polling clamps are stored across later refreshes', () => {
@@ -215,7 +220,7 @@ test('switching queues does not re-anchor a saved page using the outgoing grid c
   app.tab('new'); app.resize(1440, 524);
   assert.equal(app.find('Pagination').props.pageSize, 6);
   app.pendingTab('ready');
-  assert.equal(app.find('Pagination').props.pageSize, 3);
+  assert.equal(app.find('Pagination').props.pageSize, 6);
   assert.equal(app.cards()[0].props.order.id, first);
   app.measure(400);
   assert.equal(app.find('Pagination').props.page, 2);

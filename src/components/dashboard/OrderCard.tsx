@@ -105,15 +105,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
       onClick={onClick}
-      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} flex h-full min-w-0 flex-col bg-white transition-[border-color,box-shadow] duration-200 xl:min-h-64 ${isSelected ? 'border-4 border-carbon-blue-60 p-[9px] shadow-md' : `border border-black p-3 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
+      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} flex h-full min-h-52 min-w-0 flex-col bg-white transition-[border-color,box-shadow] duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[5px] shadow-md' : `border border-black p-2 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
+      <div className="mb-1 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h4 className="font-black leading-5 text-carbon-gray-100 [overflow-wrap:anywhere]">
             <button type="button" aria-label={`Show full title and customer for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
               event.stopPropagation();
               setIsDetailsOpen(true);
-            }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-10">
+            }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-8">
               <span className="line-clamp-2">{title.filename}</span>
             </button>
           </h4>
@@ -132,7 +132,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
         </div>
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-1 [&>span]:max-w-full [&>span]:break-words [&>span]:leading-3">
+      <div className="mb-1 flex flex-wrap gap-1 [&>span]:max-w-full [&>span]:break-words [&>span]:leading-3">
         <span className={`px-2 py-0.5 text-white text-[10px] font-bold border border-[#e0e0e0] ${paperSizeBackground}`}>
           {paperSize}
         </span>
@@ -159,16 +159,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
         </span>
       </div>
 
-      <div className="mb-2">
-        <div className="flex justify-between text-sm">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3">
+        <div className="flex flex-1 justify-between gap-2 text-sm">
           <span className="text-gray-500 font-medium">Total Amount:</span>
           <span className="font-bold text-carbon-gray-100">
             ₱{order.total || 0}
           </span>
         </div>
-      </div>
-
-      {onToggleSelect && (
+        {onToggleSelect && (
           <label
             className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100 xl:min-h-9"
             onClick={(e) => e.stopPropagation()}
@@ -185,7 +183,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
             />
             <span className="text-xs select-none">{isSelected ? 'Selected' : 'Select'}</span>
           </label>
-      )}
+        )}
+      </div>
       <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#e0e0e0] pt-2">
           <button
             type="button"

@@ -676,7 +676,7 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
 
- <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
+ <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`} style={queueLayout.contained ? { gridTemplateRows: 'repeat(2, minmax(13rem, 1fr))' } : undefined}>
  {activeVisibleOrders.map(order => {
  if (activeQueue === 'new') return null;
  const badge = orderBadge(order);

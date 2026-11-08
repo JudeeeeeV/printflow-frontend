@@ -218,10 +218,10 @@ test('the full-title disclosure opens independently of selection and payment rev
 test('compact cards preserve their bounds, selected borders, and responsive actions', () => {
   const normal = renderCard(order({ state: 'IN_PRODUCTION' }), () => {});
   const selected = renderCard(order({ state: 'IN_PRODUCTION' }), () => {}, () => {}, undefined, [], true);
-  assert.match(normal.props.className, /border border-black p-3/);
-  assert.match(selected.props.className, /border-4 border-carbon-blue-60 p-\[9px\]/);
+  assert.match(normal.props.className, /border border-black p-2/);
+  assert.match(selected.props.className, /border-4 border-carbon-blue-60 p-\[5px\]/);
   assert.equal(normal.props.whileHover, undefined);
-  assert.match(normal.props.className, /xl:min-h-64/);
+  assert.match(normal.props.className, /min-h-52/);
   const preview = nodes(normal).find(node => node.type === 'button' && text(node) === 'Preview Document');
   assert.match(preview.props.className, /h-11/);
   assert.match(preview.props.className, /xl:h-9/);
