@@ -7,13 +7,11 @@ import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
 interface OrderCardProps {
   order: any;
   onClick?: () => void;
-  onReviewPayment?: () => void;
+  onReviewOrder?: () => void;
   isSelected?: boolean;
   onToggleSelect?: (orderId: string) => void;
   /** Overrides the order-state badge, e.g. with the current print attempt. */
   statusBadge?: { text: string; className: string } | null;
-  /** Attempt details, milestones and fulfillment actions. */
-  footer?: React.ReactNode;
 }
 
 const paperSizeBackgrounds: Record<string, string> = {
@@ -22,14 +20,13 @@ const paperSizeBackgrounds: Record<string, string> = {
   LONG: "bg-carbon-blue-60",
 };
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect, statusBadge, footer }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOrder, isSelected = false, onToggleSelect, statusBadge }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const isPaymentPending = order.payment_status === 'PENDING_VERIFICATION' || order.state === "AWAITING_PAYMENT_VERIFICATION";
-  const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
+  const hasDocument = Boolean(order.assets?.[0]?.file_url);
   const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
   const paperSize = order.paper_size || "A4";
@@ -87,12 +84,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       break;
   }
 
+  if (order.state === 'REJECTED') {
+    badgeText = 'Order Rejected'; badgeColor = 'bg-red-100 text-red-800';
+  } else if (['OPEN_INQUIRY', 'AWAITING_PAYMENT'].includes(order.state) && order.payment_status === 'REJECTED') {
+    badgeText = 'Receipt Rejected'; badgeColor = 'bg-red-100 text-red-800';
+  }
+  isDisputed = isDisputed || order.payment_status === 'DISPUTED';
+
   if (statusBadge) {
     badgeText = statusBadge.text;
     badgeColor = statusBadge.className;
   }
 
-  const canReviewPayment = isPaymentPending && !!onReviewPayment;
 
   return (
     <motion.div
@@ -165,9 +168,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         </div>
       </div>
 
-      {/* Payment actions share a row; selectable cards keep their checkbox. */}
-      <div className={`mt-auto gap-2 border-t border-[#e0e0e0] pt-2 ${canReviewPayment ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
-        {!canReviewPayment && (onToggleSelect ? (
+      {onToggleSelect && (
           <label
             className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100 xl:min-h-9"
             onClick={(e) => e.stopPropagation()}
@@ -184,18 +185,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
             />
             <span className="text-xs select-none">{isSelected ? 'Selected' : 'Select'}</span>
           </label>
-        ) : <div />)}
-        {hasDocument && (
+      )}
+      <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#e0e0e0] pt-2">
           <button
             type="button"
+            disabled={!hasDocument}
             onClick={(e) => {
               e.stopPropagation();
+              if (!hasDocument) return;
               setIsAssetLoading(true);
               setHasImageError(false);
               setPreviewUrl(order.assets[0].file_url);
               setIsPreviewOpen(true);
             }}
-            className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6]`}
+            className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <svg
               className="h-4 w-4 shrink-0"
@@ -218,26 +221,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
             </svg>
             <span className="min-w-0">Preview Document</span>
           </button>
-        )}
-        {canReviewPayment && (
+
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onReviewPayment?.();
+              onReviewOrder?.();
             }}
             className={`${actionButtonClassName} bg-carbon-gray-100 text-white hover:bg-[#454545]`}
           >
-            Review Payment
+            Review Order
           </button>
-        )}
       </div>
-
-      {footer && (
-        <div className="mt-2 border-t border-[#e0e0e0] pt-2" onClick={(e) => e.stopPropagation()}>
-          {footer}
-        </div>
-      )}
 
       {isDisputed && (
         <div className="mt-1">

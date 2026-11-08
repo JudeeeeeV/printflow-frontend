@@ -329,3 +329,29 @@ test('shop confirmation owns dismissal and blocks concurrent receipt verificatio
   f.escape();
   assert.equal(f.closed(), 1);
 });
+
+
+test('stranded verified GCash retries production authorization using the same receipt', async () => {
+  const f = fixture({ order: order({ state: 'OPEN_INQUIRY', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'PENDING' }) });
+  assert.match(f.text(f.render()), /does not record payment again/);
+  assert.equal(f.button('Reject & Request New Receipt'), undefined);
+  f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } });
+  f.render();
+  f.button('Retry production authorization').props.onClick();
+  await f.flush();
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0][1], 'APPROVE');
+  assert.equal(f.calls[0][3], 'receipt-current');
+  assert.equal(f.calls[0][4], true);
+});
+
+test('cancellation during review requires a fresh confirmation for the refund obligation', () => {
+  const f = fixture({ order: order({ state: 'OPEN_INQUIRY' }) });
+  f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } });
+  f.render();
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.checked, true);
+  f.update({ order: order({ state: 'CANCELLED' }) });
+  f.render();
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.checked, false);
+  assert.match(f.text(f.render()), /manual refund obligation/);
+});

@@ -172,40 +172,13 @@ test('failed immediate acceptance remains retryable without a confirmation step'
   assert.equal(f.find(node => node.props?.role === 'alert'), undefined);
 });
 
-test('mark ready for pickup opens confirmation directly and saves only after confirming', async () => {
+test('payment decisions never bypass the separate output inspection or GCash handover dialogs', () => {
   for (const payment_method of ['CASH_ON_PICKUP', 'GCASH']) {
-    for (const state of ['IN_PRODUCTION', 'PRINTED']) {
-      const calls = [], updates = [];
-      let resolve;
-      const pending = new Promise(done => { resolve = done; });
-      const order = {id:'order', state, total:45, payment_method, payment_status:payment_method === 'CASH_ON_PICKUP' ? 'DUE_AT_PICKUP' : 'VERIFIED', acceptance_status:'ACCEPTED', assets:[{file_url:'private/document.pdf'}]};
-      const f = fixture('actions', {order, onUpdated:value => updates.push(value)}, {
-        updateOrderState:async (...args) => { calls.push(args); await pending; return {order:{...order, state:'READY_FOR_PICKUP'}}; },
-      });
-      const openConfirmation = () => {
-        f.button('Mark ready for pickup').props.onClick(); f.render();
-        const modal = f.find(node => node.type === 'Confirm');
-        assert.equal(modal.props.isOpen, true);
-        assert.equal(modal.props.title, 'Mark ready for pickup?');
-        assert.match(modal.props.message, /Check the physical output, document, paper, copies and print quality/);
-        assert.equal(f.button('Review decision'), undefined);
-        assert.equal(f.find(node => node.type === 'div' && node.props.className?.includes('border-l-4')), undefined);
-        return modal;
-      };
-      let modal = openConfirmation();
-      assert.equal(calls.length, 0);
-      modal.props.onCancel(); f.render();
-      assert.equal(f.find(node => node.type === 'Confirm').props.isOpen, false);
-      assert.equal(calls.length, 0);
-      assert.equal(f.button('Review decision'), undefined);
-      modal = openConfirmation();
-      modal.props.onConfirm(); modal.props.onConfirm(); f.render();
-      assert.equal(calls.length, 1);
-      assert.deepEqual(calls[0], ['order', 'READY_FOR_PICKUP', true]);
-      assert.equal(f.find(node => node.type === 'Confirm').props.isBusy, true);
-      resolve(); await f.flush();
-      assert.equal(updates[0].state, 'READY_FOR_PICKUP');
-      assert.equal(f.find(node => node.type === 'Confirm').props.isOpen, false);
+    for (const state of ['IN_PRODUCTION', 'PRINTED', 'READY_FOR_PICKUP']) {
+      const order = { id:'order', state, total:45, payment_method, payment_status:payment_method === 'CASH_ON_PICKUP' ? 'DUE_AT_PICKUP' : 'VERIFIED', acceptance_status:'ACCEPTED', assets:[{file_url:'private/document.pdf'}] };
+      const f = fixture('actions', {order,onUpdated(){}}, {});
+      assert.equal(f.button('Mark ready for pickup'), undefined);
+      assert.equal(f.button('Confirm handover'), undefined);
     }
   }
 });
@@ -213,7 +186,7 @@ test('mark ready for pickup opens confirmation directly and saves only after con
 test('cash collection opens confirmation directly and completes the order without separate handover', async () => {
   const calls=[], updates=[]; let resolve;
   const pending=new Promise(done=>{resolve=done;});
-  const order={id:'cash',state:'READY_FOR_PICKUP',total:45,payment_method:'CASH_ON_PICKUP',payment_status:'DUE_AT_PICKUP',acceptance_status:'ACCEPTED',assets:[{file_url:'private/document.pdf'}]};
+  const order={id:'cash',state:'READY_FOR_PICKUP',output_confirmed_at:'2026-11-08T00:00:00Z',current_attempt:null,total:45,payment_method:'CASH_ON_PICKUP',payment_status:'DUE_AT_PICKUP',acceptance_status:'ACCEPTED',assets:[{file_url:'private/document.pdf'}]};
   const props={order,onUpdated(value){updates.push(value);props.order=value;}};
   const f=fixture('actions',props,{decideOrder:async(...args)=>{calls.push(args);await pending;return {order:{...order,payment_status:'COLLECTED',state:'COMPLETED',is_unclaimed:false}};}});
   assert.equal(f.button('Confirm handover'),undefined);
@@ -245,17 +218,20 @@ test('cash collection opens confirmation directly and completes the order withou
   assert.equal(settled.button('Confirm handover'),undefined);
 });
 
-test('GCash still requires its separate handover confirmation', async () => {
-  const calls=[];
-  const order={id:'gcash',state:'READY_FOR_PICKUP',total:45,payment_method:'GCASH',payment_status:'VERIFIED',acceptance_status:'ACCEPTED',assets:[{file_url:'private/document.pdf'}]};
-  const f=fixture('actions',{order,onUpdated(){}},{updateOrderState:async(...args)=>{calls.push(args);return {order:{...order,state:'COMPLETED'}};}});
-  f.button('Confirm handover').props.onClick();f.render();
-  assert.equal(calls.length,0);
-  f.button('Review decision').props.onClick();f.render();
-  const modal=f.find(node=>node.type==='Confirm');
-  assert.equal(modal.props.title,'Confirm handover?');
-  modal.props.onConfirm();await f.flush();
-  assert.deepEqual(calls,[['gcash','COMPLETED',true]]);
+test('cash collection requires confirmed output and no unresolved print attempt', () => {
+  const order = {id:'cash',state:'READY_FOR_PICKUP',total:45,payment_method:'CASH_ON_PICKUP',payment_status:'DUE_AT_PICKUP',acceptance_status:'ACCEPTED',assets:[{file_url:'document.pdf'}]};
+  for (const changes of [
+    {},
+    {output_confirmed_at:'2026-11-08T00:00:00Z',current_attempt:{resolvedAt:null}},
+    {output_confirmed_at:'2026-11-08T00:00:00Z',current_attempt:{}},
+  ]) {
+    const f=fixture('actions',{order:{...order,...changes},onUpdated(){}},{});
+    assert.equal(f.button('Record cash collected'),undefined);
+  }
+  for (const current_attempt of [null,{resolvedAt:'2026-11-08T00:01:00Z'}]) {
+    const f=fixture('actions',{order:{...order,output_confirmed_at:'2026-11-08T00:00:00Z',current_attempt},onUpdated(){}},{});
+    assert.ok(f.button('Record cash collected'));
+  }
 });
 
 test('completed cash checkout reports collection and completion without another payment prompt', () => {
@@ -272,13 +248,13 @@ test('flag and clear unclaimed submit immediately without a reason, confirmation
       const calls = [], updates = [];
       let resolve;
       const pending = new Promise(done => { resolve = done; });
-      const order = {id:'pickup', state:'READY_FOR_PICKUP', total:45, payment_method, payment_status:payment_method === 'CASH_ON_PICKUP' ? 'DUE_AT_PICKUP' : 'VERIFIED', acceptance_status:'ACCEPTED', is_unclaimed, assets:[{file_url:'private/document.pdf'}]};
+      const order = {id:'pickup', state:'READY_FOR_PICKUP', output_confirmed_at:'2026-11-08T00:00:00Z', current_attempt:null, total:45, payment_method, payment_status:payment_method === 'CASH_ON_PICKUP' ? 'DUE_AT_PICKUP' : 'VERIFIED', acceptance_status:'ACCEPTED', is_unclaimed, assets:[{file_url:'private/document.pdf'}]};
       const props = {order, onUpdated(value) { updates.push(value); props.order = value; }};
       const f = fixture('actions', props, {
         decideOrder:async (...args) => { calls.push(args); await pending; return {order:{...order, is_unclaimed:!is_unclaimed}}; },
       });
       // Starting another action must not leave its inline section open.
-      f.button(payment_method === 'CASH_ON_PICKUP' ? 'Record cash collected' : 'Confirm handover').props.onClick(); f.render();
+      if (payment_method === 'CASH_ON_PICKUP') { f.button('Record cash collected').props.onClick(); f.render(); }
       const confirmation = f.find(node => node.type === 'Confirm');
       if (confirmation.props.isOpen) { confirmation.props.onCancel(); f.render(); }
       const flag = f.button(label);
@@ -325,19 +301,26 @@ test('refund reference is required before a decision can be confirmed', () => {
   assert.match(refund.text(),/does not transfer money/);
 });
 
-test('financial confirmation keeps keyboard focus while busy and restores the queue tab when its card leaves', () => {
-  const listeners = new Map(), refs = [];
-  let cursor = 0, nextEffect, cleanup, tree, cancelled = 0;
+test('financial confirmation retains focus across callback replacement and polling, traps busy keys and restores focus', () => {
+  const listeners = new Map(), hooks = [];
+  let cursor = 0, effects = [], tree, cancelled = 0, refreshedCancel = 0;
   const document = { body:{style:{overflow:'auto'}}, activeElement:null,
     addEventListener:(name,callback)=>listeners.set(name,callback),
-    removeEventListener:name=>listeners.delete(name), querySelector:()=>tab };
-  const opener={isConnected:true,focus(){document.activeElement=opener;}};
-  const tab={isConnected:true,focus(){document.activeElement=tab;}};
-  const cancel={isConnected:true,focus(){document.activeElement=cancel;}};
-  const dialog={isConnected:true,focus(){document.activeElement=dialog;},querySelectorAll:()=>props.isBusy?[]:[cancel]};
+    removeEventListener:(name,callback)=>{if(listeners.get(name)===callback)listeners.delete(name);}, querySelector:()=>tab };
+  const control = () => ({isConnected:true,focus(){document.activeElement=this;}});
+  const opener=control(), tab=control(), cancel=control(), confirm=control();
+  const dialog={...control(),querySelectorAll:()=>props.isBusy?[]:[cancel,confirm]};
   document.activeElement=opener;
   const props={isOpen:true,isBusy:false,title:'Confirm cash collection',message:'Full amount received.',onConfirm(){},onCancel(){cancelled++;}};
-  const react={useRef(initial){return refs[cursor++] ||= {current:initial};},useEffect(effect){nextEffect=effect;}};
+  const react={
+    useRef(initial){const i=cursor++;return (hooks[i] ||= {current:initial});},
+    useEffect(effect,deps){
+      const i=cursor++,old=hooks[i];
+      if(!old || deps.some((value,index)=>!Object.is(value,old.deps[index]))) {
+        effects.push(()=>{old?.cleanup?.();hooks[i]={deps,cleanup:effect()};});
+      }
+    },
+  };
   const exports={};
   const source=ts.transpileModule(readFileSync(path.join(__dirname,'../src/components/common/ConfirmModal.tsx'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2023,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   vm.runInNewContext(source,{exports,document,require(name){
@@ -347,16 +330,24 @@ test('financial confirmation keeps keyboard focus while busy and restores the qu
     throw new Error(`Unexpected import ${name}`);
   }});
   const render=()=>{
-    cleanup?.();cursor=0;tree=exports.ConfirmModal(props);
+    cursor=0;effects=[];tree=exports.ConfirmModal(props);
     for(const node of nodes(tree))if(node.props.ref)node.props.ref.current=node.props.role==='alertdialog'?dialog:cancel;
-    cleanup=nextEffect();
+    effects.forEach(effect=>effect());
   };
   render();assert.equal(document.activeElement,cancel);
+  confirm.focus();const keydown=listeners.get('keydown');
+  for(let poll=0;poll<3;poll++) {
+    props.onCancel=()=>{refreshedCancel++;};props.message='Updated order totals';render();
+    assert.equal(document.activeElement,confirm,'polling must not move focus off Confirm');
+    assert.equal(listeners.get('keydown'),keydown,'polling must not reinstall focus effect');
+  }
+  listeners.get('keydown')({key:'Escape',preventDefault(){}});
+  assert.equal(cancelled,0);assert.equal(refreshedCancel,1,'Escape uses latest callback');
   props.isBusy=true;render();assert.equal(document.activeElement,dialog);
   let prevented=false;
   listeners.get('keydown')({key:'Tab',preventDefault(){prevented=true;}});
   assert.equal(prevented,true);assert.equal(document.activeElement,dialog);
-  listeners.get('keydown')({key:'Escape',preventDefault(){}});assert.equal(cancelled,0);
+  listeners.get('keydown')({key:'Escape',preventDefault(){}});assert.equal(refreshedCancel,1);
   opener.isConnected=false;props.isOpen=false;render();
   assert.equal(document.activeElement,tab);assert.equal(document.body.style.overflow,'auto');assert.equal(listeners.size,0);
 });

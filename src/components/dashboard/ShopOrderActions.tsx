@@ -11,6 +11,8 @@ interface ActionOrder {
   payment_status: string;
   acceptance_status: string;
   is_unclaimed?: boolean;
+  output_confirmed_at?: string | null;
+  current_attempt?: { resolvedAt?: string | null } | null;
   assets?: { file_url?: string | null }[];
 }
 type Action = ShopDecision;
@@ -44,11 +46,12 @@ export const ShopOrderActions = ({ order, onUpdated, disabled = false, onBusyCha
     if (hasAsset && order.acceptance_status === 'PENDING' && (cash || ['PENDING_VERIFICATION', 'VERIFIED'].includes(order.payment_status))) actions.push('ACCEPT');
   }
   if (order.state === 'READY_FOR_PICKUP') {
-    if (hasAsset && order.acceptance_status === 'ACCEPTED' && cash && order.payment_status === 'DUE_AT_PICKUP') actions.push('COLLECT_CASH');
+    if (hasAsset && order.acceptance_status === 'ACCEPTED' && cash && order.payment_status === 'DUE_AT_PICKUP' && order.output_confirmed_at && (!order.current_attempt || order.current_attempt.resolvedAt)) actions.push('COLLECT_CASH');
     actions.push(order.is_unclaimed ? 'CLEAR_UNCLAIMED' : 'FLAG_UNCLAIMED');
   }
   if (order.payment_status === 'REFUND_DUE') actions.push('RECORD_REFUND');
-  const blocked = !hasAsset ? 'A valid document is required before production or handover.'
+  const blocked = cash && order.state === 'READY_FOR_PICKUP' && !order.output_confirmed_at ? 'Confirm the printed output before collecting cash.'
+    : !hasAsset ? 'A valid document is required before production or handover.'
     : order.payment_status === 'DISPUTED' ? 'The payment dispute is under platform administration review.'
     : order.payment_status === 'REVIEW_REQUIRED' ? 'Historical payment evidence needs review. The customer can submit replacement proof.'
     : !cash && order.payment_status === 'UNPAID' ? 'Waiting for the customer’s GCash receipt.'

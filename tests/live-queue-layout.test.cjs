@@ -255,16 +255,25 @@ test('attempt state decides Print Ready versus Pickup, selection and the offered
   assert.deepEqual(Object.keys(ready).sort(), ['failed', 'fresh', 'printing']);
   assert.equal(typeof ready.fresh.onToggleSelect, 'function');
   assert.equal(ready.failed.onToggleSelect, undefined, 'unresolved attempts cannot be re-sent');
-  assert.deepEqual([...ready.failed.footer.props.children[0].props.actions], ['retry']);
-  assert.deepEqual([...ready.printing.footer.props.children[0].props.actions], []);
+  assert.equal(ready.failed.footer, undefined, 'cards keep their compact action row');
+  ready.failed.onReviewOrder();
+  assert.deepEqual([...app.find('PaymentReview').props.fulfillmentActions.props.actions], ['retry']);
+  ready.printing.onReviewOrder();
+  assert.deepEqual([...app.find('PaymentReview').props.fulfillmentActions.props.actions], []);
   assert.equal(ready.failed.statusBadge.text, 'Failed before printing');
 
   app.tab('pickup');
   const pickup = Object.fromEntries(app.cards().map((card) => [card.props.order.id, card.props]));
   assert.deepEqual(Object.keys(pickup).sort(), ['legacy', 'ready', 'submitted']);
   assert.match(pickup.submitted.statusBadge.text, /^Submission reported . check output$/);
-  assert.deepEqual([...pickup.submitted.footer.props.children[0].props.actions], ['confirm', 'reprint']);
-  assert.deepEqual([...pickup.ready.footer.props.children[0].props.actions], ['handover', 'reprint']);
+  pickup.submitted.onReviewOrder();
+  assert.deepEqual([...app.find('PaymentReview').props.fulfillmentActions.props.actions], ['confirm', 'reprint']);
+  app.find('PaymentReview').props.fulfillmentActions.props.onAction('confirm');
+  assert.equal(app.find('PaymentReview').props.isOpen, false);
+  assert.equal(app.find('Fulfillment').props.mode, 'confirm');
+  assert.equal(app.find('Fulfillment').props.order.id, 'submitted');
+  pickup.ready.onReviewOrder();
+  assert.deepEqual([...app.find('PaymentReview').props.fulfillmentActions.props.actions], ['handover', 'reprint']);
   assert.equal(pickup.legacy.statusBadge.text, 'Awaiting output check');
 
   app.tab('completed');

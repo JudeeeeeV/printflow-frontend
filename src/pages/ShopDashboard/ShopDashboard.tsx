@@ -7,7 +7,6 @@ import { DashboardSkeleton } from '../../components/dashboard/skeletons/Dashboar
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
-import { ShopOrderActions } from '../../components/dashboard/ShopOrderActions';
 import type { OrderDecisionResponse } from '../../services/orderService';
 import { QueuePagination } from '../../components/dashboard/QueuePagination';
 import { daemonSocketService } from '../../services/daemonSocketService';
@@ -82,7 +81,6 @@ export const ShopDashboard: React.FC = () => {
  void refreshOrders().catch(console.error);
  }, [refreshOrders]);
  const [selectedPaymentOrderId, setSelectedPaymentOrderId] = useState<string | null>(null);
- const selectedPaymentOrder = shopOrders.find(order => order.id === selectedPaymentOrderId) ?? null;
  const setSelectedPaymentOrder = (orderId: string | null) => setSelectedPaymentOrderId(orderId);
  const [isVerifying, setIsVerifying] = useState(false);
 
@@ -119,6 +117,7 @@ export const ShopDashboard: React.FC = () => {
  () => shopOrders.map(order => ({ ...order, current_attempt: mergeAttempt(order.current_attempt, liveAttempts[order.id]) })),
  [shopOrders, liveAttempts],
  );
+ const selectedPaymentOrder = ordersWithAttempts.find(order => order.id === selectedPaymentOrderId) ?? null;
  const orderLabels = useMemo(
  () => Object.fromEntries(shopOrders.map(order => [order.id, orderLabel(order)])),
  [shopOrders],
@@ -680,21 +679,8 @@ export const ShopDashboard: React.FC = () => {
  <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
  {activeVisibleOrders.map(order => {
  if (activeQueue === 'new') return null;
- const attempt = order.current_attempt ?? null;
  const badge = orderBadge(order);
  const statusBadge = badge ? { text: badge.text, className: TONE_CLASSES[badge.tone] } : null;
- const footer = (
-  <>
-   <FulfillmentFooter
-    order={order} attempt={attempt}
-    actions={availableActions(order)}
-    showMilestones={activeQueue !== 'ready'}
-    orderLabel={orderLabels[order.id]}
-    onAction={action => openFulfillment(action, order)}
-   />
-   <ShopOrderActions order={order} onUpdated={handleOrderUpdated} />
-  </>
- );
   return activeQueue === 'ready' && canSelectForPrint(order) ? (
  <OrderCard
  key={order.id}
@@ -703,17 +689,17 @@ export const ShopDashboard: React.FC = () => {
  onClick={() => handleToggleReadySelection(order.id)}
  isSelected={selectedReadyOrders.includes(order.id)}
  onToggleSelect={handleToggleReadySelection}
+ onReviewOrder={() => setSelectedPaymentOrder(order.id)}
  />
  ) : (
- <OrderCard key={order.id} order={order} statusBadge={statusBadge} footer={footer} onReviewPayment={order.payment_status === 'PENDING_VERIFICATION' ? () => setSelectedPaymentOrder(order.id) : undefined} />
+ <OrderCard key={order.id} order={order} statusBadge={statusBadge} onReviewOrder={() => setSelectedPaymentOrder(order.id)} />
  );
  })}
  {activeQueue === 'new' && activeVisibleOrders.map(order => (
  <OrderCard
  key={order.id}
  order={order}
- onReviewPayment={order.payment_status === 'PENDING_VERIFICATION' ? () => setSelectedPaymentOrder(order.id) : undefined}
- footer={<ShopOrderActions order={order} onUpdated={handleOrderUpdated} />}
+ onReviewOrder={() => setSelectedPaymentOrder(order.id)}
  />
  ))}
  {activeOrders.length === 0 && (
@@ -745,6 +731,12 @@ export const ShopDashboard: React.FC = () => {
  onVerify={handleVerifyPayment}
  onUpdated={handleOrderUpdated}
  isVerifying={isVerifying}
+ fulfillmentActions={selectedPaymentOrder && <FulfillmentFooter
+   order={selectedPaymentOrder} attempt={selectedPaymentOrder.current_attempt ?? null}
+   actions={availableActions(selectedPaymentOrder)} showMilestones
+   orderLabel={orderLabels[selectedPaymentOrder.id]}
+   onAction={action => { setSelectedPaymentOrder(null); openFulfillment(action, selectedPaymentOrder); }}
+ />}
  />
 
  <PrintJobProgressModal

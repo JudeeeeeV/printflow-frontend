@@ -24,6 +24,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const latest = useRef({ isBusy, onCancel });
+  latest.current = { isBusy, onCancel };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,9 +36,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     else cancelRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !isBusy) {
+      if (event.key === "Escape" && !latest.current.isBusy) {
         event.preventDefault();
-        onCancel();
+        latest.current.onCancel();
         return;
       }
       if (event.key !== "Tab") return;
@@ -68,7 +70,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
       else document.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
     };
-  }, [isBusy, isOpen, onCancel]);
+  }, [isBusy, isOpen]);
 
   if (!isOpen) return null;
 

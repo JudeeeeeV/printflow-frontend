@@ -212,10 +212,5 @@ export const orderService = {
     });
   },
 
-  async updateOrderState(orderId: string, state: string, confirmed = false): Promise<OrderDecisionResponse> {
-    return apiClient<OrderDecisionResponse>(`/orders/${orderId}/state`, {
-      method: 'PATCH',
-      body: JSON.stringify({ state, confirmed }),
-    });
-  }
+
 };
