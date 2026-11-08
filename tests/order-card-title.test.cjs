@@ -95,7 +95,7 @@ test('uses Manila day and year boundaries and zero-padded MM/DD/YY', () => {
   }
 });
 
-function renderCard(value, onClick, onToggleSelect, onReviewPayment = () => {}, stateChanges = [], isSelected = false) {
+function renderCard(value, onClick, onToggleSelect, onReviewOrder = () => {}, stateChanges = [], isSelected = false) {
   const jsx = (type, props) => ({ type, props });
   const { OrderCard } = load('OrderCard.tsx', {
     react: { useState: initial => [initial, next => stateChanges.push(next)] },
@@ -105,7 +105,7 @@ function renderCard(value, onClick, onToggleSelect, onReviewPayment = () => {}, 
     './orderCardTitle': { getOrderCardTitleParts },
     './OrderCardDetailsDialog': { OrderCardDetailsDialog: 'OrderCardDetailsDialog' },
   });
-  return OrderCard({ order: value, onClick, onToggleSelect, onReviewPayment, isSelected });
+  return OrderCard({ order: value, onClick, onToggleSelect, onReviewOrder, isSelected });
 }
 
 function nodes(tree) {
@@ -138,6 +138,27 @@ test('all queue states render the new heading, supporting order ID, and status b
   }
 });
 
+test('rejected orders and rejected receipts show distinct red badges instead of awaiting payment', () => {
+  for (const [state, payment_status, expected] of [
+    ['REJECTED', 'REJECTED', 'Order Rejected'],
+    ['REJECTED', 'REFUND_DUE', 'Order Rejected'],
+    ['OPEN_INQUIRY', 'REJECTED', 'Receipt Rejected'],
+    ['AWAITING_PAYMENT', 'REJECTED', 'Receipt Rejected'],
+  ]) {
+    const elements = nodes(renderCard(order({ state, payment_status, payment_method:'GCASH' })));
+    const badge = elements.find(node => node.type === 'div' && text(node) === expected);
+    assert.ok(badge);
+    assert.match(badge.props.className, /bg-red-100 text-red-800/);
+    assert.ok(!elements.some(node => /Awaiting payment/i.test(text(node))));
+  }
+  const replaced = nodes(renderCard(order({state:'OPEN_INQUIRY',payment_status:'PENDING_VERIFICATION',payment_method:'GCASH'})));
+  assert.ok(replaced.some(node => node.type === 'div' && text(node) === 'Payment Review Pending'));
+  for (const state of ['CANCELLED','EXPIRED','COMPLETED']) {
+    const elements = nodes(renderCard(order({state,payment_status:'REJECTED',payment_method:'GCASH'})));
+    assert.ok(!elements.some(node => node.type === 'div' && text(node) === 'Receipt Rejected'));
+  }
+});
+
 test('card activation, ready selection, and preview remain available', () => {
   let activated = 0, selected;
   const tree = renderCard(order({ state: 'IN_PRODUCTION' }), () => activated++, id => { selected = id; });
@@ -147,7 +168,7 @@ test('card activation, ready selection, and preview remain available', () => {
   elements.find(node => node.type === 'input').props.onChange({ stopPropagation() {} });
   assert.equal(selected, '12345678-order');
   assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
-  assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
+  assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Review Order'));
 });
 
 test('card and preview clicks do not activate payment review; only the review button invokes its callback', () => {
@@ -158,7 +179,7 @@ test('card and preview clicks do not activate payment review; only the review bu
   assert.match(tree.props.className, /cursor-default/);
   const elements = nodes(tree);
   const preview = elements.find(node => node.type === 'button' && text(node) === 'Preview Document');
-  const review = elements.find(node => node.type === 'button' && text(node) === 'Review Payment');
+  const review = elements.find(node => node.type === 'button' && text(node) === 'Review Order');
   preview.props.onClick({ stopPropagation() { stopped++; } });
   assert.equal(activated, 0);
   review.props.onClick({ stopPropagation() { stopped++; } });
@@ -167,15 +188,16 @@ test('card and preview clicks do not activate payment review; only the review bu
   assert.equal(review.props.type, 'button');
 });
 
-test('payment review remains available without a document and other states retain their actions', () => {
+test('preview keeps the left slot even without a document and all states can open decisions', () => {
   for (const assets of [undefined, null, []]) {
     const buttons = nodes(renderCard(order({ assets }))).filter(node => node.type === 'button' && !node.props['aria-haspopup']);
-    assert.deepEqual(buttons.map(text), ['Review Payment']);
+    assert.deepEqual(buttons.map(text), ['Preview Document', 'Review Order']);
+    assert.equal(buttons[0].props.disabled, true);
   }
   for (const state of ['AWAITING_PAYMENT', 'IN_PRODUCTION', 'READY_FOR_PICKUP', 'COMPLETED']) {
     const elements = nodes(renderCard(order({ state })));
     assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
-    assert.ok(!elements.some(node => node.type === 'button' && text(node) === 'Review Payment'));
+    assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Review Order'));
   }
 });
 
@@ -212,7 +234,7 @@ test('disputed orders retain explicit receipt review and the administration noti
   const elements = nodes(tree);
   assert.ok(elements.some(node => node.type === 'p' && text(node) === 'Administration Reviewing Payment'));
   assert.ok(elements.some(node => node.type === 'button' && text(node) === 'Preview Document'));
-  elements.find(node => node.type === 'button' && text(node) === 'Review Payment').props.onClick({ stopPropagation() {} });
+  elements.find(node => node.type === 'button' && text(node) === 'Review Order').props.onClick({ stopPropagation() {} });
   assert.equal(reviewed, 1);
 });
 
@@ -221,6 +243,17 @@ test('cards retain the metadata date and total without a redundant Created row',
   assert.ok(elements.some(node => node.type === 'p' && text(node) === '04/10/26'));
   assert.ok(elements.some(node => node.type === 'span' && text(node) === 'Total Amount:'));
   assert.ok(!elements.some(node => text(node) === 'Created:'));
+});
+
+test('cash and GCash cards end with exactly one two-button row', () => {
+  for (const payment_method of ['CASH_ON_PICKUP', 'GCASH']) {
+    const card = renderCard(order({ payment_method, state: 'OPEN_INQUIRY' }));
+    const children = card.props.children.filter(child => child && typeof child === 'object');
+    const row = children.at(-1);
+    assert.match(row.props.className, /mt-auto grid grid-cols-2/);
+    assert.deepEqual(nodes(row).filter(node => node.type === 'button').map(text), ['Preview Document', 'Review Order']);
+    assert.equal(nodes(card).filter(node => node.type === 'button').length, 3); // Title disclosure plus the action row.
+  }
 });
 
 test('paper-size tags use their requested colors across all queues', () => {

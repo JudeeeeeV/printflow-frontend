@@ -8,6 +8,7 @@ import { ConfirmModal } from '../common/ConfirmModal';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
 export interface DraftOrder {
+ paymentMethod?: 'GCASH' | 'CASH_ON_PICKUP';
  id: string;
  shopId: string;
  shopName: string;

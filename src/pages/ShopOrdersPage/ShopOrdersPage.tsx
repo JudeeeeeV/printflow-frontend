@@ -4,6 +4,9 @@ import { TableSkeleton } from '../../components/common/TableSkeleton';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
 export interface Order {
+ payment_method?: string;
+ payment_status?: string;
+ acceptance_status?: string;
  id: string;
  student_id: string;
  created_at: string;
@@ -89,8 +92,10 @@ export const ShopOrdersPage: React.FC = () => {
  <td className="px-6 py-4">₱{order.total}</td>
  <td className="px-6 py-4">
  <span className="bg-gray-100 text-gray-700 px-2 py-1 text-xs font-semibold">
- {order.state.replace(/_/g, ' ')}
+ {order.state === 'COMPLETED' ? 'HANDED OVER' : order.state === 'PRINTED' ? 'PRINTED; OUTPUT UNCONFIRMED' : order.state.replace(/_/g, ' ')}
  </span>
+ <p className="mt-2 text-xs">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} · {order.payment_status?.replaceAll('_', ' ')}</p>
+ {order.payment_method === 'CASH_ON_PICKUP' && <p className="mt-1 text-xs">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</p>}
  </td>
  </tr>
  ))}

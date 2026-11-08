@@ -25,7 +25,7 @@ const attempt = (overrides = {}) => ({
   updatedAt: new Date(NOW - 1000).toISOString(),
   ...overrides,
 });
-const order = (state, current_attempt = null, extra = {}) => ({ id: 'o1', state, current_attempt, ...extra });
+const order = (state, current_attempt = null, extra = {}) => ({ id: 'o1', state, current_attempt, payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'ACCEPTED', assets: [{ file_url: 'document.pdf' }], ...extra });
 
 test('queued, processing, failed and uncertain work stays in Print Ready; submitted and manual work moves to Pickup', () => {
   for (const status of ['QUEUED', 'RECEIVED', 'DOWNLOADING', 'SUBMITTING', 'FAILED_PRE_SUBMISSION', 'OUTCOME_UNKNOWN'])
@@ -104,7 +104,7 @@ test('progress is tracked per attempt, ignoring out-of-date updates', () => {
 
 test('milestones show output, payment and handover separately', () => {
   assert.deepEqual(
-    f.milestones(order('READY_FOR_PICKUP', null, { output_confirmed_at: 'x', payment_receipts: [{ verified: true }] })).map((m) => m.done),
+    f.milestones(order('READY_FOR_PICKUP', null, { output_confirmed_at: 'x', payment_status: 'VERIFIED' })).map((m) => m.done),
     [true, true, false],
   );
 });
@@ -122,4 +122,15 @@ test('students see coarse stages, with Completed reserved for handover', () => {
   assert.equal(f.studentStage(order('READY_FOR_PICKUP')).label, 'Ready for pickup');
   assert.equal(f.studentStage(order('COMPLETED')).label, 'Completed');
   assert.equal(f.studentStage(order('AWAITING_PAYMENT')), null);
+});
+
+test('cash orders require acceptance, stay due until collection, and do not offer GCash handover', () => {
+  const cash = (state, status, acceptance = 'ACCEPTED') => order(state, null, { payment_method: 'CASH_ON_PICKUP', payment_status: status, acceptance_status: acceptance });
+  assert.equal(f.queueFor(cash('IN_PRODUCTION', 'DUE_AT_PICKUP')), 'ready');
+  assert.equal(f.canSelectForPrint(cash('IN_PRODUCTION', 'DUE_AT_PICKUP')), true);
+  assert.equal(f.canSelectForPrint(cash('IN_PRODUCTION', 'DUE_AT_PICKUP', 'PENDING')), false);
+  assert.deepEqual(f.availableActions(cash('READY_FOR_PICKUP', 'DUE_AT_PICKUP', 'ACCEPTED')), ['confirm']);
+  assert.deepEqual(f.availableActions({ ...cash('READY_FOR_PICKUP', 'DUE_AT_PICKUP'), output_confirmed_at: 'now' }), ['reprint']);
+  assert.deepEqual(f.milestones(cash('READY_FOR_PICKUP', 'DUE_AT_PICKUP')).map(x => x.done), [false, false, false]);
+  assert.deepEqual(f.milestones(cash('COMPLETED', 'COLLECTED')).map(x => x.done), [false, true, false]);
 });

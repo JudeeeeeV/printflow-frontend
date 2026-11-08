@@ -7,6 +7,8 @@ import { DashboardSkeleton } from '../../components/dashboard/skeletons/Dashboar
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
+import { ShopOrderActions } from '../../components/dashboard/ShopOrderActions';
+import type { OrderDecisionResponse } from '../../services/orderService';
 import { QueuePagination } from '../../components/dashboard/QueuePagination';
 import { daemonSocketService } from '../../services/daemonSocketService';
 import type { DaemonStatus } from '../../services/daemonSocketService';
@@ -79,7 +81,9 @@ export const ShopDashboard: React.FC = () => {
  const refreshOrdersAfterChange = useCallback(() => {
  void refreshOrders().catch(console.error);
  }, [refreshOrders]);
- const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<any | null>(null);
+ const [selectedPaymentOrderId, setSelectedPaymentOrderId] = useState<string | null>(null);
+ const selectedPaymentOrder = shopOrders.find(order => order.id === selectedPaymentOrderId) ?? null;
+ const setSelectedPaymentOrder = (orderId: string | null) => setSelectedPaymentOrderId(orderId);
  const [isVerifying, setIsVerifying] = useState(false);
 
  // Batch processing state
@@ -273,19 +277,19 @@ export const ShopDashboard: React.FC = () => {
  }
  };
 
- const handleVerifyPayment = async (orderId: string, action: 'APPROVE' | 'REJECT', reason?: string) => {
- setIsVerifying(true);
- try {
- await orderService.verifyPayment(orderId, action, reason);
- setSelectedPaymentOrder(null);
- // Optimistic update
- setShopOrders(prev => prev.map(o => o.id === orderId ? { ...o, state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'AWAITING_PAYMENT' } : o));
- // Actual refresh
- refreshOrdersAfterChange();
- } finally {
- setIsVerifying(false);
- }
+ const handleOrderUpdated = (order: OrderDecisionResponse['order']) => {
+  setShopOrders(previous => previous.map(existing => existing.id === order.id ? { ...existing, ...order } : existing));
+  refreshOrdersAfterChange();
  };
+ const handleVerifyPayment = async (orderId: string, action: 'APPROVE' | 'REJECT', reason: string | undefined, receiptId: string, confirmed: boolean) => {
+  setIsVerifying(true);
+  try {
+   const response = await orderService.verifyPayment(orderId, action, reason, receiptId, confirmed);
+   handleOrderUpdated(response.order);
+   setSelectedPaymentOrder(null);
+  } finally { setIsVerifying(false); }
+ };
+
 
  const handleToggleReadySelection = (orderId: string) => {
  setSelectedReadyOrders(prev => 
@@ -680,16 +684,18 @@ export const ShopDashboard: React.FC = () => {
  const badge = orderBadge(order);
  const statusBadge = badge ? { text: badge.text, className: TONE_CLASSES[badge.tone] } : null;
  const footer = (
- <FulfillmentFooter
- order={order}
- attempt={attempt}
- actions={availableActions(order)}
- showMilestones={activeQueue !== 'ready'}
- orderLabel={orderLabels[order.id]}
- onAction={action => openFulfillment(action, order)}
- />
+  <>
+   <FulfillmentFooter
+    order={order} attempt={attempt}
+    actions={availableActions(order)}
+    showMilestones={activeQueue !== 'ready'}
+    orderLabel={orderLabels[order.id]}
+    onAction={action => openFulfillment(action, order)}
+   />
+   <ShopOrderActions order={order} onUpdated={handleOrderUpdated} />
+  </>
  );
- return activeQueue === 'ready' && canSelectForPrint(order) ? (
+  return activeQueue === 'ready' && canSelectForPrint(order) ? (
  <OrderCard
  key={order.id}
  order={order}
@@ -699,14 +705,15 @@ export const ShopDashboard: React.FC = () => {
  onToggleSelect={handleToggleReadySelection}
  />
  ) : (
- <OrderCard key={order.id} order={order} statusBadge={statusBadge} footer={footer} />
+ <OrderCard key={order.id} order={order} statusBadge={statusBadge} footer={footer} onReviewPayment={order.payment_status === 'PENDING_VERIFICATION' ? () => setSelectedPaymentOrder(order.id) : undefined} />
  );
  })}
  {activeQueue === 'new' && activeVisibleOrders.map(order => (
  <OrderCard
  key={order.id}
  order={order}
- onReviewPayment={activeQueue === 'new' && ['AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(order.state) ? () => setSelectedPaymentOrder(order) : undefined}
+ onReviewPayment={order.payment_status === 'PENDING_VERIFICATION' ? () => setSelectedPaymentOrder(order.id) : undefined}
+ footer={<ShopOrderActions order={order} onUpdated={handleOrderUpdated} />}
  />
  ))}
  {activeOrders.length === 0 && (
@@ -736,6 +743,7 @@ export const ShopDashboard: React.FC = () => {
  order={selectedPaymentOrder}
  onClose={() => setSelectedPaymentOrder(null)}
  onVerify={handleVerifyPayment}
+ onUpdated={handleOrderUpdated}
  isVerifying={isVerifying}
  />
 

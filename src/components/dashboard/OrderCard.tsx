@@ -28,7 +28,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
+  const isPaymentPending = order.payment_status === 'PENDING_VERIFICATION' || order.state === "AWAITING_PAYMENT_VERIFICATION";
   const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
   const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
@@ -56,7 +56,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       badgeColor = "bg-gray-100 text-gray-600";
       break;
     case "OPEN_INQUIRY":
-      badgeText = "Pending Checkout";
+      badgeText = order.payment_status === 'DISPUTED' ? 'Dispute Under Review' : order.payment_status === 'REVIEW_REQUIRED' ? 'Payment review required' : order.payment_status === 'PENDING_VERIFICATION' ? 'Payment Review Pending' : order.payment_status === 'REJECTED' ? 'Receipt Rejected' : 'Awaiting shop / payment';
       badgeColor = "bg-gray-100 text-gray-600";
       break;
     case "PROOF_APPROVED":
@@ -92,7 +92,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
     badgeColor = statusBadge.className;
   }
 
-  const canReviewPayment = (isPaymentPending || isDisputed) && !!onReviewPayment;
+  const canReviewPayment = isPaymentPending && !!onReviewPayment;
 
   return (
     <motion.div

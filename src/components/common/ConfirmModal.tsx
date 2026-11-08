@@ -30,7 +30,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    cancelRef.current?.focus();
+    if (isBusy) dialogRef.current?.focus();
+    else cancelRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isBusy) {
@@ -44,7 +45,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           "button:not([disabled])",
         ) || [],
       );
-      if (focusable.length === 0) return;
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -60,7 +65,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      else document.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
     };
   }, [isBusy, isOpen, onCancel]);
 
@@ -76,6 +82,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       <div
         ref={dialogRef}
         role="alertdialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
         aria-describedby="confirm-modal-message"
@@ -90,7 +97,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </h2>
           <p
             id="confirm-modal-message"
-            className="mt-3 text-sm leading-relaxed text-gray-600"
+            className="mt-3 break-words text-sm leading-relaxed text-gray-600"
           >
             {message}
           </p>

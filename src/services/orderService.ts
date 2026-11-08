@@ -1,5 +1,13 @@
 import { apiClient } from './apiClient';
 
+export type PaymentMethod = 'GCASH' | 'CASH_ON_PICKUP';
+export type ShopDecision = 'ACCEPT' | 'REJECT_ORDER' | 'COLLECT_CASH' | 'RECORD_REFUND' | 'FLAG_UNCLAIMED' | 'CLEAR_UNCLAIMED';
+export interface OrderDecisionResponse {
+ message: string;
+ state: string;
+ order: { id: string; state: string; payment_status: string; acceptance_status: string; [key: string]: unknown };
+}
+
 export interface PrintShop {
  id: string;
  name: string;
@@ -68,7 +76,7 @@ export const orderService = {
  /**
  * Submits the final print order.
  */
- async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number): Promise<SubmitOrderResponse> {
+ async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH'): Promise<SubmitOrderResponse> {
  const formData = new FormData();
  formData.append('shopId', shopId);
  formData.append('file', file);
@@ -77,6 +85,7 @@ export const orderService = {
  formData.append('orderName', orderName.trim());
  formData.append('orientation', orientation);
  formData.append('copies', String(copies));
+ formData.append('paymentMethod', paymentMethod);
 
  return apiClient<SubmitOrderResponse>('/orders', {
  method: 'POST',
@@ -125,10 +134,10 @@ export const orderService = {
  });
  },
 
- async verifyPayment(orderId: string, action: 'APPROVE' | 'REJECT', reason?: string): Promise<{ message: string }> {
- return apiClient<{ message: string }>(`/orders/${orderId}/verify-payment`, {
+ async verifyPayment(orderId: string, action: 'APPROVE' | 'REJECT', reason: string | undefined, receiptId: string, confirmed: boolean): Promise<OrderDecisionResponse> {
+ return apiClient<OrderDecisionResponse>(`/orders/${orderId}/verify-payment`, {
  method: 'POST',
- body: JSON.stringify({ action, reason }),
+ body: JSON.stringify({ action, reason, receiptId, confirmed }),
  });
  },
 
@@ -157,9 +166,10 @@ export const orderService = {
  },
 
  // Convert a draft to a real order (starts the 15-minute timer)
- submitDraft: async (draftId: string) => {
+ submitDraft: async (draftId: string, paymentMethod?: PaymentMethod) => {
  return await apiClient(`/orders/${draftId}/submit`, { 
- method: 'PATCH' 
+ method: 'PATCH',
+ body: paymentMethod ? JSON.stringify({ paymentMethod }) : undefined,
  });
  },
 
@@ -170,7 +180,7 @@ export const orderService = {
  });
  },
 
-  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number) => {
+  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH') => {
     const formData = new FormData();
     formData.append('shopId', shopId);
     formData.append('file', file);
@@ -180,6 +190,7 @@ export const orderService = {
     formData.append('orderName', orderName.trim());
     formData.append('orientation', orientation);
     formData.append('copies', String(copies));
+    formData.append('paymentMethod', paymentMethod);
 
     // Reusing your existing POST /orders endpoint
     return await apiClient('/orders', {
@@ -188,17 +199,23 @@ export const orderService = {
     });
   },
 
-  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number) => {
+  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH') => {
     return await apiClient(`/orders/${draftId}/update-draft`, {
       method: 'PATCH',
-      body: JSON.stringify({ shopId, paperSize, printColorMode, orderName: orderName.trim(), orientation, copies }),
+      body: JSON.stringify({ shopId, paperSize, printColorMode, orderName: orderName.trim(), orientation, copies, paymentMethod }),
     });
   },
 
-  async updateOrderState(orderId: string, state: string): Promise<{ message: string; state: string }> {
-    return apiClient<{ message: string; state: string }>(`/orders/${orderId}/state`, {
+  async decideOrder(orderId: string, action: ShopDecision, data: { reason?: string; reference?: string; confirmed?: boolean } = {}): Promise<OrderDecisionResponse> {
+    return apiClient<OrderDecisionResponse>(`/orders/${orderId}/decision`, {
+      method: 'POST', body: JSON.stringify({ action, ...data }),
+    });
+  },
+
+  async updateOrderState(orderId: string, state: string, confirmed = false): Promise<OrderDecisionResponse> {
+    return apiClient<OrderDecisionResponse>(`/orders/${orderId}/state`, {
       method: 'PATCH',
-      body: JSON.stringify({ state }),
+      body: JSON.stringify({ state, confirmed }),
     });
   }
 };

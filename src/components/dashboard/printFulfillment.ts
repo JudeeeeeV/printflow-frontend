@@ -42,6 +42,10 @@ export interface FulfillmentOrder {
   output_confirmed_attempt_id?: string | null;
   handed_over_at?: string | null;
   payment_receipts?: Array<{ verified?: boolean | null }>;
+  payment_method?: string;
+  payment_status?: string;
+  acceptance_status?: string;
+  assets?: Array<{ file_url?: string | null }> | null;
   fulfillment_stage?: string | null;
 }
 
@@ -55,7 +59,7 @@ export interface PrintableOrder extends FulfillmentOrder {
   order_name?: string | null;
   client_name?: string | null;
   created_at?: string;
-  assets?: Array<{ original_filename?: string | null }> | null;
+  assets?: Array<{ original_filename?: string | null; file_url?: string | null }> | null;
 }
 
 export type QueueKey = 'new' | 'ready' | 'pickup' | 'completed';
@@ -112,6 +116,7 @@ export function isAttemptStale(attempt: AttemptProgress | null | undefined, now 
 
 export function queueFor(order: FulfillmentOrder, attempt = order.current_attempt): QueueKey | null {
   if (NEW_STATES.has(order.state)) return 'new';
+  if (order.state === 'IN_PRODUCTION' && !paymentEligible(order)) return 'new';
   if (order.state === 'COMPLETED') return 'completed';
   if (order.state === 'PRINTED' || order.state === 'READY_FOR_PICKUP') return 'pickup';
   if (order.state !== 'IN_PRODUCTION') return null;
@@ -120,8 +125,13 @@ export function queueFor(order: FulfillmentOrder, attempt = order.current_attemp
 }
 
 /** Only orders without an unresolved attempt can start a new batch. */
+export function paymentEligible(order: FulfillmentOrder) {
+  return order.acceptance_status === 'ACCEPTED' && Boolean(order.assets?.some(asset => asset.file_url)) &&
+    (order.payment_method === 'CASH_ON_PICKUP' ? ['DUE_AT_PICKUP', 'COLLECTED'].includes(order.payment_status || '') : order.payment_status === 'VERIFIED');
+}
+
 export function canSelectForPrint(order: FulfillmentOrder, attempt = order.current_attempt) {
-  return order.state === 'IN_PRODUCTION' && !isOpen(attempt);
+  return order.state === 'IN_PRODUCTION' && paymentEligible(order) && !isOpen(attempt);
 }
 
 export function availableActions(
@@ -131,7 +141,7 @@ export function availableActions(
 ): OperatorAction[] {
   if (order.handed_over_at) return [];
   if (order.state === 'READY_FOR_PICKUP')
-    return order.output_confirmed_at ? ['handover', 'reprint'] : ['confirm'];
+    return order.output_confirmed_at ? (order.payment_method === 'CASH_ON_PICKUP' ? ['reprint'] : ['handover', 'reprint']) : ['confirm'];
   if (order.state === 'PRINTED') return ['confirm', 'reprint'];
   if (order.state !== 'IN_PRODUCTION' || !isOpen(attempt)) return [];
   if (attempt.status === 'FAILED_PRE_SUBMISSION') return ['retry'];
@@ -212,7 +222,7 @@ export function milestones(order: FulfillmentOrder) {
     {
       key: 'payment',
       label: 'Payment recorded',
-      done: Boolean(order.payment_receipts?.some((receipt) => receipt.verified)),
+      done: ['VERIFIED', 'COLLECTED'].includes(order.payment_status || ''),
     },
     { key: 'handover', label: 'Handed over', done: Boolean(order.handed_over_at) },
   ];

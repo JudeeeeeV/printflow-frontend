@@ -5,7 +5,7 @@ import { ShopSelector } from '../../components/orders/ShopSelector/ShopSelector'
 import { FileUploadZone } from '../../components/orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../../components/orders/OrderSummary/OrderSummary';
 import { MyOrdersList } from '../../components/dashboard/MyOrdersList';
-import { orderService, type OrderEstimate } from '../../services/orderService';
+import { orderService, type OrderEstimate, type PaymentMethod } from '../../services/orderService';
 import { shopService } from '../../services/shopService';
 import { useDataEvents } from '../../hooks/useDataEvents';
 import type { PrintShop } from '../../services/orderService';
@@ -58,6 +58,7 @@ export const NewOrderPage: React.FC = () => {
     const [orderName, setOrderName] = useState('');
     const [orientation, setOrientation] = useState('PORTRAIT');
     const [copies, setCopies] = useState(1);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('GCASH');
 
     const [file, setFile] = useState<File | null>(null);
     const [isValidating, setIsValidating] = useState(false);
@@ -238,7 +239,7 @@ export const NewOrderPage: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await orderService.submitOrder(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies);
+            const response = await orderService.submitOrder(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
             navigate(`/checkout/${response.orderId}`);
         } catch (err: any) {
             showAlert(`Failed to submit order: ${err.message || 'Unknown error'}`, 'error', 'Submission Failed');
@@ -254,7 +255,7 @@ export const NewOrderPage: React.FC = () => {
         setIsSubmitting(true);
         try {
             // Replaced the mock delay with the actual API call
-            await orderService.saveDraft(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies);
+            await orderService.saveDraft(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
 
             showAlert('Order saved as draft!', 'success', 'Success', () => {
                 handleTabChange('drafts');
@@ -267,6 +268,7 @@ export const NewOrderPage: React.FC = () => {
             setOrderName('');
             setOrientation('PORTRAIT');
             setCopies(1);
+            setPaymentMethod('GCASH');
 
         } catch (err: any) {
             showAlert(`Failed to save draft: ${err.message || 'Unknown error'}`, 'error', 'Save Failed');
@@ -478,6 +480,8 @@ export const NewOrderPage: React.FC = () => {
                                     setOrientation={setOrientation}
                                     copies={copies}
                                     setCopies={setCopies}
+                                    paymentMethod={paymentMethod}
+                                    setPaymentMethod={setPaymentMethod}
                                 />
                             </div>
                         </aside>

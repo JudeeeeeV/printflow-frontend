@@ -5,6 +5,7 @@ import { FileUploadZone } from '../orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../orders/OrderSummary/OrderSummary';
 import { AlertModal } from '../common/AlertModal';
 import { orderService } from '../../services/orderService';
+import type { PaymentMethod } from '../../services/orderService';
 import type { PrintShop, OrderEstimate } from '../../services/orderService';
 import type { DraftOrder } from './MyDraftsList';
 
@@ -37,6 +38,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  const [orderName, setOrderName] = useState(draft.orderName || '');
  const [orientation, setOrientation] = useState(draft.orientation || 'PORTRAIT');
  const [copies, setCopies] = useState(draft.copies || 1);
+ const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(draft.paymentMethod || 'GCASH');
 
  // Pre-fill validation so they can submit immediately without uploading a new file
  const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({
@@ -208,15 +210,15 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  try {
  if (newFile) {
  // They uploaded a new file! Create a brand new order, delete the old draft.
- const response = await orderService.submitOrder(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies);
+ const response = await orderService.submitOrder(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
  await orderService.deleteDraft(draft.id);
  onSuccess(response.orderId);
  } else {
  // They changed settings but didn't upload a new file, update draft first then submit.
  if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies);
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
  }
- await orderService.submitDraft(draft.id);
+ await orderService.submitDraft(draft.id, paymentMethod);
  onSuccess(draft.id);
  }
  } catch (error: unknown) {
@@ -238,12 +240,12 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  setIsSubmitting(true);
  try {
  if (newFile) {
- await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies);
+ await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
  await orderService.deleteDraft(draft.id);
  showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
  if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies);
+ await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
  showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
  } else {
  showAlert('No changes were made to the draft.', 'info', 'No Changes', () => onCancel());
@@ -407,6 +409,8 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  setOrientation={setOrientation}
  copies={copies}
  setCopies={setCopies}
+ paymentMethod={paymentMethod}
+ setPaymentMethod={setPaymentMethod}
  />
  </div>
  </aside>

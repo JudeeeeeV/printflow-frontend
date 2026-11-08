@@ -65,7 +65,7 @@ export const MyOrdersList: React.FC = () => {
  return { text: stage.label, color };
  }
  switch (state) {
- case 'OPEN_INQUIRY': return { text: 'Pending Checkout', color: 'bg-yellow-100 text-yellow-800' };
+ case 'OPEN_INQUIRY': return { text: 'Awaiting shop / payment', color: 'bg-yellow-100 text-yellow-800' };
  case 'AWAITING_PAYMENT': return hasReceipts 
  ? { text: 'Payment Denied', color: 'bg-gray-200 text-carbon-gray-100' }
  : { text: 'Awaiting Payment', color: 'bg-blue-100 text-blue-800' };
@@ -107,7 +107,12 @@ export const MyOrdersList: React.FC = () => {
  >
  <option value="All">All Statuses</option>
  <option value="OPEN_INQUIRY">Pending Checkout</option>
- <option value="AWAITING_PAYMENT">Awaiting Payment</option>
+ <option value="UNPAID">Awaiting GCash payment</option>
+ <option value="PENDING_VERIFICATION">Verifying payment</option>
+ <option value="DISPUTED">Payment dispute</option>
+ <option value="DUE_AT_PICKUP">Cash due at pickup</option>
+ <option value="REFUND_DUE">Refund due</option>
+ <option value="REFUNDED">Refund recorded</option>
  <option value="AWAITING_PAYMENT_VERIFICATION">Verifying Payment</option>
  <option value="PROOF_APPROVED">Proof Approved</option>
  <option value="IN_PRODUCTION">In Production</option>
@@ -177,12 +182,16 @@ export const MyOrdersList: React.FC = () => {
  <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold ${badge.color}`}>
  {badge.text}
  </span>
- {order.state === 'OPEN_INQUIRY' && (
+ <span className="mt-2 text-xs font-bold text-gray-800">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} · {order.payment_status?.replaceAll('_', ' ')}</span>
+ {order.payment_method === 'CASH_ON_PICKUP' && <span className="mt-1 text-xs text-gray-600">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</span>}
+ {order.is_unclaimed && <span className="mt-1 text-xs text-amber-800">Unclaimed: {order.unclaimed_reason || 'Contact the shop to arrange collection.'}</span>}
+ {order.payment_status === 'REFUND_DUE' && <span className="mt-1 text-xs text-amber-800">Contact the shop to arrange a full manual refund.</span>}
+ {order.payment_method === 'GCASH' && order.payment_status === 'UNPAID' && order.expires_at && (
  <span className="text-[10px] text-carbon-gray-100 font-bold mt-1.5 ml-1">
- Expires in {getRemainingTime(order.created_at, true)}
+ Expires in {getRemainingTime(order.expires_at, false)}
  </span>
  )}
- {order.state === 'AWAITING_PAYMENT' && order.expires_at && (
+ {order.payment_method === 'GCASH' && order.payment_status === 'REJECTED' && order.expires_at && (
  <span className="text-[10px] text-carbon-gray-100 font-bold mt-1.5 ml-1">
  Expires in {getRemainingTime(order.expires_at, false)}
  </span>
@@ -190,14 +199,7 @@ export const MyOrdersList: React.FC = () => {
  </div>
  </td>
  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
- {(order.state === 'OPEN_INQUIRY' || order.state === 'AWAITING_PAYMENT') && (
- <button 
- onClick={() => navigate(`/checkout/${order.id}`)}
- className={`text-white px-4 py-1.5 transition-colors ${order.state === 'AWAITING_PAYMENT' ? 'bg-carbon-gray-100 hover:bg-carbon-gray-100' : 'bg-carbon-blue-60 hover:bg-carbon-blue-70 '}`}
- >
- {order.state === 'AWAITING_PAYMENT' ? 'Review & Appeal' : 'Checkout'}
- </button>
- )}
+ <button onClick={() => navigate(`/checkout/${order.id}`)} className="bg-carbon-blue-60 px-4 py-1.5 text-white hover:bg-carbon-blue-70">View order</button>
  </td>
  </tr>
  );

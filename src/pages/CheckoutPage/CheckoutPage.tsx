@@ -8,6 +8,12 @@ import styles from './CheckoutPage.module.css';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
 interface CheckoutOrder {
+ payment_method?: 'GCASH' | 'CASH_ON_PICKUP';
+ payment_status?: string;
+ acceptance_status?: string;
+ acceptance_reason?: string;
+ is_unclaimed?: boolean;
+ unclaimed_reason?: string;
  total?: number;
  created_at?: string;
  expires_at?: string;
@@ -120,6 +126,12 @@ export const CheckoutPage: React.FC = () => {
  <CheckoutPageShell>
  <CheckoutCard
  orderId={orderId}
+ paymentMethod={order?.payment_method}
+ paymentStatus={order?.payment_status}
+ acceptanceStatus={order?.acceptance_status}
+ acceptanceReason={order?.acceptance_reason}
+ isUnclaimed={order?.is_unclaimed}
+ unclaimedReason={order?.unclaimed_reason}
  amount={order?.total ?? 15}
  gcashNumber={order?.shops?.gcash_number}
  gcashQrUrl={order?.shops?.gcash_qr_url}

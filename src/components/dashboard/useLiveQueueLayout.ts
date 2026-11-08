@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
-import { getLiveQueueLayout, type LiveQueueLayout } from './liveQueueLayout';
+import { getLiveQueueLayout, MIN_QUEUE_CARD_HEIGHT, type LiveQueueLayout } from './liveQueueLayout';
 
 export function useLiveQueueLayout() {
   const [grid, gridRef] = useState<HTMLDivElement | null>(null);
@@ -22,7 +22,7 @@ export function useLiveQueueLayout() {
         - (board ? parseFloat(getComputedStyle(board).paddingBottom) : 0)
         - (panel ? parseFloat(getComputedStyle(panel).borderBottomWidth) : 0)
         - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom);
-      const cardHeight = parseFloat(getComputedStyle(document.documentElement).fontSize) * 16;
+      const cardHeight = parseFloat(getComputedStyle(document.documentElement).fontSize) * (MIN_QUEUE_CARD_HEIGHT / 16);
       const next = { ...getLiveQueueLayout(window.innerWidth, height, cardHeight, parseFloat(styles.rowGap)), queueKey: grid.dataset.queue ?? null };
       setLayout(previous => previous.pageSize === next.pageSize && previous.rows === next.rows && previous.contained === next.contained && previous.queueKey === next.queueKey ? previous : next);
     };

@@ -108,6 +108,7 @@ function dashboardHarness() {
     '../../components/dashboard/skeletons/DashboardSkeleton': { DashboardSkeleton: 'Skeleton' },
     '../../components/dashboard/OrderCard': { OrderCard: 'Card' },
     '../../components/dashboard/PaymentReviewPanel': { PaymentReviewPanel: 'PaymentReview' },
+    '../../components/dashboard/ShopOrderActions': { ShopOrderActions: 'ShopOrderActions' },
     '../../components/dashboard/QueuePagination': { QueuePagination: 'Pagination' },
     '../../components/dashboard/PrintJobProgressModal': { PrintJobProgressModal: 'Progress' },
     '../../components/dashboard/KanbanFilterBar': { KanbanFilterBar: 'Filters' },
@@ -152,7 +153,7 @@ function dashboardHarness() {
   }
   render();
   const orders = ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED'].flatMap((state, queue) => Array.from({ length: 13 }, (_, index) => ({
-    id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR',
+    id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'ACCEPTED', assets: [{file_url: 'file.pdf'}],
   })));
   states[0] = { verification_status: 'VERIFIED' }; states[1] = false; states[7] = orders;
   return {
@@ -238,7 +239,7 @@ test('ready selections persist across pagination, resizing, and queues', () => {
 
 test('attempt state decides Print Ready versus Pickup, selection and the offered actions', () => {
   const app = dashboardHarness();
-  const base = { client_name: 'Customer', created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR' };
+  const base = { client_name: 'Customer', created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'ACCEPTED', assets: [{file_url: 'file.pdf'}] };
   const attempt = (status) => ({ attemptId: `a-${status}`, orderId: status, attemptNumber: 1, kind: 'INITIAL', mode: 'AGENT', status, printerName: 'Desk', resolvedAt: null, updatedAt: new Date().toISOString() });
   app.poll([
     { ...base, id: 'fresh', state: 'IN_PRODUCTION', current_attempt: null },
@@ -254,16 +255,16 @@ test('attempt state decides Print Ready versus Pickup, selection and the offered
   assert.deepEqual(Object.keys(ready).sort(), ['failed', 'fresh', 'printing']);
   assert.equal(typeof ready.fresh.onToggleSelect, 'function');
   assert.equal(ready.failed.onToggleSelect, undefined, 'unresolved attempts cannot be re-sent');
-  assert.deepEqual([...ready.failed.footer.props.actions], ['retry']);
-  assert.deepEqual([...ready.printing.footer.props.actions], []);
+  assert.deepEqual([...ready.failed.footer.props.children[0].props.actions], ['retry']);
+  assert.deepEqual([...ready.printing.footer.props.children[0].props.actions], []);
   assert.equal(ready.failed.statusBadge.text, 'Failed before printing');
 
   app.tab('pickup');
   const pickup = Object.fromEntries(app.cards().map((card) => [card.props.order.id, card.props]));
   assert.deepEqual(Object.keys(pickup).sort(), ['legacy', 'ready', 'submitted']);
   assert.match(pickup.submitted.statusBadge.text, /^Submission reported . check output$/);
-  assert.deepEqual([...pickup.submitted.footer.props.actions], ['confirm', 'reprint']);
-  assert.deepEqual([...pickup.ready.footer.props.actions], ['handover', 'reprint']);
+  assert.deepEqual([...pickup.submitted.footer.props.children[0].props.actions], ['confirm', 'reprint']);
+  assert.deepEqual([...pickup.ready.footer.props.children[0].props.actions], ['handover', 'reprint']);
   assert.equal(pickup.legacy.statusBadge.text, 'Awaiting output check');
 
   app.tab('completed');
