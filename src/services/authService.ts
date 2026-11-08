@@ -14,6 +14,7 @@ export interface RegisterPayload {
 export interface LoginPayload {
  email: string;
  passwordHash: string;
+ captchaToken?: string;
 }
 
 export interface AuthResponse {
@@ -93,7 +94,7 @@ export const authService = {
  async login(payload: LoginPayload): Promise<AuthResponse> {
    const response = await apiClient<AuthResponse>('/auth/login', {
      method: 'POST',
-     body: JSON.stringify({ email: payload.email, password: payload.passwordHash }),
+     body: JSON.stringify({ email: payload.email, password: payload.passwordHash, captchaToken: payload.captchaToken }),
    });
    if (response.token || response.refreshToken) {
      setAuthTokens(response.token, response.refreshToken);

@@ -7,6 +7,8 @@ import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService, type LoginPayload } from '../../../services/authService';
 import { API_URL } from '../../../config/runtime';
 import { ApiError } from '../../../services/apiClient';
+import { CaptchaWidget } from '../CaptchaWidget/CaptchaWidget';
+import { useCaptcha } from '../CaptchaWidget/useCaptcha';
 
 interface LoginFormProps {
   onForgotPassword?: () => void;
@@ -24,6 +26,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const captcha = useCaptcha();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,12 +42,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
       return;
     }
 
+    if (!captcha.ready) {
+      setError('Please complete the security check.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const payload: LoginPayload = {
         email,
         passwordHash: password,
+        captchaToken: captcha.take(),
       };
 
       const response = await authService.login(payload);
@@ -161,12 +170,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onForgotPassword }) => {
         )}
       </div>
 
+      <CaptchaWidget key={captcha.widgetKey} onToken={captcha.setToken} />
+
       <AuthErrorMessage message={error} />
 
       <div className="mt-2 [&>button]:min-h-11 [&>button]:py-3">
         <SubmitButton
           label="Sign In"
           isLoading={isSubmitting || isMicrosoftLoading}
+          disabled={isSubmitting || isMicrosoftLoading || !captcha.ready}
         />
       </div>
     </form>

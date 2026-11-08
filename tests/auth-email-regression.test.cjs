@@ -151,6 +151,14 @@ test('security check tokens are sent with signup, resend and password reset', as
   assert.deepEqual(f.calls.map(call => call.body.gotrue_meta_security.captcha_token), ['token-a', 'token-b', 'token-c']);
 });
 
+test('login sends the security check token to the backend', async () => {
+  const f = setup();
+  await f.service.login({ email: payload.email, passwordHash: 'pw', captchaToken: 'token-d' });
+  const [endpoint, options] = f.apiCalls[0];
+  assert.equal(endpoint, '/auth/login');
+  assert.deepEqual(JSON.parse(options.body), { email: payload.email, password: 'pw', captchaToken: 'token-d' });
+});
+
 test('a failed security check is reported instead of claiming a code was sent', async () => {
   const failure = () => authError(400, 'captcha_failed', 'captcha protection: request disallowed (timeout-or-duplicate)');
   const message = /security check failed/;

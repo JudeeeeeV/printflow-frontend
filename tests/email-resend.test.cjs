@@ -40,8 +40,11 @@ function mount(file, exportName, service, props, captcha = readyCaptcha()) {
   const jsx = (type, elementProps) => ({ type, props: elementProps });
   const exports = {};
   vm.runInNewContext(compile(file), {
-    exports, Error,
+    exports, Error, localStorage, navigator: { onLine: true },
     require(name) {
+      if (name === 'react-router-dom') return { useNavigate: () => () => {} };
+      if (name.endsWith('/apiClient')) return { ApiError: class ApiError extends Error {} };
+      if (name.endsWith('/runtime')) return { API_URL: 'https://api.example.test' };
       if (name === 'react') return { useState, default: { useState } };
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
       if (name === 'react-dom') return { createPortal: node => node };
@@ -230,10 +233,13 @@ test('signup resend sends the security check token', async () => {
 });
 
 function captchaModule(siteKey) {
+  const ref = { current: { clientWidth: 400 } };
+  const effects = [];
+  const turnstile = { options: null, render(_element, options) { this.options = options; return 'widget'; }, remove() {} };
   const hooks = [];
   let cursor = 0;
   const react = {
-    useRef: () => ({ current: null }), useEffect() {},
+    useRef: () => ref, useEffect(effect) { effects.push(effect); },
     useState(initial) {
       const index = cursor++;
       if (!(index in hooks)) hooks[index] = initial;
@@ -242,10 +248,11 @@ function captchaModule(siteKey) {
   };
   const hook = {};
   const load = (file, exports) => vm.runInNewContext(compile(file), {
-    exports,
+    exports, window: { turnstile }, Promise,
     require(name) {
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+      if (name === '@carbon/icons-react') return { CheckmarkOutline: 'CheckIcon', WarningAlt: 'WarningIcon' };
       if (name.endsWith('/runtime')) return { TURNSTILE_SITE_KEY: siteKey };
       if (name.endsWith('/useCaptcha')) return hook;
       throw new Error(name);
@@ -254,7 +261,12 @@ function captchaModule(siteKey) {
   load('components/auth/CaptchaWidget/useCaptcha.ts', hook);
   const widget = {};
   load('components/auth/CaptchaWidget/CaptchaWidget.tsx', widget);
-  return { exports: { ...hook, ...widget }, use() { cursor = 0; return hook.useCaptcha(); } };
+  return {
+    exports: { ...hook, ...widget }, turnstile,
+    use() { cursor = 0; return hook.useCaptcha(); },
+    widget(onToken) { cursor = 0; effects.length = 0; return widget.CaptchaWidget({ onToken }); },
+    async start() { effects.forEach(effect => effect()); await new Promise(resolve => setImmediate(resolve)); },
+  };
 }
 
 test('without a site key the forms are not blocked and nothing renders', () => {
@@ -275,6 +287,34 @@ test('with a site key a token is required and replaced after use', () => {
   assert.equal(after.widgetKey, 1);
 });
 
+test('the security check shows a clean badge and hides Cloudflare\'s box unless it is needed', async () => {
+  const module = captchaModule('site-key');
+  const tokens = [];
+  const onToken = token => tokens.push(token);
+  assert.match(text(module.widget(onToken)), /Verifying…/);
+  await module.start();
+  const { options } = module.turnstile;
+  assert.equal(options.appearance, 'interaction-only');
+  assert.equal(options.theme, 'light');
+
+  options.callback('fresh-token');
+  const verified = module.widget(onToken);
+  assert.match(text(verified), /Verification successful/);
+  assert.match(text(verified), /CloudflareTurnstile/);
+  assert.ok(nodes(verified).some(node => node.type === 'CheckIcon'));
+  assert.deepEqual(tokens, ['fresh-token']);
+
+  options['before-interactive-callback']();
+  assert.equal(nodes(module.widget(onToken)).some(node => node.props?.role === 'status'), false);
+
+  options['expired-callback']();
+  assert.equal(tokens.at(-1), null);
+  assert.match(text(module.widget(onToken)), /Verifying…/);
+
+  options['error-callback']();
+  assert.match(text(module.widget(onToken)), /security check failed/);
+});
+
 test('robots.txt keeps private areas out of search and the security policy allows the check', () => {
   const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   assert.match(read('public/robots.txt'), /User-agent: \*\s+Allow: \/\$\s+Allow: \/auth\$\s+Disallow: \/\s*$/);
@@ -282,6 +322,28 @@ test('robots.txt keeps private areas out of search and the security policy allow
   assert.match(policy, /script-src 'self' https:\/\/challenges\.cloudflare\.com;/);
   assert.match(policy, /frame-src [^;]*https:\/\/challenges\.cloudflare\.com;/);
   assert.match(policy, /VITE_TURNSTILE_SITE_KEY/);
+});
+
+function loginForm(captcha) {
+  const service = { calls: [], async login(payload) { service.calls.push(payload); return { user: { roleTag: 'Student' } }; } };
+  const form = mount('components/auth/LoginForm/LoginForm.tsx', 'LoginForm', service, {}, captcha);
+  form.find(node => node.type === 'EmailInput').props.onChange('customer@example.test', true);
+  form.find(node => node.type === 'input' && node.props.placeholder === 'Enter your password').props.onChange({ target: { value: 'Password1!' } });
+  return { form, service };
+}
+
+test('login needs a completed security check and sends its token once', async () => {
+  const blocked = loginForm(readyCaptcha(false));
+  assert.equal(blocked.form.find(node => node.type === 'Submit').props.disabled, true);
+  await blocked.form.find(node => node.type === 'form').props.onSubmit(event);
+  assert.equal(blocked.service.calls.length, 0);
+
+  const captcha = readyCaptcha();
+  const allowed = loginForm(captcha);
+  assert.ok(allowed.form.find(node => node.type === 'Captcha'));
+  await allowed.form.find(node => node.type === 'form').props.onSubmit(event);
+  assert.equal(allowed.service.calls[0].captchaToken, 'captcha-token');
+  assert.equal(captcha.taken, 1);
 });
 
 test('email send errors keep other messages and use the fallback when needed', () => {
