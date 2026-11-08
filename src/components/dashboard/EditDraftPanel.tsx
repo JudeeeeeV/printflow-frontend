@@ -5,11 +5,13 @@ import { FileUploadZone } from '../orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../orders/OrderSummary/OrderSummary';
 import { AlertModal } from '../common/AlertModal';
 import { orderService } from '../../services/orderService';
+import { invalidateApiCache } from '../../services/apiClient';
 import type { PaymentMethod } from '../../services/orderService';
 import type { PrintShop, OrderEstimate } from '../../services/orderService';
 import type { DraftOrder } from './MyDraftsList';
 
-const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+import { prepareDocument, submissionFileFeedback, type FileFeedback as Feedback } from '../../services/documentPreparation';
+import { FileFeedback } from '../orders/FileFeedback';
 
 type PreviewKind = 'image' | 'pdf' | 'document';
 
@@ -41,10 +43,17 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(draft.paymentMethod || 'GCASH');
 
  // Pre-fill validation so they can submit immediately without uploading a new file
- const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>({
- passed: true, message: 'Valid file loaded from draft'
+ const [validationResult, setValidationResult] = useState<Feedback | null>({
+ passed: true, message: 'Saved draft selected. The server will check its file when you submit.'
  });
  const [isSubmitting, setIsSubmitting] = useState(false);
+ const [fileIssue, setFileIssue] = useState<Feedback | null>(null);
+ const [completedReplacement, setCompletedReplacement] = useState<{id: string; kind: 'order' | 'draft'} | null>(null);
+ const validationGeneration = useRef(0);
+ const submissionPending = useRef(false);
+ const replacementCreated = useRef(false);
+ const retryOperation = useRef<'submit' | 'save'>('submit');
+ React.useEffect(() => () => { validationGeneration.current++; }, []);
 
  const uploadButtonRef = useRef<HTMLButtonElement>(null);
  const replacementImageRef = useRef<HTMLImageElement>(null);
@@ -121,142 +130,210 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  }, [hasFile, newFile]);
 
  const handleFileSelect = async (selectedFile: File) => {
- setNewFile(selectedFile);
- setHasFile(false);
- setIsValidating(true);
- setValidationResult(null);
+  if (submissionPending.current || completedReplacement) return;
+  const generation = ++validationGeneration.current;
+  setNewFile(selectedFile);
+  setHasFile(false);
+  setIsValidating(true);
+  setValidationResult(null);
+  setFileIssue(null);
+  try {
+   const result = await prepareDocument(selectedFile);
+   if (generation !== validationGeneration.current) return;
+   if ('feedback' in result) {
+    setNewFile(result.file);
+    setPageCount(result.pageCount);
+    setValidationResult(result.feedback);
+    setHasFile(true);
+   } else {
+    setValidationResult(result);
+   }
+  } catch {
+   if (generation === validationGeneration.current)
+    setValidationResult({
+     passed: false,
+     message: 'This file could not be checked.',
+     nextStep: 'Choose another file or export a new PDF and try again.',
+    });
+  } finally {
+   if (generation === validationGeneration.current) setIsValidating(false);
+  }
+ };
 
- let detectedPageCount = 1;
-
- if (selectedFile.type === 'application/pdf') {
- try {
- const { PDFDocument } = await import('pdf-lib');
- const arrayBuffer = await selectedFile.arrayBuffer();
- const pdfDoc = await PDFDocument.load(arrayBuffer);
- detectedPageCount = pdfDoc.getPageCount();
- if (detectedPageCount === 0) {
- setValidationResult({ passed: false, message: 'Corrupted PDF: File contains no pages.' });
- setIsValidating(false);
- return;
- }
- } catch (error) {
- console.error('Failed to parse PDF:', error);
- setValidationResult({ passed: false, message: 'Corrupted File: This PDF could not be read. Please re-export and try again.' });
- setIsValidating(false);
- return;
- }
- } else if (selectedFile.type.startsWith('image/')) {
- const validationUrl = URL.createObjectURL(selectedFile);
- try {
- const isValid = await new Promise<boolean>((resolve) => {
- const image = new Image();
- image.onload = () => resolve(image.naturalWidth > 0 && image.naturalHeight > 0);
- image.onerror = () => resolve(false);
- image.src = validationUrl;
- });
- if (!isValid) {
- setValidationResult({ passed: false, message: 'Corrupted File: This image could not be loaded. It may be damaged or truncated.' });
- setIsValidating(false);
- return;
- }
- } catch {
- setValidationResult({ passed: false, message: 'Corrupted File: This image could not be validated.' });
- setIsValidating(false);
- return;
- } finally {
- URL.revokeObjectURL(validationUrl);
- }
- }
-
- setPageCount(detectedPageCount);
-
- try {
- await new Promise(resolve => setTimeout(resolve, 1500));
- setValidationResult({
- passed: true,
- message: selectedFile.type === DOCX_MIME_TYPE
- ? 'DOCX accepted. It will be converted, resized to the selected paper, and priced using its final page count.'
- : 'Validation passed. The file will be resized to the selected paper and normalized to PDF.',
- });
- setHasFile(true);
- } catch {
- setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
- } finally {
- setIsValidating(false);
- }
+ const handleFileFailure = (error: unknown): boolean => {
+  const feedback = submissionFileFeedback(error);
+  if (!feedback) return false;
+  if (feedback.retryable || feedback.uncertain) setFileIssue(feedback);
+  else {
+   setValidationResult(feedback);
+   setHasFile(false);
+  }
+  return true;
  };
 
  const handleRemoveFile = () => {
- if (isSubmitting) return;
+  if (isSubmitting || completedReplacement) return;
 
- shouldFocusUploadRef.current = true;
- setNewFile(null);
- setHasFile(false);
- setPageCount(1);
- setValidationResult(null);
- setIsValidating(false);
+  validationGeneration.current++;
+  setFileIssue(null);
+  shouldFocusUploadRef.current = true;
+  setNewFile(null);
+  setHasFile(false);
+  setPageCount(1);
+  setValidationResult(null);
+  setIsValidating(false);
  };
 
  const handleSubmitOrder = async () => {
- if (!selectedShopId || !isFileValidated || !orderName.trim()) return;
+  if (
+   submissionPending.current ||
+   replacementCreated.current ||
+   completedReplacement ||
+   !selectedShopId ||
+   !isFileValidated ||
+   !orderName.trim()
+  )
+   return;
 
- // SAFEGUARD: Prevent corrupted orders if they change shops but don't re-upload
- if (selectedShopId !== draft.shopId && !newFile) {
- showAlert('You changed the Print Shop. Please re-upload your design file to validate it against this shop.', 'warning', 'Re-upload Required');
- return;
- }
+  // SAFEGUARD: Prevent corrupted orders if they change shops but don't re-upload
+  if (selectedShopId !== draft.shopId && !newFile) {
+   showAlert(
+    'You changed the Print Shop. Please re-upload your design file to validate it against this shop.',
+    'warning',
+    'Re-upload Required'
+   );
+   return;
+  }
 
- setIsSubmitting(true);
- try {
- if (newFile) {
- // They uploaded a new file! Create a brand new order, delete the old draft.
- const response = await orderService.submitOrder(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
- await orderService.deleteDraft(draft.id);
- onSuccess(response.orderId);
- } else {
- // They changed settings but didn't upload a new file, update draft first then submit.
- if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
- }
- await orderService.submitDraft(draft.id, paymentMethod);
- onSuccess(draft.id);
- }
- } catch (error: unknown) {
- const message = error instanceof Error ? error.message : 'Unknown error';
- showAlert(`Failed to submit: ${message}`, 'error', 'Submission Failed');
- } finally {
- setIsSubmitting(false);
- }
+  submissionPending.current = true;
+  retryOperation.current = 'submit';
+  setFileIssue(null);
+  setIsSubmitting(true);
+  let createdId: string | null = null;
+  try {
+   if (newFile) {
+    // They uploaded a new file! Create a brand new order, delete the old draft.
+    const response = await orderService.submitOrder(
+     selectedShopId,
+     newFile,
+     paperSize,
+     printColorMode,
+     orderName,
+     orientation,
+     copies,
+     paymentMethod
+    );
+    createdId = response.orderId;
+    replacementCreated.current = true;
+    await orderService.deleteDraft(draft.id);
+    onSuccess(response.orderId);
+   } else {
+    // They changed settings but didn't upload a new file, update draft first then submit.
+    if (estimate) {
+     await orderService.updateDraftWithoutFile(
+      draft.id,
+      selectedShopId,
+      paperSize,
+      printColorMode,
+      orderName,
+      orientation,
+      copies,
+      paymentMethod
+     );
+    }
+    await orderService.submitDraft(draft.id, paymentMethod);
+    onSuccess(draft.id);
+   }
+  } catch (error: unknown) {
+   if (createdId) {
+    setCompletedReplacement({ id: createdId, kind: 'order' });
+    setFileIssue({
+     passed: false,
+     uncertain: true,
+     message: 'The replacement order was submitted, but the previous draft cleanup could not be confirmed.',
+     nextStep: 'Open the saved order before making another submission.',
+    });
+   } else if (!handleFileFailure(error))
+    showAlert(
+     error instanceof Error ? error.message : 'The order could not be submitted.',
+     'error',
+     'Submission Failed'
+    );
+  } finally {
+   submissionPending.current = false;
+   setIsSubmitting(false);
+  }
  };
 
  const handleSaveDraftChanges = async () => {
- if (!selectedShopId || !isFileValidated || !orderName.trim()) return;
+  if (
+   submissionPending.current ||
+   replacementCreated.current ||
+   completedReplacement ||
+   !selectedShopId ||
+   !isFileValidated ||
+   !orderName.trim()
+  )
+   return;
 
- if (selectedShopId !== draft.shopId && !newFile) {
- showAlert('You changed the Print Shop. Please re-upload your design file to save.', 'warning', 'Re-upload Required');
- return;
- }
+  if (selectedShopId !== draft.shopId && !newFile) {
+   showAlert('You changed the Print Shop. Please re-upload your design file to save.', 'warning', 'Re-upload Required');
+   return;
+  }
 
- setIsSubmitting(true);
- try {
- if (newFile) {
- await orderService.saveDraft(selectedShopId, newFile, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
- await orderService.deleteDraft(draft.id);
- showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
- } else {
- if (estimate) {
- await orderService.updateDraftWithoutFile(draft.id, selectedShopId, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
- showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
- } else {
- showAlert('No changes were made to the draft.', 'info', 'No Changes', () => onCancel());
- }
- }
- } catch (error: unknown) {
- const message = error instanceof Error ? error.message : 'Unknown error';
- showAlert(`Failed to save draft: ${message}`, 'error', 'Save Failed');
- } finally {
- setIsSubmitting(false);
- }
+  submissionPending.current = true;
+  retryOperation.current = 'save';
+  setFileIssue(null);
+  setIsSubmitting(true);
+  let createdId: string | null = null;
+  try {
+   if (newFile) {
+    const response = await orderService.saveDraft(
+     selectedShopId,
+     newFile,
+     paperSize,
+     printColorMode,
+     orderName,
+     orientation,
+     copies,
+     paymentMethod
+    );
+    createdId = response.orderId;
+    replacementCreated.current = true;
+    await orderService.deleteDraft(draft.id);
+    showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
+   } else {
+    if (estimate) {
+     await orderService.updateDraftWithoutFile(
+      draft.id,
+      selectedShopId,
+      paperSize,
+      printColorMode,
+      orderName,
+      orientation,
+      copies,
+      paymentMethod
+     );
+     showAlert('Draft updated successfully!', 'success', 'Success', () => onCancel());
+    } else {
+     showAlert('No changes were made to the draft.', 'info', 'No Changes', () => onCancel());
+    }
+   }
+  } catch (error: unknown) {
+   if (createdId) {
+    setCompletedReplacement({ id: createdId, kind: 'draft' });
+    setFileIssue({
+     passed: false,
+     uncertain: true,
+     message: 'The replacement draft was saved, but the previous draft cleanup could not be confirmed.',
+     nextStep: 'Check your saved drafts before making another submission.',
+    });
+   } else if (!handleFileFailure(error))
+    showAlert(error instanceof Error ? error.message : 'The draft could not be saved.', 'error', 'Save Failed');
+  } finally {
+   submissionPending.current = false;
+   setIsSubmitting(false);
+  }
  };
 
  return (
@@ -300,10 +377,13 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  </div>
  </div>
 
+ <FileFeedback focusOnError feedback={fileIssue} onRetry={() => { if (retryOperation.current === 'save') void handleSaveDraftChanges(); else void handleSubmitOrder(); }} checkLabel={completedReplacement?.kind === 'order' ? 'Open saved order' : 'View drafts'} onCheckOrders={() => { invalidateApiCache(); if (completedReplacement?.kind === 'order') onSuccess(completedReplacement.id); else onCancel(); }} />
  {!isFileValidated ? (
  <div className="[&>div]:mb-0">
  <FileUploadZone
  onFileSelect={handleFileSelect}
+ disabled={isSubmitting || !!completedReplacement}
+ onRemoveFile={handleRemoveFile}
  isValidating={isValidating}
  validationResult={validationResult}
  uploadButtonRef={uploadButtonRef}
@@ -362,7 +442,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  <div className="min-w-0 text-xs font-semibold leading-relaxed text-gray-200" role="status">
  <div className="flex items-start gap-2">
  <span className="mt-1 h-2 w-2 shrink-0 bg-green-500" />
- <span>{newFile ? validationResult?.message : 'Current draft file is ready.'}</span>
+ <span>{newFile ? validationResult?.message : 'Saved draft selected. The server will check its file when you submit.'}</span>
  </div>
  {shopChangedWithoutReplacement && (
  <p className="mt-2 border-l-2 border-yellow-400 pl-2 text-yellow-200">
@@ -374,7 +454,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  <button
  type="button"
  onClick={handleRemoveFile}
- disabled={isSubmitting}
+ disabled={isSubmitting || !!completedReplacement}
  className="min-h-11 shrink-0 cursor-pointer self-end bg-red-700 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none sm:self-auto"
  >
  Remove file
@@ -397,7 +477,7 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  isSubmitting={isSubmitting}
  onSubmit={handleSubmitOrder}
  onSaveDraft={handleSaveDraftChanges}
- isReady={!!selectedShopId && isFileValidated && !!orderName.trim()}
+ isReady={!completedReplacement && !!selectedShopId && isFileValidated && !!orderName.trim()}
  paperSize={paperSize}
  setPaperSize={setPaperSize}
  pageCount={pageCount}

@@ -14,11 +14,12 @@ import type { DraftOrder } from '../../components/dashboard/MyDraftsList';
 import { EditDraftPanel } from '../../components/dashboard/EditDraftPanel';
 import { AlertModal } from '../../components/common/AlertModal';
 import { ChangePasswordModal } from '../../components/auth/ChangePasswordModal';
-import { apiClient, clearAuthTokens } from '../../services/apiClient';
+import { apiClient, clearAuthTokens, invalidateApiCache } from '../../services/apiClient';
 import printflowLogoDark from '../../assets/printflow-logo-dark.png';
 import styles from './NewOrderPage.module.css';
 
-const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+import { prepareDocument, submissionFileFeedback, type FileFeedback as Feedback } from '../../services/documentPreparation';
+import { FileFeedback } from '../../components/orders/FileFeedback';
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
@@ -62,12 +63,17 @@ export const NewOrderPage: React.FC = () => {
 
     const [file, setFile] = useState<File | null>(null);
     const [isValidating, setIsValidating] = useState(false);
-    const [validationResult, setValidationResult] = useState<{ passed: boolean; message: string } | null>(null);
+    const [validationResult, setValidationResult] = useState<Feedback | null>(null);
     const isFileValidated = validationResult?.passed === true;
     const canPreviewFile = !!file && isFileValidated && (file.type.startsWith('image/') || file.type === 'application/pdf');
 
     const [estimate, setEstimate] = useState<OrderEstimate | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [fileIssue, setFileIssue] = useState<Feedback | null>(null);
+    const validationGeneration = useRef(0);
+    const submissionPending = useRef(false);
+    const retryOperation = useRef<'submit' | 'save'>('submit');
+    useEffect(() => () => { validationGeneration.current++; }, []);
 
     const [alertState, setAlertState] = useState<{ isOpen: boolean; title?: string; message: string; type?: 'info' | 'success' | 'error' | 'warning'; onCloseAction?: () => void }>({ isOpen: false, message: '' });
     const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string, onCloseAction?: () => void) => {
@@ -138,94 +144,57 @@ export const NewOrderPage: React.FC = () => {
     }, [paperSize, printColorMode, selectedShopId, file, validationResult?.passed, shops, pageCount, copies]);
 
     const handleFileSelect = async (selectedFile: File) => {
+        if (submissionPending.current) return;
         if (!selectedShopId) {
             showAlert('Please select a print shop first.', 'warning', 'Missing Information');
             return;
         }
-
+        const generation = ++validationGeneration.current;
         setFile(selectedFile);
         setIsValidating(true);
         setValidationResult(null);
-
-        let detectedSize = 'A4';
-        let detectedPageCount = 1;
-
-        if (selectedFile.type === 'application/pdf') {
-            try {
-                const { PDFDocument } = await import('pdf-lib');
-                const arrayBuffer = await selectedFile.arrayBuffer();
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
-                detectedPageCount = pdfDoc.getPageCount();
-
-                if (detectedPageCount === 0) {
-                    setValidationResult({ passed: false, message: 'Corrupted PDF: File contains no pages.' });
-                    setEstimate(null);
-                    setIsValidating(false);
-                    return;
-                }
-
-                const page = pdfDoc.getPage(0);
-                const { width, height } = page.getSize();
-                const h = Math.max(width, height);
-                if (Math.abs(h - 792) < 20) {
-                    detectedSize = 'SHORT';
-                } else if (Math.abs(h - 1008) < 20) {
-                    detectedSize = 'LONG';
-                }
-            } catch (e) {
-                console.error("Failed to parse PDF:", e);
-                setValidationResult({ passed: false, message: 'Corrupted File: This PDF could not be read. Please re-export and try again.' });
-                setEstimate(null);
-                setIsValidating(false);
-                return;
-            }
-        } else if (selectedFile.type.startsWith('image/')) {
-            // Validate image integrity by attempting to load it
-            try {
-                const isValidImage = await new Promise<boolean>((resolve) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img.naturalWidth > 0 && img.naturalHeight > 0);
-                    img.onerror = () => resolve(false);
-                    img.src = URL.createObjectURL(selectedFile);
-                });
-                if (!isValidImage) {
-                    setValidationResult({ passed: false, message: 'Corrupted File: This image could not be loaded. It may be damaged or truncated.' });
-                    setEstimate(null);
-                    setIsValidating(false);
-                    return;
-                }
-            } catch (e) {
-                console.error("Failed to validate image:", e);
-                setValidationResult({ passed: false, message: 'Corrupted File: This image could not be validated.' });
-                setEstimate(null);
-                setIsValidating(false);
-                return;
-            }
-        }
-
-        setPaperSize(detectedSize);
-        setPageCount(detectedPageCount);
-
+        setFileIssue(null);
+        setEstimate(null);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setValidationResult({
-                passed: true,
-                message: selectedFile.type === DOCX_MIME_TYPE
-                    ? 'DOCX accepted. It will be converted, resized to the selected paper, and priced using its final page count.'
-                    : 'Validation passed. The file will be resized to the selected paper and normalized to PDF.',
-            });
-            updateEstimate(selectedShopId, detectedSize, printColorMode, detectedPageCount);
-        } catch (err) {
-            setValidationResult({ passed: false, message: 'Validation Failed: Minimum 300 DPI required.' });
-            setEstimate(null);
+            const result = await prepareDocument(selectedFile);
+            if (generation !== validationGeneration.current) return;
+            if ('feedback' in result) {
+                setFile(result.file);
+                setPageCount(result.pageCount);
+                setPaperSize(result.paperSize);
+                setValidationResult(result.feedback);
+                updateEstimate(selectedShopId, result.paperSize, printColorMode, result.pageCount);
+            } else {
+                setValidationResult(result);
+            }
+        } catch {
+            if (generation === validationGeneration.current)
+                setValidationResult({
+                    passed: false,
+                    message: 'This file could not be checked.',
+                    nextStep: 'Choose another file or export a new PDF and try again.',
+                });
         } finally {
-            setIsValidating(false);
+            if (generation === validationGeneration.current) setIsValidating(false);
         }
+    };
+
+    const handleFileFailure = (error: unknown): boolean => {
+        const feedback = submissionFileFeedback(error);
+        if (!feedback) return false;
+        if (feedback.retryable || feedback.uncertain) setFileIssue(feedback);
+        else {
+            setValidationResult(feedback);
+            setEstimate(null);
+        }
+        return true;
     };
 
     const handleRemoveFile = () => {
         if (isSubmitting) return;
 
+        validationGeneration.current++;
+        setFileIssue(null);
         shouldFocusUploadRef.current = true;
         setFile(null);
         setValidationResult(null);
@@ -235,27 +204,59 @@ export const NewOrderPage: React.FC = () => {
     };
 
     const handleSubmitOrder = async () => {
-        if (!selectedShopId || !file || !validationResult?.passed || !orderName.trim()) return;
+        if (submissionPending.current || !selectedShopId || !file || !validationResult?.passed || !orderName.trim())
+            return;
 
+        submissionPending.current = true;
+        retryOperation.current = 'submit';
+        setFileIssue(null);
         setIsSubmitting(true);
         try {
-            const response = await orderService.submitOrder(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
+            const response = await orderService.submitOrder(
+                selectedShopId,
+                file,
+                paperSize,
+                printColorMode,
+                orderName,
+                orientation,
+                copies,
+                paymentMethod
+            );
             navigate(`/checkout/${response.orderId}`);
-        } catch (err: any) {
-            showAlert(`Failed to submit order: ${err.message || 'Unknown error'}`, 'error', 'Submission Failed');
+        } catch (err: unknown) {
+            if (!handleFileFailure(err))
+                showAlert(
+                    err instanceof Error ? err.message : 'The order could not be submitted.',
+                    'error',
+                    'Submission Failed'
+                );
         } finally {
+            submissionPending.current = false;
             setIsSubmitting(false);
         }
     };
 
     // New handler for saving a draft
     const handleSaveDraft = async () => {
-        if (!selectedShopId || !file || !validationResult?.passed || !orderName.trim()) return;
+        if (submissionPending.current || !selectedShopId || !file || !validationResult?.passed || !orderName.trim())
+            return;
 
+        submissionPending.current = true;
+        retryOperation.current = 'save';
+        setFileIssue(null);
         setIsSubmitting(true);
         try {
             // Replaced the mock delay with the actual API call
-            await orderService.saveDraft(selectedShopId, file, paperSize, printColorMode, orderName, orientation, copies, paymentMethod);
+            await orderService.saveDraft(
+                selectedShopId,
+                file,
+                paperSize,
+                printColorMode,
+                orderName,
+                orientation,
+                copies,
+                paymentMethod
+            );
 
             showAlert('Order saved as draft!', 'success', 'Success', () => {
                 handleTabChange('drafts');
@@ -269,10 +270,11 @@ export const NewOrderPage: React.FC = () => {
             setOrientation('PORTRAIT');
             setCopies(1);
             setPaymentMethod('GCASH');
-
-        } catch (err: any) {
-            showAlert(`Failed to save draft: ${err.message || 'Unknown error'}`, 'error', 'Save Failed');
+        } catch (err: unknown) {
+            if (!handleFileFailure(err))
+                showAlert(err instanceof Error ? err.message : 'The draft could not be saved.', 'error', 'Save Failed');
         } finally {
+            submissionPending.current = false;
             setIsSubmitting(false);
         }
     };
@@ -404,6 +406,7 @@ export const NewOrderPage: React.FC = () => {
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-gray-100 text-xs font-black text-white">02</span>
                                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-black">Upload your work</p>
                                     </div>
+                                    <FileFeedback focusOnError feedback={fileIssue} onRetry={() => { if (retryOperation.current === 'save') void handleSaveDraft(); else void handleSubmitOrder(); }} onCheckOrders={() => { invalidateApiCache(); handleTabChange(retryOperation.current === 'save' ? 'drafts' : 'orders'); }} />
                                     <div className="[&>div]:mb-0">
                                         {file && isFileValidated ? (
                                             <div className="border border-[#8d8d8d] bg-carbon-gray-100 p-2 shadow-[0_8px_20px_rgba(22,22,22,0.12)] sm:p-3">
@@ -447,6 +450,8 @@ export const NewOrderPage: React.FC = () => {
                                         ) : (
                                             <FileUploadZone
                                                 onFileSelect={handleFileSelect}
+                                                disabled={isSubmitting}
+                                                onRemoveFile={handleRemoveFile}
                                                 isValidating={isValidating}
                                                 validationResult={validationResult}
                                                 uploadButtonRef={uploadButtonRef}

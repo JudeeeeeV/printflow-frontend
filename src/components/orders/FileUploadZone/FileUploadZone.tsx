@@ -1,69 +1,23 @@
 import React, { useState, useRef } from 'react';
-import { CloudUpload, Warning } from '@carbon/icons-react';
-
-const ALLOWED_TYPES = [
- 'application/pdf',
- 'image/png',
- 'image/jpeg',
- 'image/webp',
- 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-];
-
-const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.docx'];
-
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+import { CloudUpload } from '@carbon/icons-react';
+import { FileFeedback } from '../FileFeedback';
+import type { FileFeedback as Feedback } from '../../../services/documentPreparation';
 
 interface FileUploadZoneProps {
  onFileSelect: (file: File) => void;
  isValidating: boolean;
- validationResult: { passed: boolean; message: string } | null;
+ validationResult: Feedback | null;
  uploadButtonRef?: React.Ref<HTMLButtonElement>;
+ disabled?: boolean;
+ onRemoveFile?: () => void;
 }
 
-const getFileExtension = (name: string): string => {
- const dot = name.lastIndexOf('.');
- return dot >= 0 ? name.slice(dot).toLowerCase() : '';
-};
-
-const isValidFile = (file: File): { valid: boolean; error: string } => {
- const ext = getFileExtension(file.name);
-
- // Check extension
- if (!ALLOWED_EXTENSIONS.includes(ext)) {
- return { valid: false, error: `Invalid file format "${ext}". Accepted: PDF, DOCX, PNG, JPG, WEBP.` };
- }
-
- // Check MIME type (also catches renamed files in most cases)
- if (!ALLOWED_TYPES.includes(file.type) && file.type !== '') {
- return { valid: false, error: `Invalid file type "${file.type}". Accepted: PDF, DOCX, PNG, JPG, WEBP.` };
- }
-
- // Check file size
- if (file.size > MAX_FILE_SIZE) {
- return { valid: false, error: `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: 20MB.` };
- }
-
- // Check empty/zero-byte files
- if (file.size === 0) {
- return { valid: false, error: 'File is empty (0 bytes). The file may be corrupted.' };
- }
-
- return { valid: true, error: '' };
-};
-
-export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, isValidating, validationResult, uploadButtonRef }) => {
+export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, isValidating, validationResult, uploadButtonRef, disabled = false, onRemoveFile }) => {
  const [isDragging, setIsDragging] = useState(false);
- const [fileError, setFileError] = useState<string | null>(null);
  const fileInputRef = useRef<HTMLInputElement>(null);
 
  const processFile = (file: File) => {
- setFileError(null);
- const result = isValidFile(file);
- if (!result.valid) {
- setFileError(result.error);
- return;
- }
- onFileSelect(file);
+ if (!disabled) onFileSelect(file);
  };
 
  const handleDrop = (e: React.DragEvent) => {
@@ -75,11 +29,11 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
  };
 
  return (
- <div className="mb-8">
+ <div className="mb-8" aria-busy={isValidating}>
  <h3 className="text-sm font-semibold text-gray-700 mb-3">Upload Design File</h3>
  <div
  className={`border-2 border-dashed p-10 flex flex-col items-center justify-center text-center transition-colors duration-200 ${
- isDragging ? 'border-black bg-carbon-gray-10' : fileError ? 'border-gray-300 bg-gray-100/30' : 'border-[#8d8d8d] bg-white'
+ isDragging ? 'border-black bg-carbon-gray-10' : validationResult?.passed === false ? 'border-gray-300 bg-gray-100/30' : 'border-[#8d8d8d] bg-white'
  }`}
  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
  onDragLeave={() => setIsDragging(false)}
@@ -92,6 +46,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
 
  <input
  type="file"
+ disabled={disabled}
  accept=".pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp"
  className="hidden"
  ref={fileInputRef}
@@ -111,28 +66,16 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, is
  ref={uploadButtonRef}
  type="button"
  onClick={() => fileInputRef.current?.click()}
- disabled={isValidating}
- className="bg-carbon-blue-60 hover:bg-carbon-blue-70 text-white px-6 py-2 font-bold disabled:opacity-50"
+ disabled={disabled}
+ className="min-h-11 bg-carbon-blue-60 hover:bg-carbon-blue-70 text-white px-6 py-2 font-bold disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
  >
- {isValidating ? 'Validating...' : 'Upload File'}
+ {isValidating || validationResult?.passed === false ? 'Choose another file' : 'Upload File'}
  </button>
  </div>
 
- {/* File format / size error */}
- {fileError && (
- <div className="mt-3 text-sm font-bold flex items-center gap-2 text-carbon-gray-100 bg-gray-100 border border-gray-300 px-3 py-2">
- <Warning className="w-4 h-4 shrink-0" />
- {fileError}
- </div>
- )}
-
- {/* Validation Feedback Component integrated here per SDD */}
- {!fileError && validationResult && (
- <div className={`mt-3 text-sm font-bold flex items-center gap-2 ${validationResult.passed ? 'text-green-600' : 'text-carbon-gray-100'}`}>
- <span className={`w-2 h-2 ${validationResult.passed ? 'bg-green-600' : 'bg-carbon-gray-100'}`}></span>
- {validationResult.message}
- </div>
- )}
+ {isValidating && <p role="status" className="mt-3 text-sm text-gray-600">Checking the selected file...</p>}
+ {isValidating && onRemoveFile && <button type="button" disabled={disabled} onClick={onRemoveFile} className="mt-3 min-h-11 bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Remove file</button>}
+ <FileFeedback focusOnError feedback={validationResult} />
  </div>
  );
 };
