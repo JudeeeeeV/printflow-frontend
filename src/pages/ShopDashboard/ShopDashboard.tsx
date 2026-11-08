@@ -19,12 +19,8 @@ import { getQueuePage, queueGridClassName } from '../../components/dashboard/liv
 import { useLiveQueueLayout } from '../../components/dashboard/useLiveQueueLayout';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
-type QueueKey = 'new' | 'ready' | 'completed';
-type QueueFilterState = {
- searchQuery: string;
- paperSize: string;
- colorMode: string;
-};
+import { browseQueue, initialQueueFilters, QUEUE_STATES } from '../../components/dashboard/queueBrowsing';
+import type { QueueKey, QueueFilterState, ShopOrder } from '../../components/dashboard/queueBrowsing';
 
 const QUEUE_ORDER: QueueKey[] = ['new', 'ready', 'completed'];
 const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', completed: 'Completed' };
@@ -34,14 +30,14 @@ const QUEUE_EMPTY_LABELS: Record<QueueKey, string> = {
  completed: 'No completed orders.',
 };
 const INITIAL_QUEUE_FILTERS: Record<QueueKey, QueueFilterState> = {
- new: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
- ready: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
- completed: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
+ new: initialQueueFilters(),
+ ready: initialQueueFilters(),
+ completed: initialQueueFilters(),
 };
 
 export const ShopDashboard: React.FC = () => {
  const navigate = useNavigate();
- const [shopData, setShopData] = useState<any>(null);
+ const [shopData, setShopData] = useState<Awaited<ReturnType<typeof shopService.getMyShop>> | null>(null);
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
  const [permitFile, setPermitFile] = useState<File | null>(null);
@@ -50,14 +46,14 @@ export const ShopDashboard: React.FC = () => {
 
  const [qrFile, setQrFile] = useState<File | null>(null);
 
- const [shopOrders, setShopOrders] = useState<any[]>([]);
+ const [shopOrders, setShopOrders] = useState<ShopOrder[]>([]);
  const refreshOrders = useMemo(() => createRefreshQueue(
  () => orderService.getShopOrders(), orders => setShopOrders(orders),
  ), []);
  const refreshOrdersAfterChange = useCallback(() => {
  void refreshOrders().catch(console.error);
  }, [refreshOrders]);
- const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<any | null>(null);
+ const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<ShopOrder | null>(null);
  const [isVerifying, setIsVerifying] = useState(false);
 
  // Batch processing state
@@ -129,10 +125,10 @@ export const ShopDashboard: React.FC = () => {
  requestAnimationFrame(() => queueTabRefs.current[nextQueue]?.focus());
  };
 
- const loadShopData = () => {
- setError(null);
+ const loadShopData = useCallback(() => {
  shopService.getMyShop()
  .then(data => {
+ setError(null);
  setShopData(data);
  if (data.verification_status === 'VERIFIED' || data.verification_status === 'OPEN') {
  return refreshOrders(false);
@@ -146,11 +142,11 @@ export const ShopDashboard: React.FC = () => {
  setError(err.message || 'Failed to fetch shop data');
  setIsLoading(false);
  });
- };
+ }, [refreshOrders]);
 
  useEffect(() => {
  loadShopData();
- }, []);
+ }, [loadShopData]);
 
  useDataEvents(['shops'], loadShopData);
  useDataEvents(['orders', 'receipts', 'assets', 'print-jobs'], refreshOrdersAfterChange);
@@ -223,8 +219,8 @@ export const ShopDashboard: React.FC = () => {
  await shopService.uploadGcashQr(qrFile);
  await shopService.verifyPermit(permitFile);
  loadShopData();
- } catch (err: any) {
- setUploadError(err.message || 'Failed to submit verification documents.');
+ } catch (err: unknown) {
+ setUploadError(err instanceof Error ? err.message : 'Failed to submit verification documents.');
  } finally {
  setIsUploading(false);
  }
@@ -262,11 +258,11 @@ export const ShopDashboard: React.FC = () => {
  let downloadCount = 0;
  for (const orderId of selectedReadyOrders) {
  const order = shopOrders.find(o => o.id === orderId);
- if (order && order.assets && order.assets.length > 0) {
+ if (order?.assets?.[0]?.file_url) {
  const assetUrl = order.assets[0].file_url;
  
  const urlParts = assetUrl.split('/');
- let rawName = decodeURIComponent(urlParts[urlParts.length - 1] || 'asset.pdf');
+ const rawName = decodeURIComponent(urlParts[urlParts.length - 1] || 'asset.pdf');
  const match = rawName.match(/-\d{13}-(.+)$/);
  let fileName = match ? match[1] : rawName;
  fileName = `Order_${order.id.slice(0, 8)}_${fileName}`;
@@ -346,45 +342,18 @@ export const ShopDashboard: React.FC = () => {
  </div>
  );
 
- const { verification_status } = shopData;
+ const verification_status = shopData?.verification_status;
 
  // Derived queue data. Counts stay unfiltered while each queue owns its filter state.
- const unfilteredNewOrders = shopOrders
- .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state))
- .sort((a, b) => {
- if (a.state === 'AWAITING_PAYMENT_VERIFICATION' && b.state !== 'AWAITING_PAYMENT_VERIFICATION') return -1;
- if (b.state === 'AWAITING_PAYMENT_VERIFICATION' && a.state !== 'AWAITING_PAYMENT_VERIFICATION') return 1;
- return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
- });
-
- const unfilteredPrintReadyOrders = shopOrders
- .filter(o => ['IN_PRODUCTION'].includes(o.state))
- .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
- const unfilteredCompletedOrders = shopOrders
- .filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state))
- .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
- const unfilteredQueueOrders: Record<QueueKey, typeof shopOrders> = {
- new: unfilteredNewOrders,
- ready: unfilteredPrintReadyOrders,
- completed: unfilteredCompletedOrders,
+ const unfilteredQueueOrders: Record<QueueKey, ShopOrder[]> = {
+ new: shopOrders.filter(order => QUEUE_STATES.new.includes(order.state)),
+ ready: shopOrders.filter(order => QUEUE_STATES.ready.includes(order.state)),
+ completed: shopOrders.filter(order => QUEUE_STATES.completed.includes(order.state)),
  };
- const filterOrders = (orders: typeof shopOrders, filters: QueueFilterState) => {
- const searchLower = filters.searchQuery.trim().toLowerCase();
- return orders.filter(order => {
- const matchSearch = !searchLower
- || order.id.slice(0, 8).toLowerCase().includes(searchLower)
- || (order.client_name || '').toLowerCase().includes(searchLower);
- const matchPaper = filters.paperSize === 'ALL' || order.paper_size === filters.paperSize;
- const matchColor = filters.colorMode === 'ALL' || order.print_color_mode === filters.colorMode;
- return matchSearch && matchPaper && matchColor;
- });
- };
- const filteredQueueOrders: Record<QueueKey, typeof shopOrders> = {
- new: filterOrders(unfilteredNewOrders, queueFilters.new),
- ready: filterOrders(unfilteredPrintReadyOrders, queueFilters.ready),
- completed: filterOrders(unfilteredCompletedOrders, queueFilters.completed),
+ const filteredQueueOrders: Record<QueueKey, ShopOrder[]> = {
+ new: browseQueue(shopOrders, 'new', queueFilters.new),
+ ready: browseQueue(shopOrders, 'ready', queueFilters.ready),
+ completed: browseQueue(shopOrders, 'completed', queueFilters.completed),
  };
  const newOrders = filteredQueueOrders.new;
  const printReadyOrders = filteredQueueOrders.ready;
@@ -538,6 +507,13 @@ export const ShopDashboard: React.FC = () => {
  <KanbanFilterBar
  key={activeQueue}
  contextLabel={QUEUE_LABELS[activeQueue]}
+ queue={activeQueue}
+ filters={activeFilters}
+ onFilterChange={(field, value) => updateQueueFilter(activeQueue, field, value)}
+ onClear={() => {
+ setQueueFilters(previous => ({ ...previous, [activeQueue]: { ...initialQueueFilters(), sort: previous[activeQueue].sort } }));
+ setQueuePages(previous => ({ ...previous, [activeQueue]: 1 }));
+ }}
  searchQuery={activeFilters.searchQuery}
  onSearch={handleActiveSearch}
  paperSizeFilter={activeFilters.paperSize}
@@ -546,6 +522,7 @@ export const ShopDashboard: React.FC = () => {
  setColorModeFilter={mode => updateQueueFilter(activeQueue, 'colorMode', mode)}
  />
 
+ <p className="shrink-0 px-3 pt-2 text-xs text-gray-600" role="status">{activeOrders.length} matching of {unfilteredQueueOrders[activeQueue].length} {QUEUE_LABELS[activeQueue].toLowerCase()}</p>
  <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{pageAnnouncement}</p>
  <div ref={queueBoardRef} data-live-queue className={`flex flex-none flex-col overflow-hidden p-3 ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1' : ''}`}>
  <motion.section

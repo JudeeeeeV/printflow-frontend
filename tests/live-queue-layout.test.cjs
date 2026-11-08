@@ -18,6 +18,8 @@ function load(file, mocks = {}, globals = {}) {
   return exports;
 }
 
+const titleHelpers = load('components/dashboard/orderCardTitle.ts');
+const browsingHelpers = load('components/dashboard/queueBrowsing.ts', { './orderCardTitle': titleHelpers });
 const layoutHelpers = load('components/dashboard/liveQueueLayout.ts');
 const { getLiveQueueLayout, getQueuePage } = layoutHelpers;
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -134,6 +136,7 @@ function dashboardHarness() {
     '../../services/refreshQueue': { createRefreshQueue: () => () => Promise.resolve() },
     '../../hooks/useDataEvents': { useDataEvents() {} },
     '../../components/dashboard/liveQueueLayout': layoutHelpers,
+    '../../components/dashboard/queueBrowsing': browsingHelpers,
     '../../components/dashboard/useLiveQueueLayout': { useLiveQueueLayout: () => ({ layout: { ...layout, queueKey: measuredQueue }, gridRef() {} }) },
   }, { requestAnimationFrame() {}, console });
   function render() {
@@ -146,7 +149,7 @@ function dashboardHarness() {
   }
   render();
   const orders = ['AWAITING_PAYMENT_VERIFICATION', 'IN_PRODUCTION', 'COMPLETED'].flatMap((state, queue) => Array.from({ length: 13 }, (_, index) => ({
-    id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR',
+    id: `queue-${queue}-${index}`, state, client_name: `Customer ${index}`, created_at: new Date(Date.UTC(2026, 3, 10, 0, index)).toISOString(), paper_size: 'A4', print_color_mode: 'COLOR',
   })));
   states[0] = { verification_status: 'VERIFIED' }; states[1] = false; states[7] = orders;
   return {
@@ -228,4 +231,71 @@ test('ready selections persist across pagination, resizing, and queues', () => {
   app.tab('completed'); app.tab('ready');
   assert.equal(app.cards()[0].props.isSelected, true);
   assert.match(text(app.render()), /1 not on this page/);
+});
+
+test('queue search covers full references, titles, original filenames and Unicode before pagination', () => {
+  const { browseQueue, initialQueueFilters } = browsingHelpers;
+  const orders = Array.from({ length: 30 }, (_, index) => ({ id: `full-reference-${index}`, state: 'IN_PRODUCTION',
+    order_name: `Assignment ${index}`, client_name: `Student ${index}`, created_at: '2026-10-01T00:00:00Z',
+    assets: [{ original_filename: index === 29 ? 'Résumé 学生.final.docx' : 'document.pdf' }] }));
+  for (const searchQuery of ['full-reference-29', 'ASSIGNMENT 29', 'Student 29', 'résumé 学生', '.final.docx']) {
+    const result = browseQueue(orders, 'ready', { ...initialQueueFilters(), searchQuery });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].id, 'full-reference-29');
+  }
+  assert.equal(browseQueue(orders, 'ready', { ...initialQueueFilters(), searchQuery: 'full-reference-' }).length, 30);
+  assert.equal(orders[0].id, 'full-reference-0');
+});
+
+test('inclusive date filters use Manila midnight boundaries and exclude missing timestamps', () => {
+  const orders = ['2026-10-09T15:59:59Z', '2026-10-09T16:00:00Z', '2026-10-10T15:59:59.999Z', '2026-10-10T16:00:00Z', null, 'invalid']
+    .map((created_at, index) => ({ id: String(index), state: 'IN_PRODUCTION', created_at }));
+  const filters = { ...browsingHelpers.initialQueueFilters(), dateFrom: '2026-10-10', dateTo: '2026-10-10' };
+  assert.deepEqual(plain(browsingHelpers.browseQueue(orders, 'ready', filters).map(order => order.id)), ['1', '2']);
+  assert.equal(browsingHelpers.browseQueue(orders, 'ready', { ...filters, dateFrom: '2026-10-11' }).length, 0);
+});
+
+test('queue defaults and alternative sorts are stable, put missing values last, and do not mutate orders', () => {
+  const orders = [
+    { id: 'z', state: 'AWAITING_PAYMENT', created_at: null },
+    { id: 'b', state: 'AWAITING_PAYMENT', created_at: '2026-10-02T00:00:00Z', order_name: 'Banana', client_name: 'Zoe' },
+    { id: 'a', state: 'AWAITING_PAYMENT', created_at: '2026-10-02T00:00:00Z', assets: [{ original_filename: 'Apple.docx' }], client_name: 'Ana' },
+    { id: 'r', state: 'AWAITING_PAYMENT_VERIFICATION', created_at: '2026-10-03T00:00:00Z', order_name: 'Review', client_name: 'Lee' },
+    { id: 'o', state: 'AWAITING_PAYMENT', created_at: '2026-10-01T00:00:00Z' },
+  ];
+  const before = JSON.stringify(orders);
+  const ids = (sort, queue = 'new', rows = orders) => plain(browsingHelpers.browseQueue(rows, queue, { ...browsingHelpers.initialQueueFilters(), sort }).map(order => order.id));
+  assert.deepEqual(ids('default'), ['r', 'o', 'a', 'b', 'z']);
+  assert.deepEqual(ids('oldest'), ['o', 'a', 'b', 'r', 'z']);
+  assert.deepEqual(ids('newest'), ['r', 'a', 'b', 'o', 'z']);
+  assert.deepEqual(ids('title'), ['a', 'b', 'r', 'o', 'z']);
+  assert.deepEqual(ids('customer'), ['a', 'r', 'b', 'o', 'z']);
+  assert.deepEqual(ids('default', 'completed', orders.map(order => ({ ...order, state: 'COMPLETED' }))), ['r', 'a', 'b', 'o', 'z']);
+  assert.equal(JSON.stringify(orders), before);
+});
+
+test('sorting and additional filters persist per tab, clear preserves sort, and hidden selections survive', () => {
+  const app = dashboardHarness();
+  app.tab('ready'); app.select(['queue-1-0', 'queue-1-12']);
+  app.find('Filters').props.onFilterChange('sort', 'newest');
+  app.find('Pagination').props.onPageChange(2);
+  app.find('Filters').props.onFilterChange('dateFrom', '2026-04-10');
+  assert.equal(app.find('Pagination').props.page, 1);
+  app.find('Filters').props.onSearch('Customer 5');
+  assert.equal(app.cards().length, 1);
+  assert.match(text(app.render()), /2 selected/);
+  const outgoing = app.find('Filters').props;
+  app.tab('new');
+  // Even an outgoing callback belongs to its originating tab.
+  outgoing.onSearch('Customer 12');
+  assert.equal(app.find('Filters').props.searchQuery, '');
+  app.tab('ready');
+  assert.equal(app.find('Filters').props.searchQuery, 'Customer 12');
+  assert.equal(app.find('Filters').props.filters.sort, 'newest');
+  assert.equal(app.cards()[0].props.isSelected, true);
+  app.find('Filters').props.onClear();
+  assert.equal(app.find('Filters').props.filters.sort, 'newest');
+  assert.equal(browsingHelpers.activeQueueFilterCount(app.find('Filters').props.filters), 0);
+  assert.equal(app.find('Pagination').props.total, 13);
+  assert.match(text(app.render()), /2 selected/);
 });

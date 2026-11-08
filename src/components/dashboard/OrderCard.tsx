@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { getOrderCardTitleParts } from "./orderCardTitle";
+import { getOrderCardTitleParts, getOrderSpecifications } from "./orderCardTitle";
 import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
 
+import type { ShopOrder } from './queueBrowsing';
+
 interface OrderCardProps {
-  order: any;
+  order: ShopOrder;
   onClick?: () => void;
   onReviewPayment?: () => void;
   isSelected?: boolean;
@@ -25,18 +27,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
   const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
-  const hasDocument = Array.isArray(order.assets) && order.assets.length > 0;
+  const documentUrl = order.assets?.[0]?.file_url;
+  const hasDocument = Boolean(documentUrl);
   const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
-  const paperSize = order.paper_size || "A4";
+  const specs = getOrderSpecifications(order);
+  const paperSize = specs.paper;
   const paperSizeBackground = Object.hasOwn(paperSizeBackgrounds, paperSize)
     ? paperSizeBackgrounds[paperSize]
     : "bg-gray-600";
-  const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
-    ? order.page_count as number
-    : null;
-  const copies = Number.isInteger(order.copies) && order.copies > 0 ? order.copies as number : 1;
-
   // Determine the state badge configuration
   let badgeText = order.state;
   let badgeColor = "bg-gray-100 text-gray-800";
@@ -93,7 +92,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h4 className="font-black leading-5 text-carbon-gray-100 [overflow-wrap:anywhere]">
-            <button type="button" aria-label={`Show full title and customer for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
+            <button type="button" aria-label={`Show details for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
               event.stopPropagation();
               setIsDetailsOpen(true);
             }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-10">
@@ -111,7 +110,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
           <div className={`max-w-full px-2 py-1 text-right text-[10px] font-bold leading-3 [overflow-wrap:anywhere] ${badgeColor}`}>
             {badgeText}
           </div>
-          <p className="whitespace-nowrap text-sm font-bold text-black leading-4">{title.date}</p>
+          <p className="text-right text-xs font-bold text-black leading-4"><span className="block">Created {title.date}</span><span className="block">{title.time} PHT</span></p>
         </div>
       </div>
 
@@ -128,17 +127,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
           </span>
         ) : (
           <span className="px-2 py-0.5 bg-white text-black text-[10px] font-bold border border-gray-300">
-            B&W
+            {specs.color}
           </span>
         )}
         <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
-          {pageCount === null ? 'Page count unavailable' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`}
+          {specs.pages}
         </span>
         <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800">
-          {order.orientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT'}
+          {specs.orientation}
         </span>
         <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800">
-          {copies} {copies === 1 ? 'COPY' : 'COPIES'}
+          {specs.copies}
         </span>
       </div>
 
@@ -146,7 +145,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         <div className="flex justify-between text-sm">
           <span className="text-gray-500 font-medium">Total Amount:</span>
           <span className="font-bold text-carbon-gray-100">
-            ₱{order.total || 0}
+            {specs.total}
           </span>
         </div>
       </div>
@@ -178,7 +177,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
               e.stopPropagation();
               setIsAssetLoading(true);
               setHasImageError(false);
-              setPreviewUrl(order.assets[0].file_url);
+              setPreviewUrl(documentUrl || null);
               setIsPreviewOpen(true);
             }}
             className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6]`}
@@ -227,7 +226,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         </div>
       )}
 
-      {isDetailsOpen && <OrderCardDetailsDialog orderId={order.id} filename={title.filename} customer={title.customer} onClose={() => setIsDetailsOpen(false)} />}
+      {isDetailsOpen && <OrderCardDetailsDialog order={order} onClose={() => setIsDetailsOpen(false)} />}
 
       {/* Document Preview Modal */}
       {isPreviewOpen &&
