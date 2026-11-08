@@ -95,7 +95,7 @@ export const ShopOrdersPage: React.FC = () => {
  {order.state === 'COMPLETED' ? 'HANDED OVER' : order.state === 'PRINTED' ? 'PRINTED; OUTPUT UNCONFIRMED' : order.state.replace(/_/g, ' ')}
  </span>
  <p className="mt-2 text-xs">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} ? {order.payment_status?.replaceAll('_', ' ')}</p>
- <p className="mt-1 text-xs">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</p>
+ {order.payment_method === 'CASH_ON_PICKUP' && <p className="mt-1 text-xs">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</p>}
  </td>
  </tr>
  ))}

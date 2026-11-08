@@ -50,6 +50,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
 }) => {
  const status = paymentStatus || (orderState === 'AWAITING_PAYMENT_VERIFICATION' ? 'PENDING_VERIFICATION' : orderState === 'ESCALATED_DISPUTE' ? 'DISPUTED' : orderState === 'AWAITING_PAYMENT' ? 'REJECTED' : 'UNPAID');
  const isCash = paymentMethod === 'CASH_ON_PICKUP';
+ const hasPaymentDeadline = !isCash && orderState === 'OPEN_INQUIRY' && ['UNPAID', 'REJECTED'].includes(status);
  const closed = ['CANCELLED', 'REJECTED', 'EXPIRED', 'COMPLETED'].includes(orderState || '');
  const canCancel = orderState === 'OPEN_INQUIRY';
  const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -82,10 +83,9 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  ) => setAlertState({ isOpen: true, message, type, title, onCloseCallback });
 
  useEffect(() => {
+ if (!hasPaymentDeadline) return;
  const updateTimer = () => {
- const expiryTime = !isCash && orderState === 'OPEN_INQUIRY' && ['UNPAID', 'REJECTED'].includes(status)
- ? expiresAt ? new Date(expiresAt).getTime() : status === 'UNPAID' && createdAt ? new Date(createdAt).getTime() + 15 * 60000 : null
- : null;
+ const expiryTime = expiresAt ? new Date(expiresAt).getTime() : status === 'UNPAID' && createdAt ? new Date(createdAt).getTime() + 15 * 60000 : null;
 
  if (expiryTime === null) {
  setTimeLeft('');
@@ -116,10 +116,10 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  updateTimer();
  const intervalId = setInterval(updateTimer, 1000);
  return () => clearInterval(intervalId);
- }, [createdAt, expiresAt, orderState, isCash, status]);
+ }, [createdAt, expiresAt, hasPaymentDeadline, status]);
 
  useEffect(() => {
- if (!isExpired) return;
+ if (!hasPaymentDeadline || !isExpired) return;
  const alertTimer = window.setTimeout(() => setAlertState({
  isOpen: true,
  title: 'Order Expired',
@@ -128,7 +128,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  onCloseCallback: () => navigate('/new-order?tab=orders'),
  }), 0);
  return () => window.clearTimeout(alertTimer);
- }, [isExpired, navigate]);
+ }, [hasPaymentDeadline, isExpired, navigate]);
 
  const handleSubmit = async () => {
  if (!receiptFile || !referenceNumber.trim() || isCash || closed) return;
@@ -180,7 +180,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  return (
  <article aria-busy={isSubmitting || isCancelling || isDisputing} className="relative w-full overflow-hidden border border-black bg-white shadow-[0_20px_60px_rgba(0,0,0,0.36)]">
 
- {isExpired && (
+ {hasPaymentDeadline && isExpired && (
  <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/90 p-6 backdrop-blur-sm" role="status">
  <div className="border border-black bg-white px-8 py-7 text-center shadow-xl">
  <WarningAlt aria-hidden="true" className="mx-auto h-10 w-10 text-red-700" />
@@ -196,7 +196,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  <h1 className="mt-1 text-2xl font-black tracking-tight text-carbon-gray-100 sm:text-3xl">Checkout &amp; Payment</h1>
  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-600">
  <span className="border border-gray-300 bg-carbon-gray-10 px-2.5 py-1 font-mono">Order #{orderId.slice(0, 8)}</span>
- {timeLeft && orderState !== 'AWAITING_PAYMENT_VERIFICATION' && (
+ {hasPaymentDeadline && timeLeft && (
  <span className="flex items-center gap-1.5 border-l-4 border-carbon-blue-60 bg-blue-50 px-2.5 py-1 text-carbon-gray-100" role="timer" aria-live="off">
  <Time aria-hidden="true" className="h-4 w-4" />
  Expires in <span className="font-black tabular-nums">{timeLeft}</span>
@@ -263,7 +263,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
 
  <section className="grid gap-3 border border-black bg-carbon-gray-10 p-4 text-sm sm:grid-cols-3" aria-label="Order and payment status">
  <div><p className="text-xs font-bold uppercase text-gray-600">Payment method</p><p className="mt-1 font-bold">{isCash ? 'Cash on pickup' : 'GCash'}</p></div>
- <div><p className="text-xs font-bold uppercase text-gray-600">Shop acceptance</p><p className="mt-1 font-bold">{acceptanceStatus.replaceAll('_', ' ')}</p></div>
+ {isCash && <div><p className="text-xs font-bold uppercase text-gray-600">Shop acceptance</p><p className="mt-1 font-bold">{acceptanceStatus.replaceAll('_', ' ')}</p></div>}
  <div><p className="text-xs font-bold uppercase text-gray-600">Payment</p><p className="mt-1 font-bold">{status.replaceAll('_', ' ')}</p></div>
  {acceptanceReason && <p className="sm:col-span-3">Shop reason: {acceptanceReason}</p>}
  {isUnclaimed && <p className="sm:col-span-3 text-amber-900">Marked unclaimed: {unclaimedReason || 'Contact the shop to arrange collection.'} Your prints remain available for pickup.</p>}
@@ -273,7 +273,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  <section className="border border-gray-300 bg-carbon-gray-10 p-5 sm:p-7" role="status">
  <p className="text-xs font-bold uppercase tracking-wider text-carbon-blue-60">{closed ? 'Order status' : isCash ? 'Pay at the shop' : 'Payment verified'}</p>
  <h2 className="mt-2 text-xl font-black">{orderState === 'COMPLETED' ? 'Handed over' : closed ? orderState?.replaceAll('_', ' ') : isCash ? status === 'COLLECTED' ? 'Cash collected' : `Amount due at pickup: ₱${Number(amount).toFixed(2)}` : 'Your payment has been recorded'}</h2>
- <p className="mt-3 text-sm leading-relaxed text-gray-700">{status === 'REFUND_DUE' ? 'A full manual refund is due. Contact the print shop; PrintFlow does not transfer funds.' : status === 'REFUNDED' ? 'The shop has recorded your full manual refund.' : isCash ? 'The shop reviews your file and accepts the order separately. Pay the full amount before handover; no GCash receipt is needed.' : 'Shop acceptance and payment verification are separate. Track production and pickup in My Orders.'}</p>
+ <p className="mt-3 text-sm leading-relaxed text-gray-700">{status === 'REFUND_DUE' ? 'A full manual refund is due. Contact the print shop; PrintFlow does not transfer funds.' : status === 'REFUNDED' ? 'The shop has recorded your full manual refund.' : isCash ? orderState === 'COMPLETED' && status === 'COLLECTED' ? 'The shop has recorded your cash payment and completed your order.' : 'The shop reviews your file and accepts the order separately. Pay the full amount before handover; no GCash receipt is needed.' : 'Receipt verification authorizes production when your document is valid. Track production and pickup in My Orders.'}</p>
  </section>
  ) : status === 'DISPUTED' ? (
  <section className="flex min-h-72 flex-col items-center justify-center border border-blue-300 bg-blue-50 px-6 py-10 text-center" role="status">
@@ -290,7 +290,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  </span>
  <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-carbon-blue-60">Receipt submitted</p>
  <h2 className="mt-1 text-xl font-black text-carbon-gray-100">Verifying payment</h2>
- <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-700">Print shop is reviewing your receipt. Payment verification and shop acceptance are separate. Production starts only when both are confirmed.</p>
+ <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-700">The print shop is reviewing your receipt. Verifying it authorizes production when your document is valid.</p>
  </section>
  ) : (
  <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-6">

@@ -36,10 +36,10 @@ function text(node) {
 test('responsive capacities use exact width and desktop fit boundaries', () => {
   for (const width of [375, 667, 767]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 3, rows: 3, contained: false });
   for (const width of [768, 820, 1024, 1180, 1279]) assert.deepEqual(plain(getLiveQueueLayout(width, 900)), { pageSize: 4, rows: 2, contained: false });
-  assert.deepEqual(plain(getLiveQueueLayout(1280, 716)), { pageSize: 6, rows: 2, contained: true });
-  assert.deepEqual(plain(getLiveQueueLayout(1440, 715.99)), { pageSize: 3, rows: 1, contained: true });
-  assert.equal(getLiveQueueLayout(1280, 352).contained, true);
-  assert.equal(getLiveQueueLayout(1280, 351.99).contained, false);
+  assert.deepEqual(plain(getLiveQueueLayout(1280, 524)), { pageSize: 6, rows: 2, contained: true });
+  assert.deepEqual(plain(getLiveQueueLayout(1440, 523.99)), { pageSize: 3, rows: 1, contained: true });
+  assert.equal(getLiveQueueLayout(1280, 256).contained, true);
+  assert.equal(getLiveQueueLayout(1280, 255.99).contained, false);
   assert.equal(getLiveQueueLayout(1920, -10).pageSize, 3);
 });
 
@@ -107,7 +107,6 @@ function dashboardHarness() {
   const componentMocks = {
     '../../components/dashboard/skeletons/DashboardSkeleton': { DashboardSkeleton: 'Skeleton' },
     '../../components/dashboard/OrderCard': { OrderCard: 'Card' },
-    '../../components/dashboard/ShopOrderActions': { ShopOrderActions: 'ShopOrderActions' },
     '../../components/dashboard/PaymentReviewPanel': { PaymentReviewPanel: 'PaymentReview' },
     '../../components/dashboard/QueuePagination': { QueuePagination: 'Pagination' },
     '../../components/dashboard/PrintJobProgressModal': { PrintJobProgressModal: 'Progress' },
@@ -229,4 +228,25 @@ test('ready selections persist across pagination, resizing, and queues', () => {
   app.tab('completed'); app.tab('ready');
   assert.equal(app.cards()[0].props.isSelected, true);
   assert.match(text(app.render()), /1 not on this page/);
+});
+
+test('every queue opens its order modal from the card without an appended action section', () => {
+  const app = dashboardHarness();
+  for (const queue of ['new', 'ready', 'completed']) {
+    app.tab(queue);
+    const card = app.cards()[0];
+    assert.equal(card.props.footer, undefined);
+    card.props.onReviewOrder();
+    const modal = app.find('PaymentReview');
+    assert.equal(modal.props.isOpen, true);
+    assert.equal(modal.props.order.id, card.props.order.id);
+    assert.equal(typeof modal.props.onUpdated, 'function');
+    // An accepted/collected order stays in the modal for the next decision.
+    // The confirmation closes before the parent dialog can be dismissed.
+    modal.props.onUpdated({ id: card.props.order.id, payment_status: 'COLLECTED' });
+    assert.equal(app.find('PaymentReview').props.order.payment_status, 'COLLECTED');
+    assert.equal(app.find('PaymentReview').props.isOpen, true);
+    modal.props.onClose();
+    assert.equal(app.find('PaymentReview').props.isOpen, false);
+  }
 });

@@ -7,7 +7,6 @@ import { DashboardSkeleton } from '../../components/dashboard/skeletons/Dashboar
 import { orderService } from '../../services/orderService';
 import { OrderCard } from '../../components/dashboard/OrderCard';
 import { PaymentReviewPanel } from '../../components/dashboard/PaymentReviewPanel';
-import { ShopOrderActions } from '../../components/dashboard/ShopOrderActions';
 import type { OrderDecisionResponse } from '../../services/orderService';
 import { QueuePagination } from '../../components/dashboard/QueuePagination';
 import { daemonSocketService } from '../../services/daemonSocketService';
@@ -636,12 +635,12 @@ export const ShopDashboard: React.FC = () => {
  </div>
  )}
 
- <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-y-auto' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? 'minmax(22rem, max-content)' : 'repeat(2, minmax(22rem, max-content))' } : undefined}>
+ <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-y-auto' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
  {activeVisibleOrders.map(order => activeQueue === 'ready' ? (
  <OrderCard
  key={order.id}
  order={order}
- footer={<ShopOrderActions order={order} onUpdated={handleOrderUpdated} />}
+ onReviewOrder={() => setSelectedPaymentOrder(order)}
  onClick={() => handleToggleReadySelection(order.id)}
  isSelected={selectedReadyOrders.includes(order.id)}
  onToggleSelect={handleToggleReadySelection}
@@ -650,8 +649,7 @@ export const ShopDashboard: React.FC = () => {
  <OrderCard
  key={order.id}
  order={order}
- onReviewPayment={['PENDING_VERIFICATION', 'DISPUTED'].includes(order.payment_status) ? () => setSelectedPaymentOrder(order) : undefined}
- footer={<ShopOrderActions order={order} onUpdated={handleOrderUpdated} />}
+ onReviewOrder={() => setSelectedPaymentOrder(order)}
  />
  ))}
  {activeOrders.length === 0 && (
@@ -681,6 +679,10 @@ export const ShopDashboard: React.FC = () => {
  order={selectedPaymentOrder}
  onClose={() => setSelectedPaymentOrder(null)}
  onVerify={handleVerifyPayment}
+ onUpdated={order => {
+ handleOrderUpdated(order);
+ setSelectedPaymentOrder((current: OrderDecisionResponse['order'] | null) => current?.id === order.id ? { ...current, ...order } : current);
+ }}
  isVerifying={isVerifying}
  />
 

@@ -73,6 +73,7 @@ function fixture(overrides = {}, reducedMotion = false) {
       if (name === 'react-dom') return { createPortal: node => node };
       if (name === 'framer-motion') return { motion: { div: 'div' }, useReducedMotion: () => reducedMotion };
       if (name === '@carbon/icons-react') return { Close: 'icon', Checkmark: 'icon' };
+      if (name === './ShopOrderActions') return { ShopOrderActions: 'ShopOrderActions' };
       if (name === '../maps/Maps.module.css') return { default: { primaryButton: 'primary', secondaryButton: 'secondary' } };
       throw new Error(`Unexpected import ${name}`);
     },
@@ -250,7 +251,7 @@ test('dashboard uses authoritative responses without inferring acceptance or pro
     exports,
     orderService: { verifyPayment: async (_id, action) => {
       if (failure) throw failure;
-      return { order: order({ state: 'OPEN_INQUIRY', payment_status: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED', acceptance_status: 'PENDING' }) };
+      return { order: order({ state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'OPEN_INQUIRY', payment_status: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED', acceptance_status: action === 'APPROVE' ? 'ACCEPTED' : 'PENDING' }) };
     } },
     setIsVerifying: value => state.busy.push(value),
     setSelectedPaymentOrder: value => { state.selected = value; },
@@ -264,9 +265,9 @@ test('dashboard uses authoritative responses without inferring acceptance or pro
   failure = null;
   for (const [action, expected] of [['APPROVE', 'VERIFIED'], ['REJECT', 'REJECTED']]) {
     await exports.handleVerifyPayment('order-12345678', action, 'Reason', 'receipt-current', true);
-    assert.equal(state.orders[0].state, 'OPEN_INQUIRY');
+    assert.equal(state.orders[0].state, action === 'APPROVE' ? 'IN_PRODUCTION' : 'OPEN_INQUIRY');
     assert.equal(state.orders[0].payment_status, expected);
-    assert.equal(state.orders[0].acceptance_status, 'PENDING');
+    assert.equal(state.orders[0].acceptance_status, action === 'APPROVE' ? 'ACCEPTED' : 'PENDING');
     assert.equal(state.selected, null);
   }
   assert.equal(state.refreshed, 2);
@@ -282,4 +283,49 @@ test('verification requires explicit evidence confirmation and never reviews an 
   f.confirm(); f.button(approve).props.onClick(); await f.flush();
   assert.equal(f.calls.length, 0);
   assert.match(f.text(f.find(node => node.props.role === 'alert')), /current receipt is unavailable/);
+});
+
+test('cash modal shows pickup payment and shop decisions without GCash receipt controls', () => {
+  const f = fixture({ order: order({ payment_method: 'CASH_ON_PICKUP', payment_status: 'DUE_AT_PICKUP', state: 'OPEN_INQUIRY' }), onUpdated() {} });
+  assert.ok(f.find(node => f.text(node).includes('Amount due at pickup: ₱50.00')));
+  assert.equal(f.find(node => node.type === 'img'), undefined);
+  assert.equal(f.button(approve), undefined);
+  assert.equal(f.button(reject), undefined);
+  const actions = f.find(node => node.type === 'ShopOrderActions');
+  assert.equal(actions.props.order.payment_method, 'CASH_ON_PICKUP');
+  assert.equal(actions.props.order.payment_status, 'DUE_AT_PICKUP');
+  assert.match(f.text(f.find(node => f.text(node).includes('Recording cash collection'))), /Recording cash collection completes the order/);
+  f.update({ order: order({ payment_method:'CASH_ON_PICKUP', payment_status:'COLLECTED', state:'COMPLETED', acceptance_status:'ACCEPTED' }) });
+  assert.ok(f.find(node => f.text(node).includes('Cash payment has been collected. This order is complete.')));
+  assert.equal(f.find(node => f.text(node).includes('then confirm handover')), undefined);
+});
+
+test('settled GCash orders retain fulfillment actions and receipt inspection without repeat verification', () => {
+  const f = fixture({ order: order({ payment_method: 'GCASH', payment_status: 'VERIFIED', state: 'OPEN_INQUIRY' }), onUpdated() {} });
+  assert.ok(f.find(node => node.type === 'img'));
+  assert.ok(f.find(node => node.type === 'ShopOrderActions'));
+  assert.equal(f.button(approve), undefined);
+  assert.equal(f.button(reject), undefined);
+  assert.equal(f.find(node => f.text(node) === 'Shop acceptance: PENDING'), undefined);
+  assert.ok(f.find(node => f.text(node).includes('Verifying the receipt authorizes production')));
+});
+
+test('shop confirmation owns dismissal and blocks concurrent receipt verification', () => {
+  const f = fixture({ onUpdated() {} });
+  const actions = f.find(node => node.type === 'ShopOrderActions');
+  actions.props.onBusyChange(true); f.render();
+  f.escape(); f.button('Close payment review').props.onClick();
+  f.button(approve).props.onClick();
+  assert.equal(f.closed(), 0);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.button(approve).props.disabled, true);
+  let prevented = false;
+  f.listeners.get('keydown')({ key:'Tab', preventDefault() { prevented = true; } });
+  assert.equal(prevented, true); // Immediate decisions keep focus in the parent dialog.
+  prevented = false;
+  f.listeners.get('keydown')({ key:'Tab', target:{closest:() => ({})}, preventDefault() { prevented = true; } });
+  assert.equal(prevented, false); // Nested financial confirmations handle their own keys.
+  actions.props.onBusyChange(false); f.render();
+  f.escape();
+  assert.equal(f.closed(), 1);
 });

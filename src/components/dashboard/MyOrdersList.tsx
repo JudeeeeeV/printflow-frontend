@@ -180,7 +180,7 @@ export const MyOrdersList: React.FC = () => {
  {badge.text}
  </span>
  <span className="mt-2 text-xs font-bold text-gray-800">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} ? {order.payment_status?.replaceAll('_', ' ')}</span>
- <span className="mt-1 text-xs text-gray-600">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</span>
+ {order.payment_method === 'CASH_ON_PICKUP' && <span className="mt-1 text-xs text-gray-600">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</span>}
  {order.acceptance_reason && <span className="mt-1 max-w-xs whitespace-normal text-xs text-red-700">{order.acceptance_reason}</span>}
  {order.payment_status === 'REFUND_DUE' && <span className="mt-1 max-w-xs whitespace-normal text-xs text-amber-800">Contact the shop for your full manual refund.</span>}
  {order.is_unclaimed && <span className="mt-1 max-w-xs whitespace-normal text-xs text-amber-800">Unclaimed: {order.unclaimed_reason}. Contact the shop to collect.</span>}
