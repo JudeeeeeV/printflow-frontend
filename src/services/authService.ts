@@ -26,6 +26,14 @@ export interface AuthResponse {
  refreshToken?: string;
 }
 
+const isCaptchaError = (error: { code?: string; message: string }) =>
+  error.code === 'captcha_failed' || /captcha/i.test(error.message);
+
+const CAPTCHA_FAILED_MESSAGE = 'The security check failed. Please complete it again.';
+
+const toAuthError = (error: { code?: string; message: string }) =>
+  new Error(isCaptchaError(error) ? CAPTCHA_FAILED_MESSAGE : error.message);
+
 export const authService = {
  getProfile(): Promise<{ firstName: string; lastName: string }> {
    return apiClient('/auth/profile');
@@ -36,7 +44,7 @@ export const authService = {
      method: 'PATCH', body: JSON.stringify({ firstName, lastName }),
    });
  },
- async register(payload: RegisterPayload): Promise<{ requiresEmailVerification: boolean; email: string }> {
+ async register(payload: RegisterPayload, captchaToken?: string): Promise<{ requiresEmailVerification: boolean; email: string }> {
    const firstName = payload.firstName.trim().replace(/\s+/g, ' ');
    const lastName = payload.lastName.trim().replace(/\s+/g, ' ');
    if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) {
@@ -46,6 +54,7 @@ export const authService = {
      email: payload.email,
      password: payload.passwordHash,
      options: {
+       captchaToken,
        data: {
          first_name: firstName,
          last_name: lastName,
@@ -55,7 +64,7 @@ export const authService = {
      }
    });
    
-   if (error) throw new Error(error.message);
+   if (error) throw toAuthError(error);
    return { requiresEmailVerification: true, email: payload.email };
  },
 
@@ -70,13 +79,14 @@ export const authService = {
    return { verified: true };
  },
 
- async resendCode(email: string): Promise<{ message: string }> {
+ async resendCode(email: string, captchaToken?: string): Promise<{ message: string }> {
    const { error } = await supabase.auth.resend({
      type: 'signup',
      email,
+     options: { captchaToken },
    });
    
-   if (error) throw new Error(error.message);
+   if (error) throw toAuthError(error);
    return { message: 'A new verification code has been sent.' };
  },
 
@@ -91,8 +101,10 @@ export const authService = {
    return response;
  },
 
- async sendPasswordReset(email: string): Promise<{ message: string }> {
-   const { error } = await supabase.auth.resetPasswordForEmail(email);
+ async sendPasswordReset(email: string, captchaToken?: string): Promise<{ message: string }> {
+   const { error } = await supabase.auth.resetPasswordForEmail(email, { captchaToken });
+   // A failed security check says nothing about whether the account exists.
+   if (error && isCaptchaError(error)) throw new Error(CAPTCHA_FAILED_MESSAGE);
    // Don't throw if it fails, just return success so we don't leak existing emails
    if (error) console.error("Password reset failed", error);
    return { message: 'If an account exists, a reset code has been sent.' };

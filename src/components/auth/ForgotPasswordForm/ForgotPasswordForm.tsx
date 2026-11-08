@@ -4,7 +4,11 @@ import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { EmailInput } from '../EmailInput/EmailInput';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
 import { authService } from '../../../services/authService';
-import { EMAIL_RESEND_SECONDS, useRetryCountdown } from '../../../hooks/useRetryCountdown';
+import { CaptchaWidget } from '../CaptchaWidget/CaptchaWidget';
+import { useCaptcha } from '../CaptchaWidget/useCaptcha';
+import { EMAIL_RESEND_SECONDS, getRemainingEmailCooldown, rememberEmailSent, useRetryCountdown } from '../../../hooks/useRetryCountdown';
+
+const RESET_COOLDOWN = 'password-reset';
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void;
@@ -22,6 +26,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const { seconds: cooldown, start: startCooldown } = useRetryCountdown();
+  const captcha = useCaptcha();
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +38,24 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
       return;
     }
 
+    // After a reload, continue the earlier request instead of sending another.
+    const remaining = getRemainingEmailCooldown(RESET_COOLDOWN, email);
+    if (remaining > 0) {
+      startCooldown(remaining);
+      setMessage('A code was requested recently. Enter it below, or request another when the timer ends.');
+      setStep('reset');
+      return;
+    }
+
+    if (!captcha.ready) {
+      setError('Please complete the security check.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await authService.sendPasswordReset(email);
+      await authService.sendPasswordReset(email, captcha.take());
+      rememberEmailSent(RESET_COOLDOWN, email);
       startCooldown(EMAIL_RESEND_SECONDS);
       setStep('reset');
     } catch (err: unknown) {
@@ -50,12 +70,18 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   };
 
   const handleResend = async () => {
-    if (isSubmitting || cooldown > 0) return;
+    if (isSubmitting || cooldown > 0 || !captcha.ready) return;
+    const remaining = getRemainingEmailCooldown(RESET_COOLDOWN, email);
+    if (remaining > 0) {
+      startCooldown(remaining);
+      return;
+    }
     setError(null);
     setMessage(null);
     setIsSubmitting(true);
     try {
-      await authService.sendPasswordReset(email);
+      await authService.sendPasswordReset(email, captcha.take());
+      rememberEmailSent(RESET_COOLDOWN, email);
       startCooldown(EMAIL_RESEND_SECONDS);
       setMessage('If an account exists for this email, a new code has been sent.');
     } catch (err: unknown) {
@@ -228,11 +254,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
             isLoading={isSubmitting}
             disabled={!isPasswordStrong || code.length !== 8 || isSubmitting}
           />
+          {cooldown === 0 && <div className="mt-4"><CaptchaWidget key={captcha.widgetKey} onToken={captcha.setToken} /></div>}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm mt-4">
             <button
               type="button"
               onClick={handleResend}
-              disabled={isSubmitting || cooldown > 0}
+              disabled={isSubmitting || cooldown > 0 || !captcha.ready}
               className="font-bold text-carbon-gray-100 hover:text-carbon-blue-60 disabled:text-gray-400 transition-colors"
             >
               {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
@@ -267,6 +294,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         }} />
       </div>
 
+      <CaptchaWidget key={captcha.widgetKey} onToken={captcha.setToken} />
+
       <AuthErrorMessage message={error} />
 
       {message && (
@@ -279,7 +308,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         <SubmitButton
           label="Send Reset Code"
           isLoading={isSubmitting}
-          disabled={!email || !isEmailValid}
+          disabled={!email || !isEmailValid || !captcha.ready}
         />
         <button
           type="button"

@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { authService, type RegisterPayload } from '../../../services/authService';
 import { AuthErrorMessage } from '../AuthErrorMessage/AuthErrorMessage';
 import { SubmitButton } from '../SubmitButton/SubmitButton';
+import { CaptchaWidget } from '../CaptchaWidget/CaptchaWidget';
+import { useCaptcha } from '../CaptchaWidget/useCaptcha';
 
 export function EmailVerification({ registration, onBack, onSignIn, onVerified }: { registration: RegisterPayload; onBack: () => void; onSignIn: () => void; onVerified: () => void }) {
   const email = registration.email;
@@ -14,6 +16,7 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
   const [message, setMessage] = useState('Enter the 8-digit code sent to your email. Check your spam folder too.');
   const { seconds: cooldown, start: startCooldown } = useRetryCountdown(EMAIL_RESEND_SECONDS);
   const [rateLimited, setRateLimited] = useState(false);
+  const captcha = useCaptcha();
   async function verify(e: React.FormEvent) {
     e.preventDefault();
     if (busy || !/^[0-9]{8}$/.test(code)) return;
@@ -26,10 +29,10 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
     finally { setBusy(false); }
   }
   async function resend() {
-    if (busy || cooldown > 0) return;
+    if (busy || cooldown > 0 || !captcha.ready) return;
     setBusy(true); setError('');
     try {
-      const result = await authService.resendCode(email);
+      const result = await authService.resendCode(email, captcha.take());
       setMessage(result.message); setCode(''); startCooldown(EMAIL_RESEND_SECONDS); setRateLimited(false);
     } catch (err) {
       const wait = getRetrySeconds(err);
@@ -93,8 +96,9 @@ export function EmailVerification({ registration, onBack, onSignIn, onVerified }
         <div className="flex flex-col gap-4 mt-2">
           <SubmitButton label="Verify Email" isLoading={busy} disabled={code.length !== 8 || busy} />
 
+          {cooldown === 0 && <CaptchaWidget key={captcha.widgetKey} onToken={captcha.setToken} />}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm mt-2">
-            <button type="button" disabled={busy || cooldown > 0} onClick={resend} className="font-bold text-carbon-gray-100 hover:text-carbon-blue-60 disabled:text-gray-400 transition-colors">
+            <button type="button" disabled={busy || cooldown > 0 || !captcha.ready} onClick={resend} className="font-bold text-carbon-gray-100 hover:text-carbon-blue-60 disabled:text-gray-400 transition-colors">
               {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
             </button>
             <button type="button" disabled={busy} onClick={onBack} className="font-bold text-carbon-gray-100 hover:text-carbon-blue-60 disabled:text-gray-400 transition-colors">

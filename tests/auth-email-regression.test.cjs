@@ -143,6 +143,22 @@ test('recovery mail errors retain the existing generic response without leaking 
   assert.equal(f.loggedErrors.length, 1);
 });
 
+test('security check tokens are sent with signup, resend and password reset', async () => {
+  const f = setup();
+  await f.service.register(payload, 'token-a');
+  await f.service.resendCode(payload.email, 'token-b');
+  await f.service.sendPasswordReset(payload.email, 'token-c');
+  assert.deepEqual(f.calls.map(call => call.body.gotrue_meta_security.captcha_token), ['token-a', 'token-b', 'token-c']);
+});
+
+test('a failed security check is reported instead of claiming a code was sent', async () => {
+  const failure = () => authError(400, 'captcha_failed', 'captcha protection: request disallowed (timeout-or-duplicate)');
+  const message = /security check failed/;
+  await assert.rejects(setup(failure).service.sendPasswordReset(payload.email, 'used'), message);
+  await assert.rejects(setup(failure).service.resendCode(payload.email, 'used'), message);
+  await assert.rejects(setup(failure).service.register(payload, 'used'), message);
+});
+
 test('reset verifies recovery OTP before changing the password, then signs out', async () => {
   const f = setup();
   await f.service.resetPassword({ email: payload.email, code: '01234567', passwordHash: 'NewPassword1!' });
