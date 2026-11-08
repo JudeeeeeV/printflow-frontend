@@ -15,6 +15,7 @@ import {
 } from "../../services/daemonDeviceService";
 import { PrinterAgentSkeleton } from "./PrinterAgentSkeleton";
 import { useDataEvents } from "../../hooks/useDataEvents";
+import { daemonSocketService } from "../../services/daemonSocketService";
 
 const formatDate = (value: string | null) =>
   value
@@ -41,9 +42,14 @@ export const ShopPrinterAgentPage: React.FC = () => {
   const revokeDialogRef = useRef<HTMLDivElement>(null);
   const cancelRevokeRef = useRef<HTMLButtonElement>(null);
   const devicesLoadingRef = useRef(false);
+  const reloadRequestedRef = useRef(false);
 
-  const load = useCallback(async (showLoader = false) => {
-    if (devicesLoadingRef.current) return;
+  const load = useCallback(async function loadDevices(showLoader = false) {
+    if (devicesLoadingRef.current) {
+      // The running request may predate this change, so read again after it.
+      reloadRequestedRef.current = true;
+      return;
+    }
     devicesLoadingRef.current = true;
     if (showLoader) setIsLoading(true);
     try {
@@ -60,6 +66,10 @@ export const ShopPrinterAgentPage: React.FC = () => {
     } finally {
       devicesLoadingRef.current = false;
       setIsLoading(false);
+      if (reloadRequestedRef.current) {
+        reloadRequestedRef.current = false;
+        void loadDevices(false);
+      }
     }
   }, []);
 
@@ -78,6 +88,16 @@ export const ShopPrinterAgentPage: React.FC = () => {
   }, [load]);
 
   useDataEvents(["devices"], () => void load(false));
+
+  // Printers plugged in or removed are pushed over the agent socket.
+  useEffect(() => {
+    let previous: string | null = null;
+    return daemonSocketService.onPrintersList((printers) => {
+      const snapshot = JSON.stringify(printers);
+      if (previous !== null && snapshot !== previous) void load(false);
+      previous = snapshot;
+    });
+  }, [load]);
 
   useEffect(() => {
     let cancelled = false;
