@@ -139,7 +139,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  <div className="overflow-hidden">
  <div
  key={displayedPage}
- className={`flex min-h-[528px] flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
+ className={`flex flex-col gap-3 ${slideDirection === 'next' ? styles.slideFromRight : slideDirection === 'previous' ? styles.slideFromLeft : ''}`}
  >
  {visibleShops.map(({ shop, distance }) => {
  const open = isShopOpen(shop, availabilityNow);

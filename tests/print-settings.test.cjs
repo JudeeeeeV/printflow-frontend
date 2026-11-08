@@ -24,9 +24,9 @@ function text(node) { return Array.isArray(node) ? Array.from(node, text).join('
 const button = (tree, label) => nodes(tree).find(node => node.type === 'button' && text(node).trim() === label);
 const shop = { id: 'shop', pricing_matrix: { paper_sizes: { A4: 3 }, color_mode_multipliers: { COLOR: 3, BLACK_AND_WHITE: 0 } } };
 
-function fixture(kind = 'new', busy = false, draftOverrides = {}) {
+function fixture(kind = 'new', busy = false, draftOverrides = {}, options = {}) {
   const hooks = []; let cursor = 0, effects = [], dirty = false, tree;
-  const calls = [], navigation = [];
+  const calls = [], navigation = []; let cacheInvalidations = 0;
   const react = {
     useState(initial) {
       const index = cursor++;
@@ -43,12 +43,12 @@ function fixture(kind = 'new', busy = false, draftOverrides = {}) {
     },
   };
   const services = { submitOrder: async (...args) => { calls.push(['submit', ...args]); if (busy) await new Promise(() => {}); return { orderId: 'created' }; },
-    saveDraft: async (...args) => calls.push(['save', ...args]), updateDraftWithoutFile: async (...args) => calls.push(['update', ...args]),
+    saveDraft: async (...args) => { calls.push(['save', ...args]); return { orderId: 'saved' }; }, updateDraftWithoutFile: async (...args) => calls.push(['update', ...args]),
     submitDraft: async (...args) => calls.push(['submitDraft', ...args]), deleteDraft: async (...args) => calls.push(['delete', ...args]) };
   const markers = { ShopSelector: () => null, FileUploadZone: () => null };
   const mocks = { react, 'react/jsx-runtime': runtime, '@carbon/icons-react': { ArrowLeft: component, Document: component },
     '../../services/orderService': { orderService: services }, '../../services/shopService': { shopService: { getShops: async () => [shop] } },
-    '../../services/apiClient': { apiClient: async () => ({}) },
+    '../../services/apiClient': { apiClient: async () => ({}), invalidateApiCache: () => cacheInvalidations++ },
     '../../hooks/useDataEvents': { useDataEvents: () => {} },
     'react-router-dom': { useNavigate: () => target => navigation.push(target), useSearchParams: () => [new URLSearchParams(), () => {}] },
     '../../components/orders/ShopSelector/ShopSelector': markers, '../orders/ShopSelector/ShopSelector': markers,
@@ -59,15 +59,19 @@ function fixture(kind = 'new', busy = false, draftOverrides = {}) {
     '../../components/common/AlertModal': { AlertModal: component }, '../common/AlertModal': { AlertModal: component },
     '../../components/auth/ChangePasswordModal': { ChangePasswordModal: component },
     '../../assets/printflow-logo-dark.png': { default: 'logo.png' }, './NewOrderPage.module.css': { default: {} },
-    'pdf-lib': { PDFDocument: { load: async () => ({ getPageCount: () => 4, getPage: () => ({ getSize: () => ({ width:400,height:800 }) }) }) } },
+    'pdf-lib': { EncryptedPDFError: class EncryptedPDFError extends Error {}, PDFDocument: { load: options.pdfLoad || (async () => ({ getPageCount: () => 4, getPage: () => ({ getSize: () => ({ width:400,height:800 }) }) })) } },
   };
   const draft = { id: 'draft', shopId: 'shop', fileUrl: 'stored.pdf', fileName: 'four.pdf', paperSize: 'A4', printColorMode: 'COLOR', pageCount: 4, orderName: 'Saved', orientation: 'LANDSCAPE', copies: 2, ...draftOverrides };
-  const globals = { URLSearchParams, console, setTimeout: callback => { queueMicrotask(callback); return 1; }, URL: { createObjectURL: () => 'blob:fixture', revokeObjectURL() {} } };
+  const globals = { File, Error, URLSearchParams, console, setTimeout: callback => { queueMicrotask(callback); return 1; }, URL: { createObjectURL: () => 'blob:fixture', revokeObjectURL() {} } };
+  const preparation = load('services/documentPreparation.ts', mocks, globals);
+  mocks['../../services/documentPreparation'] = preparation;
+  mocks['../../components/orders/FileFeedback'] = { FileFeedback: component };
+  mocks['../orders/FileFeedback'] = { FileFeedback: component };
   const module = kind === 'new' ? load('pages/NewOrderPage/NewOrderPage.tsx', mocks, globals) : load('components/dashboard/EditDraftPanel.tsx', mocks, globals);
   const render = () => {
     for (let i=0; i<10; i++) {
       dirty = false; cursor = 0; effects = [];
-      tree = kind === 'new' ? module.NewOrderPage({}) : module.EditDraftPanel({ draft, shops: [shop], onCancel() {}, onSuccess: id => navigation.push(id) });
+      tree = kind === 'new' ? module.NewOrderPage({}) : module.EditDraftPanel({ draft, shops: [shop], onCancel: () => navigation.push('drafts'), onSuccess: id => navigation.push(id) });
       effects.forEach(effect => effect()); if (!dirty) return;
     }
     throw new Error('Render did not settle');
@@ -75,9 +79,13 @@ function fixture(kind = 'new', busy = false, draftOverrides = {}) {
   const flush = async () => { await new Promise(resolve => setImmediate(resolve)); render(); };
   const summary = () => nodes(tree).find(node => node.type === OrderSummary).props;
   render();
-  return { calls, navigation, render, flush, summary, tree: () => tree,
+  return { calls, services, navigation, render, flush, summary, invalidations: () => cacheInvalidations,
+    feedback: () => nodes(tree).find(node => node.type === component && node.props.feedback)?.props,
+    upload: () => nodes(tree).find(node => node.type === markers.FileUploadZone)?.props,
+    unmount: () => hooks.forEach(hook => hook?.cleanup?.()),
+    tree: () => tree,
     selectShop() { nodes(tree).find(node => node.type === markers.ShopSelector).props.onSelect('shop'); render(); },
-    async selectFile() { await nodes(tree).find(node => node.type === markers.FileUploadZone).props.onFileSelect({ name:'four.pdf',type:'application/pdf',arrayBuffer:async()=>new ArrayBuffer(1) }); render(); },
+    async selectFile(file = new File(['%PDF-fixture'], 'four.pdf', {type:'application/pdf'})) { await nodes(tree).find(node => node.type === markers.FileUploadZone).props.onFileSelect(file); render(); },
   };
 }
 
@@ -195,3 +203,110 @@ test('order service serializes cash choice in multipart and draft JSON payloads'
   assert.equal(calls[1].body.get('paymentMethod'),'CASH_ON_PICKUP');
   assert.equal(JSON.parse(calls[2].body).paymentMethod,'CASH_ON_PICKUP');
 });
+
+
+const documentError = (code, status = 400) => Object.assign(new Error('File error'), {status, data: {code, field:'file', message:'Public problem', nextStep:'Public next step'}});
+async function preparedForm(kind, options = {}) {
+  const f = fixture(kind, false, {}, options);
+  await f.flush();
+  if (kind === 'new') { f.selectShop(); await f.selectFile(); f.summary().setOrderName('Ready'); f.render(); }
+  return f;
+}
+for (const kind of ['new', 'edit']) {
+  test(`${kind}: a bad replacement invalidates readiness while preserving print settings`, async () => {
+    const f = await preparedForm(kind);
+    f.summary().setCopies(3); f.summary().setOrientation('LANDSCAPE'); f.render();
+    button(f.tree(),'Remove file').props.onClick(); f.render();
+    await f.selectFile(new File(['html'], 'bad.html', {type:'text/html'}));
+    assert.equal(f.summary().isReady, false);
+    assert.equal(f.upload().validationResult.code,'UNSUPPORTED_FILE');
+    assert.equal(f.summary().copies,3); assert.equal(f.summary().orientation,'LANDSCAPE');
+    await f.summary().onSubmit(); assert.equal(f.calls.length,0);
+    await f.selectFile(); assert.equal(f.summary().isReady,true);
+  });
+  test(`${kind}: server file failures remain inline and prevent submission`, async () => {
+    const f = await preparedForm(kind);
+    const method = kind === 'new' ? 'submitOrder' : 'updateDraftWithoutFile';
+    f.services[method] = async () => { throw documentError('UNREADABLE_FILE'); };
+    await f.summary().onSubmit(); f.render();
+    assert.equal(f.upload().validationResult.code,'UNREADABLE_FILE');
+    assert.equal(f.summary().isReady,false);
+    assert.equal(f.calls.length,0);
+  });
+  test(`${kind}: temporary conversion failure retains the file and retries only on request`, async () => {
+    const f = await preparedForm(kind);
+    const method = kind === 'new' ? 'submitOrder' : 'updateDraftWithoutFile';
+    let attempts = 0;
+    f.services[method] = async () => { attempts++; throw documentError('CONVERSION_UNAVAILABLE',503); };
+    f.summary().setCopies(7); f.render();
+    await f.summary().onSubmit(); f.render();
+    assert.equal(attempts,1); assert.equal(f.summary().isReady,true); assert.equal(f.summary().copies,7);
+    assert.equal(f.feedback().feedback.retryable,true);
+    f.feedback().onRetry(); await f.flush(); assert.equal(attempts,2);
+  });
+  test(`${kind}: an interrupted submission shows an uncertain outcome without automatic replay`, async () => {
+    const f = await preparedForm(kind);
+    const method = kind === 'new' ? 'submitOrder' : 'submitDraft';
+    let attempts = 0;
+    f.services[method] = async () => { attempts++; throw Object.assign(new Error('Network failed'),{status:0}); };
+    await f.summary().onSubmit(); await f.flush();
+    assert.equal(attempts,1); assert.equal(f.feedback().feedback.uncertain,true);
+    assert.equal(f.feedback().feedback.retryable,undefined);
+    assert.equal(f.summary().isReady,true);
+    f.feedback().onCheckOrders(); f.render();
+    assert.equal(f.invalidations(),1);
+    assert.equal(attempts,1);
+  });
+  test(`${kind}: removal ignores a late file-read result`, async () => {
+    let resolve;
+    const pdfLoad = () => new Promise(done => { resolve = done; });
+    const f = fixture(kind, false, {}, {pdfLoad}); await f.flush();
+    if (kind === 'new') { f.selectShop(); f.summary().setOrderName('Waiting'); f.render(); }
+    else { button(f.tree(),'Remove file').props.onClick(); f.render(); }
+    const pending = f.selectFile(); await f.flush();
+    assert.equal(f.upload().isValidating,true); assert.equal(f.summary().isReady,false);
+    f.upload().onRemoveFile(); f.render();
+    resolve({getPageCount:()=>2,getPage:()=>({getSize:()=>({width:400,height:800})})});
+    await pending;
+    assert.equal(f.upload().isValidating,false); assert.equal(f.upload().validationResult,null);
+    assert.equal(f.summary().isReady,false);
+  });
+  test(`${kind}: rapid duplicate submission clicks issue only one pending request`, async () => {
+    const f = await preparedForm(kind);
+    let resolve, attempts=0;
+    f.services[kind === 'new' ? 'submitOrder' : 'updateDraftWithoutFile'] = () => { attempts++; return new Promise(done => { resolve=done; }); };
+    const submit = f.summary().onSubmit;
+    const pending = submit(); await submit(); assert.equal(attempts,1);
+    resolve({orderId:'created'}); await pending;
+  });
+}
+for (const operation of ['onSubmit', 'onSaveDraft']) {
+  test(`draft ${operation}: a cleanup failure after creation cannot create the replacement twice`, async () => {
+    const f = await preparedForm('edit');
+    button(f.tree(),'Remove file').props.onClick(); f.render(); await f.selectFile();
+    f.services.deleteDraft = async () => { throw Object.assign(new Error('Interrupted'),{status:0}); };
+    const execute = f.summary()[operation]; await execute(); f.render();
+    assert.equal(f.calls.length,1); assert.equal(f.summary().isReady,false);
+    assert.match(f.feedback().feedback.message,/replacement/);
+    assert.equal(button(f.tree(),'Remove file').props.disabled,true);
+    await execute(); assert.equal(f.calls.length,1);
+    f.feedback().onCheckOrders();
+    assert.equal(f.invalidations(),1);
+    assert.deepEqual(f.navigation,[operation === 'onSubmit' ? 'created' : 'drafts']);
+  });
+}
+
+for (const kind of ['new','edit']) {
+  test(`${kind}: newer selection wins when the older PDF read finishes last`, async () => {
+    const waiting=[];
+    const f=fixture(kind,false,{}, {pdfLoad:()=>new Promise(resolve=>waiting.push(resolve))}); await f.flush();
+    if (kind==='new') { f.selectShop(); f.summary().setOrderName('Latest'); f.render(); }
+    else { button(f.tree(),'Remove file').props.onClick(); f.render(); }
+    const older=f.selectFile(new File(['older'],'older.pdf',{type:'application/pdf'})); await f.flush();
+    const newer=f.selectFile(new File(['newer'],'newer.pdf',{type:'application/pdf'})); await f.flush();
+    waiting[1]({getPageCount:()=>3,getPage:()=>({getSize:()=>({width:400,height:800})})}); await newer;
+    waiting[0]({getPageCount:()=>9,getPage:()=>({getSize:()=>({width:400,height:800})})}); await older;
+    assert.equal(f.summary().estimate.pageCount,3); assert.equal(f.summary().isReady,true);
+    assert.ok(text(f.tree()).includes('newer.pdf')); assert.ok(!text(f.tree()).includes('older.pdf'));
+  });
+}

@@ -25,13 +25,6 @@ export interface PrintShop {
  is_open?: boolean;
 }
 
-export interface ValidationResult {
- passed: boolean;
- dpi?: number;
- colorProfile?: string;
- errorMessage?: string;
-}
-
 export interface OrderEstimate {
  total: number;
  pageCount: number;
@@ -56,21 +49,6 @@ export const orderService = {
  */
  async getShops(): Promise<PrintShop[]> {
  return apiClient<PrintShop[]>('/shops', { method: 'GET' });
- },
-
- /**
- * Validates the uploaded asset against shop constraints.
- */
- async validateAsset(file: File, shopId: string): Promise<ValidationResult> {
- const formData = new FormData();
- formData.append('file', file);
- formData.append('shopId', shopId);
-
- // Bypassing default JSON headers to allow multipart/form-data
- return apiClient<ValidationResult>('/validation/asset', {
- method: 'POST',
- body: formData as unknown as BodyInit, // TypeScript workaround for FormData in generic fetch wrapper
- });
  },
 
  /**
@@ -193,7 +171,7 @@ export const orderService = {
     formData.append('paymentMethod', paymentMethod);
 
     // Reusing your existing POST /orders endpoint
-    return await apiClient('/orders', {
+    return await apiClient<SubmitOrderResponse>('/orders', {
       method: 'POST',
       body: formData,
     });

@@ -53,19 +53,6 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
       </h3>
 
       <div className="mb-6 space-y-4">
-        <fieldset disabled={isSubmitting}>
-          <legend className="mb-2 text-sm font-bold text-gray-700">Payment method</legend>
-          <div className="grid grid-cols-2 gap-1 bg-gray-200 p-1">
-            {(['GCASH', 'CASH_ON_PICKUP'] as const).map(method => (
-              <button key={method} type="button" aria-pressed={paymentMethod === method}
-                onClick={() => setPaymentMethod?.(method)}
-                className={`min-h-11 px-2 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60 disabled:opacity-50 ${paymentMethod === method ? 'bg-carbon-blue-60 text-white' : 'bg-white text-carbon-gray-100 hover:bg-gray-100'}`}>
-                {method === 'GCASH' ? 'GCash' : 'Cash on pickup'}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-gray-600">{paymentMethod === 'GCASH' ? 'Submit your receipt for review after placing the order.' : 'Pay the full amount at the shop before collecting your prints.'} Payment method is locked after submission.</p>
-        </fieldset>
         <div>
           <label
             htmlFor="order-name"
@@ -207,6 +194,19 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             </button>
           </div>
         </div>
+        <fieldset disabled={isSubmitting}>
+          <legend className="mb-2 text-sm font-bold text-gray-700">Payment method</legend>
+          <div className="grid grid-cols-2 gap-1 bg-gray-200 p-1">
+            {(['GCASH', 'CASH_ON_PICKUP'] as const).map(method => (
+              <button key={method} type="button" aria-pressed={paymentMethod === method}
+                onClick={() => setPaymentMethod?.(method)}
+                className={`min-h-11 px-2 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60 disabled:opacity-50 ${paymentMethod === method ? 'bg-carbon-blue-60 text-white' : 'bg-white text-carbon-gray-100 hover:bg-gray-100'}`}>
+                {method === 'GCASH' ? 'GCash' : 'Cash on pickup'}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-gray-600">{paymentMethod === 'GCASH' ? 'Submit your receipt for review after placing the order.' : 'Pay the full amount at the shop before collecting your prints.'} Payment method is locked after submission.</p>
+        </fieldset>
       </div>
 
       {estimate ? (
