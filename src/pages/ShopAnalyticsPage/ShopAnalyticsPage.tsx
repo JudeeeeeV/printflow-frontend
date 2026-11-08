@@ -89,7 +89,7 @@ const StatusBadge = ({ state }: { state: string }) => {
       cls = 'border border-gray-300 bg-gray-100 text-gray-700';
       break;
     case 'PRINTED':
-      label = 'Printed';
+      label = 'Awaiting Check';
       cls = 'border border-carbon-gray-100 bg-carbon-gray-100 text-white';
       break;
     case 'READY_FOR_PICKUP':

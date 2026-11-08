@@ -10,6 +10,10 @@ interface OrderCardProps {
   onReviewPayment?: () => void;
   isSelected?: boolean;
   onToggleSelect?: (orderId: string) => void;
+  /** Overrides the order-state badge, e.g. with the current print attempt. */
+  statusBadge?: { text: string; className: string } | null;
+  /** Attempt details, milestones and fulfillment actions. */
+  footer?: React.ReactNode;
 }
 
 const paperSizeBackgrounds: Record<string, string> = {
@@ -18,7 +22,7 @@ const paperSizeBackgrounds: Record<string, string> = {
   LONG: "bg-carbon-blue-60",
 };
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect, statusBadge, footer }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
@@ -63,6 +67,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       badgeText = "In Production";
       badgeColor = "bg-gray-200 text-carbon-gray-100";
       break;
+    case "PRINTED":
+      // Legacy state: a submission was reported but output was never checked.
+      badgeText = "Awaiting Output Check";
+      badgeColor = "bg-gray-200 text-carbon-gray-100";
+      break;
     case "READY_FOR_PICKUP":
       badgeText = "Ready For Pickup";
       badgeColor = "bg-carbon-gray-100 text-white";
@@ -76,6 +85,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       badgeColor = "bg-gray-200 text-carbon-gray-100 border border-gray-400";
       isDisputed = true;
       break;
+  }
+
+  if (statusBadge) {
+    badgeText = statusBadge.text;
+    badgeColor = statusBadge.className;
   }
 
   const canReviewPayment = (isPaymentPending || isDisputed) && !!onReviewPayment;
@@ -218,6 +232,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
           </button>
         )}
       </div>
+
+      {footer && (
+        <div className="mt-2 border-t border-[#e0e0e0] pt-2" onClick={(e) => e.stopPropagation()}>
+          {footer}
+        </div>
+      )}
 
       {isDisputed && (
         <div className="mt-1">

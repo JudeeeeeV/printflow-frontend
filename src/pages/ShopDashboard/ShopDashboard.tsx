@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight } from '@carbon/icons-react';
 import { shopService } from '../../services/shopService';
@@ -13,30 +13,52 @@ import type { DaemonStatus } from '../../services/daemonSocketService';
 import { PrintJobProgressModal } from '../../components/dashboard/PrintJobProgressModal';
 import { KanbanFilterBar } from '../../components/dashboard/KanbanFilterBar';
 import { AlertModal } from '../../components/common/AlertModal';
-import { apiClient, clearAuthTokens } from '../../services/apiClient';
+import { ApiError, apiClient, clearAuthTokens } from '../../services/apiClient';
 import { createRefreshQueue } from '../../services/refreshQueue';
 import { getQueuePage, queueGridClassName } from '../../components/dashboard/liveQueueLayout';
 import { useLiveQueueLayout } from '../../components/dashboard/useLiveQueueLayout';
 import { useDataEvents } from '../../hooks/useDataEvents';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { FulfillmentDialog, type FulfillmentMode } from '../../components/dashboard/FulfillmentDialog';
+import { FulfillmentFooter } from '../../components/dashboard/FulfillmentFooter';
+import { getOrderCardTitleParts } from '../../components/dashboard/orderCardTitle';
+import {
+ availableActions,
+ canSelectForPrint,
+ mergeAttempt,
+ orderBadge,
+ queueFor,
+ TONE_CLASSES,
+ upsertProgress,
+ type AttemptProgress,
+ type PrintableOrder,
+ type QueueKey,
+} from '../../components/dashboard/printFulfillment';
+import { downloadPinnedFile, newRequestId, printFulfillmentService } from '../../services/printFulfillmentService';
 
-type QueueKey = 'new' | 'ready' | 'completed';
 type QueueFilterState = {
  searchQuery: string;
  paperSize: string;
  colorMode: string;
 };
 
-const QUEUE_ORDER: QueueKey[] = ['new', 'ready', 'completed'];
-const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', completed: 'Completed' };
+const QUEUE_ORDER: QueueKey[] = ['new', 'ready', 'pickup', 'completed'];
+const QUEUE_LABELS: Record<QueueKey, string> = { new: 'New Orders', ready: 'Print Ready', pickup: 'Pickup', completed: 'Completed' };
 const QUEUE_EMPTY_LABELS: Record<QueueKey, string> = {
  new: 'No new orders.',
  ready: 'No orders in production.',
- completed: 'No completed orders.',
+ pickup: 'No orders waiting for an output check or pickup.',
+ completed: 'No handed-over orders.',
 };
 const INITIAL_QUEUE_FILTERS: Record<QueueKey, QueueFilterState> = {
  new: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
  ready: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
+ pickup: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
  completed: { searchQuery: '', paperSize: 'ALL', colorMode: 'ALL' },
+};
+const orderLabel = (order: Parameters<typeof getOrderCardTitleParts>[0]) => {
+ const title = getOrderCardTitleParts(order);
+ return `${title.filename} · ${title.customer}`;
 };
 
 export const ShopDashboard: React.FC = () => {
@@ -67,23 +89,40 @@ export const ShopDashboard: React.FC = () => {
  // Daemon state
  const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>('OFFLINE');
  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
- const [jobProgresses, setJobProgresses] = useState<{ orderId: string; status: string }[]>([]);
+ const [jobProgresses, setJobProgresses] = useState<AttemptProgress[]>([]);
  const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
  const [selectedPrinter, setSelectedPrinter] = useState<string>('');
 
  const [activeQueue, setActiveQueue] = useState<QueueKey>('new');
  const [tabDirection, setTabDirection] = useState(1);
  const [queueFilters, setQueueFilters] = useState<Record<QueueKey, QueueFilterState>>(INITIAL_QUEUE_FILTERS);
- const [queuePages, setQueuePages] = useState<Record<QueueKey, number>>({ new: 1, ready: 1, completed: 1 });
+ const [queuePages, setQueuePages] = useState<Record<QueueKey, number>>({ new: 1, ready: 1, pickup: 1, completed: 1 });
  const { layout: queueLayout, gridRef } = useLiveQueueLayout();
- const [queuePageSizes, setQueuePageSizes] = useState<Record<QueueKey, number>>(() => ({ new: queueLayout.pageSize, ready: queueLayout.pageSize, completed: queueLayout.pageSize }));
+ const [queuePageSizes, setQueuePageSizes] = useState<Record<QueueKey, number>>(() => ({ new: queueLayout.pageSize, ready: queueLayout.pageSize, pickup: queueLayout.pageSize, completed: queueLayout.pageSize }));
  const [pageAnnouncement, setPageAnnouncement] = useState('');
+ const [agentUpdateRequired, setAgentUpdateRequired] = useState(false);
+ // Socket updates supplement the persisted attempts loaded with the orders.
+ const [liveAttempts, setLiveAttempts] = useState<Record<string, AttemptProgress>>({});
+ const [pendingBatch, setPendingBatch] = useState<'AGENT' | 'MANUAL' | null>(null);
+ const [fulfillment, setFulfillment] = useState<{ mode: FulfillmentMode; order: PrintableOrder } | null>(null);
+ // Reused only to retry the same reviewed request after a network failure.
+ const batchRequestRef = useRef<{ key: string; requestId: string } | null>(null);
  const queueBoardRef = useRef<HTMLDivElement>(null);
- const queueTabRefs = useRef<Record<QueueKey, HTMLButtonElement | null>>({ new: null, ready: null, completed: null });
+ const queueTabRefs = useRef<Record<QueueKey, HTMLButtonElement | null>>({ new: null, ready: null, pickup: null, completed: null });
  const prefersReducedMotion = useReducedMotion();
 
- // Prune only orders that left production, not selections hidden by filters or pagination.
- const readyOrderIds = new Set(shopOrders.filter(order => order.state === 'IN_PRODUCTION').map(order => order.id));
+ const ordersWithAttempts = useMemo(
+ () => shopOrders.map(order => ({ ...order, current_attempt: mergeAttempt(order.current_attempt, liveAttempts[order.id]) })),
+ [shopOrders, liveAttempts],
+ );
+ const orderLabels = useMemo(
+ () => Object.fromEntries(shopOrders.map(order => [order.id, orderLabel(order)])),
+ [shopOrders],
+ );
+ const agentReady = daemonStatus === 'CONNECTED' && !agentUpdateRequired && availablePrinters.length > 0;
+
+ // Prune only orders that can no longer start a batch, not selections hidden by filters or pagination.
+ const readyOrderIds = new Set(ordersWithAttempts.filter(order => canSelectForPrint(order)).map(order => order.id));
  const validSelectedReadyOrders = selectedReadyOrders.filter(id => readyOrderIds.has(id));
  if (validSelectedReadyOrders.length !== selectedReadyOrders.length) {
  setSelectedReadyOrders(validSelectedReadyOrders);
@@ -177,17 +216,20 @@ export const ShopDashboard: React.FC = () => {
  setDaemonStatus(status);
  });
 
- const unsubscribeProgress = daemonSocketService.onJobProgress(({ orderId, status }) => {
- setJobProgresses(prev => {
- const existing = prev.find(p => p.orderId === orderId);
- if (existing) {
- return prev.map(p => p.orderId === orderId ? { ...p, status } : p);
- }
- return [...prev, { orderId, status }];
- });
- 
- // If a job completes, reload data to move it to the completed column
- if (status === 'COMPLETED' || status === 'SUCCESS') {
+ const unsubscribeUpdate = daemonSocketService.onUpdateRequired(setAgentUpdateRequired);
+
+ const unsubscribeProgress = daemonSocketService.onJobProgress(progress => {
+ setLiveAttempts(previous => ({
+ ...previous,
+ [progress.orderId]: mergeAttempt(previous[progress.orderId], progress) ?? progress,
+ }));
+ setJobProgresses(previous =>
+ previous.some(item => item.orderId === progress.orderId || item.attemptId === progress.attemptId)
+ ? upsertProgress(previous, progress)
+ : previous,
+ );
+ // Terminal reports change queues; reload the persisted state.
+ if (['SUBMITTED', 'FAILED_PRE_SUBMISSION', 'OUTCOME_UNKNOWN', 'MANUAL_STARTED'].includes(progress.status)) {
  refreshOrdersAfterChange();
  }
  });
@@ -201,6 +243,7 @@ export const ShopDashboard: React.FC = () => {
 
  return () => {
  unsubscribeStatus();
+ unsubscribeUpdate();
  unsubscribeProgress();
  unsubscribePrinters();
  // disconnection managed by ShopLayout
@@ -254,85 +297,70 @@ export const ShopDashboard: React.FC = () => {
  if (allMatchingReadySelected) {
  setSelectedReadyOrders([]);
  } else {
- setSelectedReadyOrders(printReadyOrders.map(o => o.id));
+ setSelectedReadyOrders(printReadyOrders.filter(o => canSelectForPrint(o)).map(o => o.id));
  }
  };
 
- const handleManualDownload = async () => {
- let downloadCount = 0;
- for (const orderId of selectedReadyOrders) {
- const order = shopOrders.find(o => o.id === orderId);
- if (order && order.assets && order.assets.length > 0) {
- const assetUrl = order.assets[0].file_url;
- 
- const urlParts = assetUrl.split('/');
- let rawName = decodeURIComponent(urlParts[urlParts.length - 1] || 'asset.pdf');
- const match = rawName.match(/-\d{13}-(.+)$/);
- let fileName = match ? match[1] : rawName;
- fileName = `Order_${order.id.slice(0, 8)}_${fileName}`;
-
- try {
- const response = await fetch(assetUrl);
- if (!response.ok) throw new Error('Network response was not ok');
- const blob = await response.blob();
- const objectUrl = window.URL.createObjectURL(blob);
- const link = document.createElement('a');
- link.href = objectUrl;
- link.download = fileName;
- document.body.appendChild(link);
- link.click();
- document.body.removeChild(link);
- window.URL.revokeObjectURL(objectUrl);
- } catch (err) {
- console.error('Failed to force download, falling back to new tab:', err);
- window.open(assetUrl, '_blank', 'noopener,noreferrer');
- }
- downloadCount++;
- try {
- await orderService.updateOrderState(orderId, 'READY_FOR_PICKUP');
- } catch(updateErr) {
- console.error('Failed to update state for order:', orderId, updateErr);
- }
- }
- }
- if (downloadCount === 0) {
- showAlert("No assets found for the selected orders.", 'warning', 'No Assets Found');
- } else {
- showAlert(`Successfully downloaded ${downloadCount} asset(s). Orders marked as Ready for Pickup.`, 'success', 'Downloads Complete');
- setSelectedReadyOrders([]);
- refreshOrdersAfterChange();
- }
+ /** One request ID per reviewed selection; reused only after a network failure. */
+ const requestIdFor = (mode: 'AGENT' | 'MANUAL', orderIds: string[]) => {
+ const key = JSON.stringify([mode, [...orderIds].sort(), mode === 'AGENT' ? selectedPrinter : null]);
+ if (batchRequestRef.current?.key !== key) batchRequestRef.current = { key, requestId: newRequestId() };
+ return batchRequestRef.current.requestId;
+ };
+ const settleRequest = (error?: unknown) => {
+ // A server response (success or recorded failure) ends this request.
+ if (!(error instanceof ApiError && error.status === 0)) batchRequestRef.current = null;
  };
 
- const handleBatchComplete = async () => {
- if (selectedReadyOrders.length === 0) return;
- if (daemonStatus !== 'CONNECTED' || !availablePrinters.includes(selectedPrinter)) {
- showAlert('Wait for the PrintFlow Agent to connect and select a detected printer before sending orders.', 'error', 'Printer Not Ready');
- return;
- }
- 
+ const startManualProduction = async () => {
+ const orderIds = [...selectedReadyOrders];
+ setPendingBatch(null);
  setIsBatchProcessing(true);
- // Initialize progresses for all selected orders
- setJobProgresses(selectedReadyOrders.map(id => ({ orderId: id, status: 'QUEUED' })));
- setIsProgressModalOpen(true);
- 
  try {
-  await apiClient('/edge/batch-execute', {
- method: 'POST',
- body: JSON.stringify({ 
- orderIds: selectedReadyOrders,
- printerName: selectedPrinter || undefined
- })
- });
- 
+ const result = await printFulfillmentService.startManualProduction(orderIds, requestIdFor('MANUAL', orderIds));
+ settleRequest();
+ for (const download of result.downloads) await downloadPinnedFile(download.url, download.fileName);
  setSelectedReadyOrders([]);
- // Don't close modal here, wait for daemon status updates via WS
+ const skipped = result.skipped.length ? ` ${result.skipped.length} order(s) were skipped because they already have an unresolved attempt or are not printable.` : '';
+ showAlert(`Manual production recorded for ${result.attempts.length} order(s). Print the downloaded files, then check each output in Pickup before marking it ready.${skipped}`, 'success', 'Manual Production Recorded');
+ refreshOrdersAfterChange();
  } catch (err: unknown) {
- showAlert(err instanceof Error ? err.message : 'Failed to dispatch batch', 'error', 'Batch Failed');
- setIsProgressModalOpen(false);
+ settleRequest(err);
+ showAlert(err instanceof Error ? err.message : 'Manual production could not be recorded.', 'error', 'Manual Production Failed');
  } finally {
  setIsBatchProcessing(false);
  }
+ };
+
+ const sendToAgent = async () => {
+ const orderIds = [...selectedReadyOrders];
+ setPendingBatch(null);
+ if (!agentReady || !availablePrinters.includes(selectedPrinter)) {
+ showAlert('Wait for an up-to-date PrintFlow Agent to connect and select a detected printer before sending orders.', 'error', 'Printer Not Ready');
+ return;
+ }
+ setIsBatchProcessing(true);
+ try {
+ const result = await printFulfillmentService.sendBatch(orderIds, selectedPrinter, requestIdFor('AGENT', orderIds));
+ settleRequest();
+ setJobProgresses(result.attempts);
+ setIsProgressModalOpen(true);
+ setSelectedReadyOrders([]);
+ refreshOrdersAfterChange();
+ } catch (err: unknown) {
+ settleRequest(err);
+ showAlert(err instanceof Error ? err.message : 'Failed to dispatch batch', 'error', 'Batch Failed');
+ refreshOrdersAfterChange();
+ } finally {
+ setIsBatchProcessing(false);
+ }
+ };
+
+ const openFulfillment = (mode: FulfillmentMode, order: PrintableOrder) => setFulfillment({ mode, order });
+ const finishFulfillment = (message: string) => {
+ setFulfillment(null);
+ showAlert(message, 'success', 'Recorded');
+ refreshOrdersAfterChange();
  };
 
  if (isLoading) return <DashboardSkeleton layout={queueLayout} gridRef={gridRef} />;
@@ -349,25 +377,32 @@ export const ShopDashboard: React.FC = () => {
  const { verification_status } = shopData;
 
  // Derived queue data. Counts stay unfiltered while each queue owns its filter state.
- const unfilteredNewOrders = shopOrders
- .filter(o => ['OPEN_INQUIRY', 'PROOF_APPROVED', 'AWAITING_PAYMENT', 'AWAITING_PAYMENT_VERIFICATION', 'ESCALATED_DISPUTE'].includes(o.state))
+ const unfilteredNewOrders = ordersWithAttempts
+ .filter(o => queueFor(o) === 'new')
  .sort((a, b) => {
  if (a.state === 'AWAITING_PAYMENT_VERIFICATION' && b.state !== 'AWAITING_PAYMENT_VERIFICATION') return -1;
  if (b.state === 'AWAITING_PAYMENT_VERIFICATION' && a.state !== 'AWAITING_PAYMENT_VERIFICATION') return 1;
  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
  });
 
- const unfilteredPrintReadyOrders = shopOrders
- .filter(o => ['IN_PRODUCTION'].includes(o.state))
+ // Queued, processing, failed and uncertain work stays in Print Ready.
+ const unfilteredPrintReadyOrders = ordersWithAttempts
+ .filter(o => queueFor(o) === 'ready')
  .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
- const unfilteredCompletedOrders = shopOrders
- .filter(o => ['READY_FOR_PICKUP', 'COMPLETED', 'PRINTED'].includes(o.state))
- .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+ // Submission-reported, manual and ready work waits for checks and handover.
+ const unfilteredPickupOrders = ordersWithAttempts
+ .filter(o => queueFor(o) === 'pickup')
+ .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+ const unfilteredCompletedOrders = ordersWithAttempts
+ .filter(o => queueFor(o) === 'completed')
+ .sort((a, b) => new Date(b.handed_over_at || b.created_at).getTime() - new Date(a.handed_over_at || a.created_at).getTime());
 
  const unfilteredQueueOrders: Record<QueueKey, typeof shopOrders> = {
  new: unfilteredNewOrders,
  ready: unfilteredPrintReadyOrders,
+ pickup: unfilteredPickupOrders,
  completed: unfilteredCompletedOrders,
  };
  const filterOrders = (orders: typeof shopOrders, filters: QueueFilterState) => {
@@ -384,41 +419,32 @@ export const ShopDashboard: React.FC = () => {
  const filteredQueueOrders: Record<QueueKey, typeof shopOrders> = {
  new: filterOrders(unfilteredNewOrders, queueFilters.new),
  ready: filterOrders(unfilteredPrintReadyOrders, queueFilters.ready),
+ pickup: filterOrders(unfilteredPickupOrders, queueFilters.pickup),
  completed: filterOrders(unfilteredCompletedOrders, queueFilters.completed),
  };
- const newOrders = filteredQueueOrders.new;
  const printReadyOrders = filteredQueueOrders.ready;
- const completedOrders = filteredQueueOrders.completed;
 
  const pageSizes = queueLayout.queueKey === activeQueue ? { ...queuePageSizes, [activeQueue]: queueLayout.pageSize } : queuePageSizes;
- const pageTotals = {
- new: Math.max(1, Math.ceil(newOrders.length / pageSizes.new)),
- ready: Math.max(1, Math.ceil(printReadyOrders.length / pageSizes.ready)),
- completed: Math.max(1, Math.ceil(completedOrders.length / pageSizes.completed)),
- };
+ const pageTotals = Object.fromEntries(QUEUE_ORDER.map(queue => [
+ queue, Math.max(1, Math.ceil(filteredQueueOrders[queue].length / pageSizes[queue])),
+ ])) as Record<QueueKey, number>;
  const anchoredPages = { ...queuePages };
  if (queuePageSizes[activeQueue] !== pageSizes[activeQueue]) {
  anchoredPages[activeQueue] = getQueuePage(queuePages[activeQueue], queuePageSizes[activeQueue], pageSizes[activeQueue], filteredQueueOrders[activeQueue].length);
  setQueuePageSizes(pageSizes);
  }
 
- const pages = {
- new: Math.min(anchoredPages.new, pageTotals.new),
- ready: Math.min(anchoredPages.ready, pageTotals.ready),
- completed: Math.min(anchoredPages.completed, pageTotals.completed),
- };
+ const pages = Object.fromEntries(QUEUE_ORDER.map(queue => [
+ queue, Math.min(anchoredPages[queue], pageTotals[queue]),
+ ])) as Record<QueueKey, number>;
  // Store poll-driven clamps so a later refresh cannot restore an obsolete page.
- if (pages.new !== queuePages.new || pages.ready !== queuePages.ready || pages.completed !== queuePages.completed) {
+ if (QUEUE_ORDER.some(queue => pages[queue] !== queuePages[queue])) {
  setQueuePages(pages);
  }
- const visibleNewOrders = newOrders.slice((pages.new - 1) * pageSizes.new, pages.new * pageSizes.new);
- const visibleReadyOrders = printReadyOrders.slice((pages.ready - 1) * pageSizes.ready, pages.ready * pageSizes.ready);
- const visibleCompletedOrders = completedOrders.slice((pages.completed - 1) * pageSizes.completed, pages.completed * pageSizes.completed);
- const visibleQueueOrders: Record<QueueKey, typeof shopOrders> = {
- new: visibleNewOrders,
- ready: visibleReadyOrders,
- completed: visibleCompletedOrders,
- };
+ const visibleQueueOrders = Object.fromEntries(QUEUE_ORDER.map(queue => [
+ queue, filteredQueueOrders[queue].slice((pages[queue] - 1) * pageSizes[queue], pages[queue] * pageSizes[queue]),
+ ])) as Record<QueueKey, typeof shopOrders>;
+ const visibleReadyOrders = visibleQueueOrders.ready;
  const activeFilters = queueFilters[activeQueue];
  const activeOrders = filteredQueueOrders[activeQueue];
  const activeVisibleOrders = visibleQueueOrders[activeQueue];
@@ -426,8 +452,9 @@ export const ShopDashboard: React.FC = () => {
  ? 'No orders match your filters.'
  : QUEUE_EMPTY_LABELS[activeQueue];
  const selectedReadyIds = new Set(selectedReadyOrders);
- const matchingSelectedCount = printReadyOrders.filter(order => selectedReadyIds.has(order.id)).length;
- const allMatchingReadySelected = printReadyOrders.length > 0 && matchingSelectedCount === printReadyOrders.length;
+ const selectableReadyOrders = printReadyOrders.filter(order => canSelectForPrint(order));
+ const matchingSelectedCount = selectableReadyOrders.filter(order => selectedReadyIds.has(order.id)).length;
+ const allMatchingReadySelected = selectableReadyOrders.length > 0 && matchingSelectedCount === selectableReadyOrders.length;
  const someMatchingReadySelected = matchingSelectedCount > 0 && !allMatchingReadySelected;
  const offPageSelectedCount = selectedReadyOrders.length - visibleReadyOrders.filter(order => selectedReadyIds.has(order.id)).length;
 
@@ -508,7 +535,7 @@ export const ShopDashboard: React.FC = () => {
  ) : (
  // Kanban Board Layout
  <div className={`flex flex-none flex-col bg-carbon-gray-10 ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`}>
- <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
+ <div role="tablist" aria-label="Live queue sections" aria-orientation="horizontal" className="grid shrink-0 grid-cols-2 gap-1 border-b sm:grid-cols-4 border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
  {QUEUE_ORDER.map(queue => {
  const isActive = activeQueue === queue;
  return (
@@ -569,12 +596,12 @@ export const ShopDashboard: React.FC = () => {
  type="checkbox"
  className="mr-3 h-5 w-5 cursor-pointer border-gray-500 text-carbon-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60"
  checked={allMatchingReadySelected}
- disabled={printReadyOrders.length === 0}
+ disabled={selectableReadyOrders.length === 0}
  ref={element => { if (element) element.indeterminate = someMatchingReadySelected; }}
  aria-describedby="ready-selection-scope"
  onChange={handleSelectAllReady}
  />
- <span>Select all matching<span id="ready-selection-scope" className="block text-xs font-normal text-gray-600">Across all pages</span></span>
+ <span>Select all matching<span id="ready-selection-scope" className="block text-xs font-normal text-gray-600">Across all pages; orders with an unresolved attempt are excluded</span></span>
  </label>
  <span className="bg-carbon-gray-10 px-2.5 py-1 text-xs font-bold tabular-nums text-gray-600">
  {selectedReadyOrders.length} selected
@@ -585,7 +612,21 @@ export const ShopDashboard: React.FC = () => {
  )}
  </div>
 
- {daemonStatus === 'CONNECTED' ? (
+ {daemonStatus === 'CONNECTED' && agentUpdateRequired ? (
+ <div className="flex min-w-0 flex-col gap-2 border border-black bg-carbon-gray-10 p-2 sm:flex-row sm:items-center lg:w-full lg:max-w-2xl">
+ <span role="status" className="flex min-h-10 flex-1 flex-col justify-center text-xs text-carbon-gray-100">
+ <span className="font-bold uppercase tracking-[0.08em]">Agent update required</span>
+ <span>This PrintFlow Agent cannot report print attempts. <Link to="/shop-dashboard/printer-agent" className="font-bold text-carbon-blue-70 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Install the latest agent</Link> or use manual production.</span>
+ </span>
+ <button
+ onClick={() => setPendingBatch('MANUAL')}
+ disabled={selectedReadyOrders.length === 0 || isBatchProcessing}
+ className="min-h-11 shrink-0 border border-black bg-white px-3 py-2 text-xs font-bold text-carbon-gray-100 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
+ >
+ Print Manually
+ </button>
+ </div>
+ ) : daemonStatus === 'CONNECTED' ? (
  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:w-full lg:max-w-2xl lg:justify-end">
  {availablePrinters.length > 0 ? (
  <select
@@ -602,7 +643,7 @@ export const ShopDashboard: React.FC = () => {
  <span role="status" className="min-h-11 flex-1 border-l-4 border-gray-300 bg-carbon-gray-10 px-3 py-2 text-xs font-medium text-gray-600">Agent online. No printers detected yet; checking automatically.</span>
  )}
  <button
- onClick={handleBatchComplete}
+ onClick={() => setPendingBatch('AGENT')}
  disabled={selectedReadyOrders.length === 0 || isBatchProcessing || !availablePrinters.includes(selectedPrinter)}
  className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-carbon-blue-60 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:pointer-events-none disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
  >
@@ -621,11 +662,11 @@ export const ShopDashboard: React.FC = () => {
  {daemonStatus === 'RECONNECTING' ? 'Checking agent connection…' : 'Daemon offline — checking automatically'}
  </span>
  <button
- onClick={handleManualDownload}
- disabled={selectedReadyOrders.length === 0}
+ onClick={() => setPendingBatch('MANUAL')}
+ disabled={selectedReadyOrders.length === 0 || isBatchProcessing}
  className="min-h-11 shrink-0 border border-black bg-white px-3 py-2 text-xs font-bold text-carbon-gray-100 transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-10 motion-reduce:transition-none"
  >
- Download Assets Manually
+ Print Manually
  </button>
  </div>
  )}
@@ -633,15 +674,35 @@ export const ShopDashboard: React.FC = () => {
  )}
 
  <div ref={gridRef} data-queue={activeQueue} id={`queue-${activeQueue}-orders`} aria-labelledby={`queue-${activeQueue}-heading`} className={`${queueGridClassName} ${queueLayout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : ''}`} style={queueLayout.contained ? { gridTemplateRows: queueLayout.rows === 1 ? '16rem' : 'repeat(2, minmax(16rem, 1fr))' } : undefined}>
- {activeVisibleOrders.map(order => activeQueue === 'ready' ? (
+ {activeVisibleOrders.map(order => {
+ if (activeQueue === 'new') return null;
+ const attempt = order.current_attempt ?? null;
+ const badge = orderBadge(order);
+ const statusBadge = badge ? { text: badge.text, className: TONE_CLASSES[badge.tone] } : null;
+ const footer = (
+ <FulfillmentFooter
+ order={order}
+ attempt={attempt}
+ actions={availableActions(order)}
+ showMilestones={activeQueue !== 'ready'}
+ orderLabel={orderLabels[order.id]}
+ onAction={action => openFulfillment(action, order)}
+ />
+ );
+ return activeQueue === 'ready' && canSelectForPrint(order) ? (
  <OrderCard
  key={order.id}
  order={order}
+ statusBadge={statusBadge}
  onClick={() => handleToggleReadySelection(order.id)}
  isSelected={selectedReadyOrders.includes(order.id)}
  onToggleSelect={handleToggleReadySelection}
  />
  ) : (
+ <OrderCard key={order.id} order={order} statusBadge={statusBadge} footer={footer} />
+ );
+ })}
+ {activeQueue === 'new' && activeVisibleOrders.map(order => (
  <OrderCard
  key={order.id}
  order={order}
@@ -682,8 +743,36 @@ export const ShopDashboard: React.FC = () => {
  isOpen={isProgressModalOpen}
  onClose={() => setIsProgressModalOpen(false)}
  jobs={jobProgresses}
+ orderLabels={orderLabels}
  />
- 
+
+ <ConfirmModal
+ isOpen={pendingBatch !== null}
+ title={pendingBatch === 'MANUAL' ? 'Print selected orders manually?' : 'Send selected orders to the printer?'}
+ message={pendingBatch === 'MANUAL'
+ ? `${selectedReadyOrders.length} order(s) will be recorded as manual production and their approved PDFs downloaded. Downloading does not mark them ready; check each printed output in Pickup.`
+ : `${selectedReadyOrders.length} order(s) will be sent to ${selectedPrinter || 'the selected printer'} with their approved settings. A submission report does not mean the pages printed; check each output in Pickup.`}
+ confirmLabel={pendingBatch === 'MANUAL' ? 'Record and download' : 'Send to printer'}
+ isBusy={isBatchProcessing}
+ onConfirm={() => void (pendingBatch === 'MANUAL' ? startManualProduction() : sendToAgent())}
+ onCancel={() => setPendingBatch(null)}
+ />
+
+ {fulfillment && (
+ <FulfillmentDialog
+ key={`${fulfillment.mode}-${fulfillment.order.id}`}
+ mode={fulfillment.mode}
+ order={fulfillment.order}
+ attempt={fulfillment.order.current_attempt ?? null}
+ title={orderLabels[fulfillment.order.id] || `Order #${fulfillment.order.id.slice(0, 8)}`}
+ agentReady={agentReady}
+ printers={availablePrinters}
+ defaultPrinter={selectedPrinter}
+ onClose={() => setFulfillment(null)}
+ onDone={finishFulfillment}
+ />
+ )}
+
  <AlertModal 
  isOpen={alertState.isOpen}
  message={alertState.message}

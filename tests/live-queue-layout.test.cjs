@@ -112,6 +112,12 @@ function dashboardHarness() {
     '../../components/dashboard/PrintJobProgressModal': { PrintJobProgressModal: 'Progress' },
     '../../components/dashboard/KanbanFilterBar': { KanbanFilterBar: 'Filters' },
     '../../components/common/AlertModal': { AlertModal: 'Alert' },
+    '../../components/common/ConfirmModal': { ConfirmModal: 'Confirm' },
+    '../../components/dashboard/FulfillmentDialog': { FulfillmentDialog: 'Fulfillment' },
+    '../../components/dashboard/FulfillmentFooter': { FulfillmentFooter: 'FulfillmentFooter' },
+    '../../components/dashboard/orderCardTitle': load('components/dashboard/orderCardTitle.ts'),
+    '../../components/dashboard/printFulfillment': load('components/dashboard/printFulfillment.ts'),
+    '../../services/printFulfillmentService': { printFulfillmentService: {}, newRequestId: () => 'request', downloadPinnedFile() {} },
   };
   const { ShopDashboard } = load('pages/ShopDashboard/ShopDashboard.tsx', {
     ...componentMocks,
@@ -124,13 +130,13 @@ function dashboardHarness() {
       useMemo: fn => fn(), useCallback: fn => fn, useRef: value => ({ current: value }), useEffect() {},
     },
     'react/jsx-runtime': { jsx, jsxs: jsx },
-    'react-router-dom': { useNavigate: () => () => {} },
+    'react-router-dom': { useNavigate: () => () => {}, Link: 'Link' },
     'framer-motion': { AnimatePresence: 'AnimatePresence', motion: { section: 'section' }, useReducedMotion: () => true },
     '@carbon/icons-react': { ChevronRight: 'right' },
     '../../services/shopService': { shopService: {} },
     '../../services/orderService': { orderService: {} },
     '../../services/daemonSocketService': { daemonSocketService: {} },
-    '../../services/apiClient': { apiClient() {} },
+    '../../services/apiClient': { apiClient() {}, ApiError: class ApiError extends Error {} },
     '../../services/refreshQueue': { createRefreshQueue: () => () => Promise.resolve() },
     '../../hooks/useDataEvents': { useDataEvents() {} },
     '../../components/dashboard/liveQueueLayout': layoutHelpers,
@@ -228,4 +234,39 @@ test('ready selections persist across pagination, resizing, and queues', () => {
   app.tab('completed'); app.tab('ready');
   assert.equal(app.cards()[0].props.isSelected, true);
   assert.match(text(app.render()), /1 not on this page/);
+});
+
+test('attempt state decides Print Ready versus Pickup, selection and the offered actions', () => {
+  const app = dashboardHarness();
+  const base = { client_name: 'Customer', created_at: '2026-04-10T00:00:00Z', paper_size: 'A4', print_color_mode: 'COLOR' };
+  const attempt = (status) => ({ attemptId: `a-${status}`, orderId: status, attemptNumber: 1, kind: 'INITIAL', mode: 'AGENT', status, printerName: 'Desk', resolvedAt: null, updatedAt: new Date().toISOString() });
+  app.poll([
+    { ...base, id: 'fresh', state: 'IN_PRODUCTION', current_attempt: null },
+    { ...base, id: 'failed', state: 'IN_PRODUCTION', current_attempt: attempt('FAILED_PRE_SUBMISSION') },
+    { ...base, id: 'printing', state: 'IN_PRODUCTION', current_attempt: attempt('DOWNLOADING') },
+    { ...base, id: 'submitted', state: 'IN_PRODUCTION', current_attempt: attempt('SUBMITTED') },
+    { ...base, id: 'legacy', state: 'PRINTED' },
+    { ...base, id: 'ready', state: 'READY_FOR_PICKUP', output_confirmed_at: '2026-04-10T01:00:00Z', payment_receipts: [{ verified: true }] },
+    { ...base, id: 'done', state: 'COMPLETED', handed_over_at: '2026-04-10T02:00:00Z' },
+  ]);
+  app.tab('ready');
+  const ready = Object.fromEntries(app.cards().map((card) => [card.props.order.id, card.props]));
+  assert.deepEqual(Object.keys(ready).sort(), ['failed', 'fresh', 'printing']);
+  assert.equal(typeof ready.fresh.onToggleSelect, 'function');
+  assert.equal(ready.failed.onToggleSelect, undefined, 'unresolved attempts cannot be re-sent');
+  assert.deepEqual([...ready.failed.footer.props.actions], ['retry']);
+  assert.deepEqual([...ready.printing.footer.props.actions], []);
+  assert.equal(ready.failed.statusBadge.text, 'Failed before printing');
+
+  app.tab('pickup');
+  const pickup = Object.fromEntries(app.cards().map((card) => [card.props.order.id, card.props]));
+  assert.deepEqual(Object.keys(pickup).sort(), ['legacy', 'ready', 'submitted']);
+  assert.match(pickup.submitted.statusBadge.text, /^Submission reported . check output$/);
+  assert.deepEqual([...pickup.submitted.footer.props.actions], ['confirm', 'reprint']);
+  assert.deepEqual([...pickup.ready.footer.props.actions], ['handover', 'reprint']);
+  assert.equal(pickup.legacy.statusBadge.text, 'Awaiting output check');
+
+  app.tab('completed');
+  assert.deepEqual(app.cards().map((card) => card.props.order.id), ['done']);
+  assert.match(text(app.render()), /Pickup/);
 });
