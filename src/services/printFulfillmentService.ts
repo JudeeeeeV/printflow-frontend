@@ -103,8 +103,11 @@ export const printFulfillmentService = {
   },
 };
 
-/** Saves a pinned file returned by manual production or a manual retry. */
-export async function downloadPinnedFile(url: string, fileName: string) {
+/**
+ * Saves a pinned file returned by manual production or a manual retry.
+ * Returns false on failure so callers never fall back to the signed storage URL.
+ */
+export async function downloadPinnedFile(url: string, fileName: string): Promise<boolean> {
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Download failed');
@@ -116,7 +119,8 @@ export async function downloadPinnedFile(url: string, fileName: string) {
     link.click();
     link.remove();
     URL.revokeObjectURL(objectUrl);
+    return true;
   } catch {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    return false;
   }
 }

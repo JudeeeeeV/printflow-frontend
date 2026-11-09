@@ -1,7 +1,6 @@
-import React, { useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import React, { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useDialogFocus } from "../common/useDialogFocus";
+import { DocumentPreviewModal } from "../common/DocumentPreviewModal";
 import { getOrderCardTitleParts, getOrderSpecifications } from "./orderCardTitle";
 import type { ShopQueueOrder } from '../../services/shopQueueService';
 import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
@@ -26,15 +25,11 @@ const paperSizeBackgrounds: Record<string, string> = {
 export const OrderCard: React.FC<OrderCardProps> = ({ order, loadOrder, onClick, onReviewOrder, isSelected = false, onToggleSelect, statusBadge }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isAssetLoading, setIsAssetLoading] = useState(true);
-  const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [details, setDetails] = useState<ShopQueueOrder | null>(null);
   const [loadError, setLoadError] = useState('');
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const previewDialog = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
-  useDialogFocus(previewDialog, isPreviewOpen, () => setIsPreviewOpen(false));
   const hasDocument = order.has_document ?? Boolean(order.assets?.[0]?.file_url);
   const fetchDetails = async () => {
     if (!loadOrder) return order;
@@ -205,14 +200,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, loadOrder, onClick,
             onClick={(e) => {
               e.stopPropagation();
               if (!hasDocument) return;
-              setIsAssetLoading(true);
-              setHasImageError(false);
               setIsPreviewOpen(true); setPreviewUrl(null); setLoadError('');
               void fetchDetails().then(fresh => {
                 const url = fresh.assets?.[0]?.file_url;
                 if (!url) throw new Error('File unavailable');
                 setPreviewUrl(url);
-              }).catch(() => { setIsAssetLoading(false); setLoadError('The document could not be loaded. Close and try again.'); });
+              }).catch(() => { setLoadError('The document could not be loaded. Close and try again.'); });
             }}
             className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6] disabled:cursor-not-allowed disabled:opacity-50`}
           >
@@ -260,169 +253,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, loadOrder, onClick,
 
       {isDetailsOpen && <OrderCardDetailsDialog order={details || order} isLoading={detailsLoading} loadError={loadError} onClose={() => setIsDetailsOpen(false)} />}
 
-      {/* Document Preview Modal */}
-      {isPreviewOpen &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsPreviewOpen(false);
-            }}
-          >
-            <div
-              ref={previewDialog}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Document preview"
-              className="bg-white w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden rounded-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-white z-10 shadow-sm">
-                <h3 className="font-bold text-carbon-gray-100 flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                  Document Preview
-                </h3>
-                <button
-                  type="button"
-                  aria-label="Close document preview"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsPreviewOpen(false);
-                  }}
-                  className="min-h-11 min-w-11 p-1 rounded-full text-gray-400 hover:text-carbon-gray-100 hover:bg-gray-100 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 relative flex flex-col overflow-hidden bg-gray-50">
-                {loadError && <p role="alert" className="p-6">{loadError}</p>}
-                {previewUrl?.match(/\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i) ? (
-                  <div
-                    className="w-full h-full flex items-center justify-center p-4 sm:p-8 overflow-auto relative"
-                    style={{
-                      backgroundImage:
-                        "radial-gradient(#d1d5db 1px, transparent 1px)",
-                      backgroundSize: "24px 24px",
-                    }}
-                  >
-                    {isAssetLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center z-10">
-                        <div className="w-64 h-80 bg-white/50 backdrop-blur-sm animate-pulse rounded-xl shadow-lg border border-gray-200 flex flex-col items-center justify-center gap-4">
-                          <svg
-                            className="w-12 h-12 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="1.5"
-                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <div className="h-2.5 w-24 bg-gray-300 rounded-full"></div>
-                        </div>
-                      </div>
-                    )}
-                    {hasImageError ? (
-                      <div role="alert" className="w-full max-w-md border border-gray-300 bg-white p-6 text-center">
-                        <h4 className="text-lg font-bold text-carbon-gray-100">Preview unavailable</h4>
-                        <p className="mt-2 text-sm text-gray-600">The image could not be loaded. Try again.</p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAssetLoading(true);
-                            setHasImageError(false);
-                          }}
-                          className="mt-4 min-h-11 bg-carbon-blue-60 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
-                        >
-                          Retry
-                        </button>
-                      </div>
-                    ) : (
-                      <motion.img
-                        initial={{ opacity: reducedMotion ? 1 : 0, scale: reducedMotion ? 1 : 0.95, y: reducedMotion ? 0 : 10 }}
-                        animate={{
-                          opacity: isAssetLoading ? 0 : 1,
-                          scale: isAssetLoading ? 0.95 : 1,
-                          y: isAssetLoading ? 10 : 0,
-                        }}
-                        transition={{ duration: reducedMotion ? 0 : 0.4, ease: "easeOut" }}
-                        src={previewUrl || undefined}
-                        alt="Document Preview"
-                        onLoad={() => setIsAssetLoading(false)}
-                        onError={() => {
-                          setIsAssetLoading(false);
-                          setHasImageError(true);
-                        }}
-                        className={`w-full h-full object-contain bg-white shadow-2xl border border-gray-200 ring-1 ring-black/5 ${isAssetLoading ? "pointer-events-none" : ""}`}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    {isAssetLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10 p-4">
-                        <div className="w-full h-full flex flex-col gap-2 max-w-4xl mx-auto">
-                          {/* Skeleton for PDF toolbar */}
-                          <div className="h-14 w-full bg-gray-200 animate-pulse rounded-t-md"></div>
-                          {/* Skeleton for PDF content */}
-                          <div className="flex-1 w-full bg-gray-200 animate-pulse rounded-b-md"></div>
-                        </div>
-                      </div>
-                    )}
-                    <iframe
-                      src={previewUrl ?? undefined}
-                      tabIndex={-1}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full border-none bg-carbon-gray-10 relative z-20"
-                      title="Document Preview"
-                      onLoad={() => setIsAssetLoading(false)}
-                      style={{
-                        opacity: isAssetLoading ? 0 : 1,
-                        transition: reducedMotion ? "none" : "opacity 0.4s ease-out",
-                      }}
-                    />
-                  </>
-                )}
-              </div>
-              {previewUrl && <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="min-h-11 shrink-0 p-3 text-sm font-bold underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open original document in a new tab</a>}
-            </div>
-          </div>,
-          document.body,
-        )}
+      {isPreviewOpen && <DocumentPreviewModal url={previewUrl} error={loadError} title="Document preview" onClose={() => setIsPreviewOpen(false)} />}
     </motion.div>
   );
 };

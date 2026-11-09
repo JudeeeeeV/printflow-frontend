@@ -112,8 +112,9 @@ export const FulfillmentDialog: React.FC<FulfillmentDialogProps> = ({
  ...(trimmedReason ? { reason: trimmedReason } : {}),
  ...(attempt?.status === 'FAILED_PRE_SUBMISSION' ? {} : { queueCleared: true }),
  });
- if (result.download) await downloadPinnedFile(result.download.url, result.download.fileName);
- message = result.message;
+ // Production is already recorded here, so a failed save must not look like a failed action.
+ const saved = !result.download || await downloadPinnedFile(result.download.url, result.download.fileName);
+ message = saved ? result.message : `${result.message} The print file could not be downloaded. Check your connection before retrying this job.`;
  }
  onDone(message);
  } catch (caught) {

@@ -104,7 +104,7 @@ function renderCard(value, onClick, onToggleSelect, onReviewOrder = () => {}, st
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-dom': { createPortal: node => node },
     'framer-motion': { motion: { div: 'div' }, useReducedMotion: () => false },
-    '../common/useDialogFocus': {useDialogFocus(){}},
+    '../common/DocumentPreviewModal': { DocumentPreviewModal: 'DocumentPreviewModal' },
     './orderCardTitle': titleHelpers,
     './OrderCardDetailsDialog': { OrderCardDetailsDialog: 'OrderCardDetailsDialog' },
   });

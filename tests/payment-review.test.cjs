@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { test } = require('node:test');
+const { beforeEach, test } = require('node:test');
 const vm = require('node:vm');
 const ts = require('typescript');
 
@@ -20,6 +20,10 @@ const order = (overrides = {}) => ({
   payment_receipts: [{ id: 'receipt-current', reference_number: 'reference-123', receipt_url: 'https://example.test/receipt.png' }],
   ...overrides,
 });
+
+const readyFile = url => ({ status: 'ready', kind: url.includes('.pdf') ? 'pdf' : 'image', objectUrl: `blob:${url}` });
+let fileState = readyFile;
+beforeEach(() => { fileState = readyFile; });
 
 // Evaluate the real component handlers with controlled React hooks. Reconcile
 // keyed children so closing/reopening and switching orders really unmount state.
@@ -73,6 +77,8 @@ function fixture(overrides = {}, reducedMotion = false) {
       if (name === 'react-dom') return { createPortal: node => node };
       if (name === 'framer-motion') return { motion: { div: 'div' }, useReducedMotion: () => reducedMotion };
       if (name === '@carbon/icons-react') return { Close: 'icon', Checkmark: 'icon' };
+      if (name === '../common/DocumentPreviewModal') return { DocumentPreviewModal: 'DocumentPreviewModal' };
+      if (name === '../common/useProtectedFile') return { useProtectedFile: url => fileState(url) };
       if (name === './ShopOrderActions') return { ShopOrderActions: 'ShopOrderActions' };
       if (name === '../maps/Maps.module.css') return { default: { primaryButton: 'primary', secondaryButton: 'secondary' } };
       throw new Error(`Unexpected import ${name}`);
@@ -174,23 +180,64 @@ test('unknown failures show a useful retry message', async () => {
 });
 
 test('receipt loading, failure, success, replacement, and missing states are explicit', () => {
+  const loadingText = node => node.props.role === 'status' && f.text(node) === 'Loading receipt…';
+  fileState = () => ({ status: 'loading' });
   const f = fixture();
-  assert.ok(f.find(node => node.props.role === 'status' && f.text(node) === 'Loading receipt…'));
-  const link = f.find(node => node.type === 'a');
-  assert.equal(link.props.href, 'https://example.test/receipt.png');
-  assert.equal(link.props.target, '_blank');
-  assert.equal(link.props.rel, 'noopener noreferrer');
+  assert.ok(f.find(loadingText));
+  fileState = readyFile; f.render();
+  assert.equal(f.find(loadingText), undefined);
+  assert.equal(f.find(node => node.type === 'img').props.src, 'blob:https://example.test/receipt.png');
   f.find(node => node.type === 'img').props.onError(); f.render();
   assert.ok(f.find(node => node.props.role === 'status' && f.text(node).includes('could not be loaded')));
-  assert.ok(f.find(node => node.type === 'a'));
+  assert.ok(f.button('View full receipt'));
+  fileState = () => ({ status: 'loading' });
   f.update({ order: order({ payment_receipts: [{ id: 'receipt-current', receipt_url: 'https://example.test/replacement.png' }] }) });
-  assert.ok(f.find(node => node.props.role === 'status' && f.text(node) === 'Loading receipt…'));
-  f.find(node => node.type === 'img').props.onLoad(); f.render();
-  assert.equal(f.find(node => node.props.role === 'status' && f.text(node) === 'Loading receipt…'), undefined);
+  assert.ok(f.find(loadingText));
+  fileState = () => ({ status: 'failed' }); f.render();
+  assert.ok(f.find(node => node.props.role === 'status' && f.text(node).includes('could not be loaded')));
+  fileState = readyFile;
   f.update({ order: order({ payment_receipts: [] }) });
   assert.ok(f.find(node => f.text(node) === 'No receipt image found.'));
-  assert.equal(f.find(node => node.type === 'a'), undefined);
+  assert.equal(f.button('View full receipt'), undefined);
   assert.ok(f.find(node => f.text(node) === 'Not provided'));
+});
+
+test('the full receipt opens in a preview modal instead of a storage link', () => {
+  const f = fixture();
+  assert.equal(f.find(node => node.type === 'a'), undefined);
+  assert.equal(f.find(node => node.type === 'DocumentPreviewModal'), undefined);
+  f.button('View full receipt').props.onClick(); f.render();
+  const modal = f.find(node => node.type === 'DocumentPreviewModal');
+  assert.equal(modal.props.url, 'https://example.test/receipt.png');
+  modal.props.onClose(); f.render();
+  assert.equal(f.find(node => node.type === 'DocumentPreviewModal'), undefined);
+});
+
+test('escape inside a file preview leaves the review dialog open', () => {
+  const f = fixture();
+  let prevented = false;
+  f.listeners.get('keydown')({ key: 'Escape', preventDefault() { prevented = true; }, target: { closest: selector => selector.includes('[data-document-preview]') ? {} : null } });
+  assert.equal(prevented, false);
+  assert.equal(f.closed(), 0);
+});
+
+test('order screens never link to or open signed storage URLs', () => {
+  for (const file of ['components/dashboard/PaymentReviewPanel.tsx', 'components/dashboard/OrderCard.tsx', 'components/common/DocumentPreviewModal.tsx', 'services/printFulfillmentService.ts']) {
+    const source = read(file);
+    assert.doesNotMatch(source, /target="_blank"|window\.open|href=\{(?!objectUrl)/, file);
+  }
+  assert.doesNotMatch(read('components/common/DocumentPreviewModal.tsx'), /src=\{(?!file\.objectUrl)/);
+});
+
+test('previews accept PDFs and raster images but never active content', () => {
+  const exports = {};
+  vm.runInNewContext(compile(read('components/common/useProtectedFile.ts')), { exports, require: () => ({}) });
+  const type = text => exports.detectPreviewType(new Uint8Array(Buffer.from(text, 'latin1')));
+  assert.equal(type('%PDF-1.7'), 'application/pdf');
+  assert.equal(type('\x89PNG\r\n'), 'image/png');
+  assert.equal(type('\xff\xd8\xff\xe0'), 'image/jpeg');
+  assert.equal(type('RIFF\0\0\0\0WEBPVP8 '), 'image/webp');
+  for (const unsafe of ['<!doctype html><script>', '<svg xmlns="http://www.w3.org/2000/svg">', 'PK\x03\x04docx', '']) assert.equal(type(unsafe), null, unsafe);
 });
 
 test('closing and changing order discard unsent reason, errors, and receipt state', async () => {
@@ -218,7 +265,7 @@ test('escalated disputes are read-only and still allow receipt inspection', () =
   assert.equal(f.button(approve), undefined);
   assert.equal(f.button(reject), undefined);
   assert.equal(f.find(node => node.type === 'input' && node.props.type === 'text'), undefined);
-  assert.ok(f.find(node => node.type === 'a'));
+  assert.ok(f.button('View full receipt'));
 });
 
 test('dismissal only handles backdrop clicks and restores a fallback queue tab', () => {
@@ -306,14 +353,16 @@ test('cash review shows the print job and keeps the preview pinned across refres
   const f = fixture({ order: cash() });
   const shown = f.text(f.find(node => node.props['aria-label'] === 'Print job'));
   for (const value of ['Thesis', 'thesis.docx', 'LONG', 'Color', 'Landscape', '12', '3']) assert.ok(shown.includes(value), value);
+  const modal = () => f.find(node => node.type === 'DocumentPreviewModal');
+  assert.equal(modal(), undefined);
   assert.equal(f.find(node => node.type === 'iframe'), undefined);
+  assert.equal(f.find(node => node.type === 'a'), undefined);
   f.button('Preview document').props.onClick(); f.render();
-  assert.equal(f.find(node => node.type === 'iframe').props.src, 'https://example.test/doc.pdf?token=first');
+  assert.equal(modal().props.url, 'https://example.test/doc.pdf?token=first');
   f.update({ order: cash('https://example.test/doc.pdf?token=second') });
-  assert.equal(f.find(node => node.type === 'iframe').props.src, 'https://example.test/doc.pdf?token=first');
-  assert.equal(f.find(node => node.type === 'a').props.href, 'https://example.test/doc.pdf?token=second');
-  f.button('Hide document').props.onClick(); f.render();
-  assert.equal(f.find(node => node.type === 'iframe'), undefined);
+  assert.equal(modal().props.url, 'https://example.test/doc.pdf?token=first');
+  modal().props.onClose(); f.render();
+  assert.equal(modal(), undefined);
 });
 
 test('review explains a document that cannot be loaded', () => {

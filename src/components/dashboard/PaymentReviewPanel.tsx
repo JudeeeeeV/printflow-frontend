@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Checkmark, Close } from '@carbon/icons-react';
 import buttonStyles from '../maps/Maps.module.css';
+import { DocumentPreviewModal } from '../common/DocumentPreviewModal';
+import { useProtectedFile } from '../common/useProtectedFile';
 import { ShopOrderActions } from './ShopOrderActions';
 import type { OrderDecisionResponse } from '../../services/orderService';
 
@@ -40,15 +42,19 @@ interface PaymentReviewPanelProps {
  onUpdated?: (order: OrderDecisionResponse['order']) => void;
 }
 
+const previewButtonClassName = 'inline-flex min-h-11 items-center text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60';
+
 const ReceiptPreview: React.FC<{ url: string }> = ({ url }) => {
- const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
+ const file = useProtectedFile(url);
+ const [imageBroken, setImageBroken] = useState(false);
+ const failed = imageBroken || file.status === 'failed' || (file.status === 'ready' && file.kind !== 'image');
  return (
- <div className="relative flex h-[min(240px,30dvh)] items-center justify-center overflow-hidden border border-gray-300 bg-carbon-gray-10" aria-busy={status === 'loading'}>
- {status === 'loading' && <p role="status" className="absolute px-3 text-sm text-gray-600">Loading receipt…</p>}
- {status === 'failed' ? (
- <p role="status" className="px-3 text-center text-sm text-gray-600">Receipt preview could not be loaded. Open the original receipt to inspect it.</p>
- ) : (
- <img src={url} alt="Payment receipt" onLoad={() => setStatus('loaded')} onError={() => setStatus('failed')} className={`h-full w-full object-contain ${status === 'loading' ? 'opacity-0' : ''}`} />
+ <div className="relative flex h-[min(240px,30dvh)] items-center justify-center overflow-hidden border border-gray-300 bg-carbon-gray-10" aria-busy={file.status === 'loading'}>
+ {file.status === 'loading' && <p role="status" className="absolute px-3 text-sm text-gray-600">Loading receipt…</p>}
+ {failed ? (
+ <p role="status" className="px-3 text-center text-sm text-gray-600">Receipt preview could not be loaded. Refresh the order and try again.</p>
+ ) : file.status === 'ready' && (
+ <img src={file.objectUrl} alt="Payment receipt" onError={() => setImageBroken(true)} className="h-full w-full object-contain" />
  )}
  </div>
  );
@@ -79,15 +85,9 @@ const PrintJobDetails: React.FC<{ order: PaymentReviewOrder }> = ({ order }) => 
  {settings.map(([label, value]) => <div key={label}><dt className="text-xs text-gray-600">{label}</dt><dd className="font-bold">{value}</dd></div>)}
  </dl>
  {documentUrl ? (
- <div className="flex flex-wrap items-center gap-x-4">
- <button type="button" onClick={() => setPreviewUrl(previewUrl ? null : documentUrl)} className="min-h-11 text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">{previewUrl ? 'Hide document' : 'Preview document'}</button>
- <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open in new tab</a>
- </div>
+ <button type="button" onClick={() => setPreviewUrl(documentUrl)} className={previewButtonClassName}>Preview document</button>
  ) : <p className="border border-dashed border-[#8d8d8d] bg-carbon-gray-10 p-3 text-center text-sm text-gray-600">The document could not be loaded. Refresh the order and try again.</p>}
- {previewUrl && <div className="relative h-[min(360px,45dvh)] overflow-hidden border border-gray-300 bg-carbon-gray-10">
- <p role="status" className="absolute inset-0 flex items-center justify-center text-sm text-gray-600">Loading document…</p>
- <iframe src={previewUrl} title={`Document for order ${order.id.slice(0, 8)}`} referrerPolicy="no-referrer" tabIndex={-1} className="relative h-full w-full border-none" />
- </div>}
+ {previewUrl && <DocumentPreviewModal url={previewUrl} title={`Document for order ${order.id.slice(0, 8)}`} onClose={() => setPreviewUrl(null)} />}
  </section>
  );
 };
@@ -98,6 +98,7 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  const [error, setError] = useState<string | null>(null);
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [decisionBusy, setDecisionBusy] = useState(false);
+ const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
  const pendingRef = useRef(false);
  const dialogRef = useRef<HTMLDivElement>(null);
  const closeRef = useRef<HTMLButtonElement>(null);
@@ -129,8 +130,8 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  if (appRoot) appRoot.inert = true;
  closeRef.current?.focus();
  const onKeyDown = (event: KeyboardEvent) => {
- // Leave keyboard handling to the nested confirmation when it has focus.
- if ((event.target as HTMLElement | null)?.closest?.('[role="alertdialog"]')) return;
+ // Leave keyboard handling to a nested confirmation or file preview when it has focus.
+ if ((event.target as HTMLElement | null)?.closest?.('[role="alertdialog"], [data-document-preview]')) return;
  if (event.key === 'Escape') {
  event.preventDefault();
  if (!pendingRef.current && !latestRef.current.isVerifying && !latestRef.current.decisionBusy) latestRef.current.onClose();
@@ -237,7 +238,8 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  {receiptUrl ? (
  <>
  <ReceiptPreview key={receiptUrl} url={receiptUrl} />
- <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-carbon-blue-60 underline hover:text-carbon-blue-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open original receipt</a>
+ <button type="button" onClick={() => setReceiptPreviewUrl(receiptUrl)} className={`mt-2 ${previewButtonClassName}`}>View full receipt</button>
+ {receiptPreviewUrl && <DocumentPreviewModal url={receiptPreviewUrl} title={`Receipt for order ${order.id.slice(0, 8)}`} onClose={() => setReceiptPreviewUrl(null)} />}
  </>
  ) : (
  <p className="border border-dashed border-[#8d8d8d] bg-carbon-gray-10 p-4 text-center text-sm text-gray-600">No receipt image found.</p>

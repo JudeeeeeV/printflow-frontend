@@ -132,7 +132,7 @@ function queueHarness(options={}) {
     '../../hooks/useLiveResource':{useLiveResource:(_key,fn)=>({data:fn(),refresh:async()=>{},isLoading:false,error:null})},
     '../../hooks/useDataEvents':{useDataEvents(){}}, '../../services/shopQueueService':{...selectionHelpers,shopQueueService:service},
     '../../services/daemonSocketService':{daemonSocketService:{onStatusChange:()=>()=>{},onPrintersList:()=>()=>{},onUpdateRequired:()=>()=>{},onJobProgress:()=>()=>{}}},
-    '../../services/printFulfillmentService':{downloadPinnedFile:async()=>{}},
+    '../../services/printFulfillmentService':{downloadPinnedFile:async()=>true},
     './BatchReviewDialog':{BatchReviewDialog:'BatchReview'},
     '../../services/batchReviewService':{readPendingBatch:()=>options.pending||null,batchReviewService:options.batches||{}},
     './useLiveQueueLayout':{useLiveQueueLayout:()=>({layout:{...layout,queueKey:measured},gridRef(){}})},

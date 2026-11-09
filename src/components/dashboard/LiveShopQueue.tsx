@@ -280,11 +280,12 @@ export function LiveShopQueue({ shopId }: { shopId: string }) {
     }
   };
   const downloadBatch = async (batch: AcceptedBatch) => {
+    let unavailable = batch.downloadErrors?.length || 0;
     for (const file of batch.downloads || [])
-      await downloadPinnedFile(file.url, file.fileName);
-    if (batch.downloadErrors?.length) {
+      if (!(await downloadPinnedFile(file.url, file.fileName))) unavailable += 1;
+    if (unavailable) {
       setDownloadRetry(batch.requestId);
-      setNotice(`Batch accepted, but ${batch.downloadErrors.length} manual file downloads are unavailable. Retry downloads without starting another production attempt.`);
+      setNotice(`Batch accepted, but ${unavailable} manual file downloads are unavailable. Retry downloads without starting another production attempt.`);
     } else {
       setDownloadRetry(null);
       setNotice("Batch accepted. Check physical output in Pickup before confirming readiness.");
