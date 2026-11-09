@@ -93,7 +93,7 @@ function fixture(kind = 'new', busy = false, draftOverrides = {}, options = {}) 
   const flush = async () => { await new Promise(resolve => setImmediate(resolve)); render(); };
   const summary = () => nodes(tree).find(node => node.type === OrderSummary).props;
   render();
-  return { calls, services, navigation, render, flush, summary, invalidations: () => cacheInvalidations, operationReads: () => operationReads,
+  return { recovery, calls, services, navigation, render, flush, summary, invalidations: () => cacheInvalidations, operationReads: () => operationReads,
     setOperationStatus: value => { operationStatus = () => value; },
     status: () => nodes(tree).find(node => node.type === markers.SubmissionStatus).props,
     feedback: () => nodes(tree).find(node => node.type === component && node.props.feedback)?.props,
@@ -131,6 +131,13 @@ test('copy input retains bounds and clamps invalid selections', () => {
   for (const [value,expected] of [['1',1],['2',2],['99',99],['0',1],['-1',1],['100',99],['1.5',1],['',1],['invalid',1]]) {
     input.props.onChange({target:{value}}); assert.equal(copies,expected);
   }
+});
+
+test('saved draft fields are not restored over a newer version of the draft', () => {
+  const stale = fixture('edit', false, { draftVersion: 3 });
+  stale.summary().setOrderName('Unsaved older edit'); stale.render();
+  assert.equal(stale.recovery.readRecovery('draft:draft:3').fields.orderName, 'Unsaved older edit');
+  assert.equal(stale.recovery.readRecovery('draft:draft:4'), null);
 });
 
 test('new-order estimate and submissions carry selected orientation and copies', async () => {
