@@ -38,12 +38,45 @@ export interface SubmitOrderResponse {
  state: string;
 }
 
+/** What the server knows about a submission, keyed by its idempotency key. */
+export interface OperationStatus<T> {
+ status: 'unknown' | 'processing' | 'succeeded' | 'failed';
+ retryAllowed: boolean;
+ retryAfterSeconds?: number;
+ result?: T;
+ error?: { status: number | null; data: unknown };
+}
+
+export type DraftSettings = {
+ shopId: string;
+ paperSize: string;
+ printColorMode: string;
+ orderName: string;
+ orientation: string;
+ copies: number;
+ paymentMethod: PaymentMethod;
+};
+
 export interface UploadReceiptResponse {
  message: string;
  state: string;
 }
 
 const READ_TIMEOUT_MS = 30_000;
+const JSON_WRITE_TIMEOUT_MS = 30_000;
+const MULTIPART_TIMEOUT_MS = 5 * 60_000;
+
+const operationHeaders = (key: string) => ({ 'Idempotency-Key': key });
+
+function draftChangeRequest(settings: DraftSettings, file: File | null, expectedVersion: number | undefined, key: string): { method: string; headers: Record<string, string>; body: BodyInit; timeoutMs: number } {
+ const fields = { ...settings, orderName: settings.orderName.trim(), ...(expectedVersion === undefined ? {} : { expectedVersion }) };
+ const shared = { method: 'PATCH', headers: operationHeaders(key) };
+ if (!file) return { ...shared, body: JSON.stringify(fields), timeoutMs: JSON_WRITE_TIMEOUT_MS };
+ const formData = new FormData();
+ formData.append('file', file);
+ Object.entries(fields).forEach(([name, value]) => formData.append(name, String(value)));
+ return { ...shared, body: formData, timeoutMs: MULTIPART_TIMEOUT_MS };
+}
 
 export const orderService = {
  /**
@@ -56,7 +89,7 @@ export const orderService = {
  /**
  * Submits the final print order.
  */
- async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH'): Promise<SubmitOrderResponse> {
+ async submitOrder(shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH', key: string, confirmDuplicate = false): Promise<SubmitOrderResponse> {
  const formData = new FormData();
  formData.append('shopId', shopId);
  formData.append('file', file);
@@ -66,10 +99,22 @@ export const orderService = {
  formData.append('orientation', orientation);
  formData.append('copies', String(copies));
  formData.append('paymentMethod', paymentMethod);
+ if (confirmDuplicate) formData.append('confirmDuplicate', 'true');
 
  return apiClient<SubmitOrderResponse>('/orders', {
  method: 'POST',
+ headers: operationHeaders(key),
  body: formData as unknown as BodyInit,
+ timeoutMs: MULTIPART_TIMEOUT_MS,
+ });
+ },
+
+ /** Asks what happened to a submission whose response never arrived. */
+ async getOperation<T>(key: string): Promise<OperationStatus<T>> {
+ return apiClient<OperationStatus<T>>(`/orders/operations/${key}`, {
+ method: 'GET',
+ cache: 'no-store',
+ timeoutMs: READ_TIMEOUT_MS,
  });
  },
 
@@ -103,7 +148,7 @@ export const orderService = {
  /**
  * Uploads the payment receipt for a specific order.
  */
- async uploadReceipt(orderId: string, receiptFile: File, referenceNumber?: string): Promise<{ message: string; state: string }> {
+ async uploadReceipt(orderId: string, receiptFile: File, referenceNumber: string | undefined, key: string): Promise<{ message: string; state: string }> {
  const formData = new FormData();
  formData.append('receiptFile', receiptFile);
  if (referenceNumber) {
@@ -112,7 +157,9 @@ export const orderService = {
 
  return apiClient<{ message: string; state: string }>(`/orders/${orderId}/receipt`, {
  method: 'POST',
+ headers: operationHeaders(key),
  body: formData,
+ timeoutMs: MULTIPART_TIMEOUT_MS,
  });
  },
 
@@ -127,12 +174,14 @@ export const orderService = {
  return apiClient<{ message: string }>(`/orders/${orderId}/dispute-payment`, {
  method: 'POST',
  body: JSON.stringify({ reason }),
+ timeoutMs: JSON_WRITE_TIMEOUT_MS,
  });
  },
 
  async cancelOrder(orderId: string): Promise<{ message: string }> {
  return apiClient<{ message: string }>(`/orders/${orderId}`, {
  method: 'DELETE',
+ timeoutMs: JSON_WRITE_TIMEOUT_MS,
  });
  },
 
@@ -148,22 +197,24 @@ export const orderService = {
  });
  },
 
- // Convert a draft to a real order (starts the 15-minute timer)
- submitDraft: async (draftId: string, paymentMethod?: PaymentMethod) => {
- return await apiClient(`/orders/${draftId}/submit`, { 
- method: 'PATCH',
- body: paymentMethod ? JSON.stringify({ paymentMethod }) : undefined,
- });
+ // Convert a draft to a real order (starts the 15-minute timer), with any edits, in one step
+ submitDraftChanges: async (draftId: string, settings: DraftSettings, file: File | null, expectedVersion: number | undefined, key: string) => {
+ return await apiClient<SubmitOrderResponse>(`/orders/${draftId}/submit`, draftChangeRequest(settings, file, expectedVersion, key));
+ },
+
+ saveDraftChanges: async (draftId: string, settings: DraftSettings, file: File | null, expectedVersion: number | undefined, key: string) => {
+ return await apiClient<SubmitOrderResponse>(`/orders/${draftId}/update-draft`, draftChangeRequest(settings, file, expectedVersion, key));
  },
 
  // Delete a draft permanently
  deleteDraft: async (draftId: string) => {
  return await apiClient(`/orders/${draftId}`, { 
- method: 'DELETE' 
+ method: 'DELETE',
+ timeoutMs: JSON_WRITE_TIMEOUT_MS,
  });
  },
 
-  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH') => {
+  saveDraft: async (shopId: string, file: File, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH', key: string) => {
     const formData = new FormData();
     formData.append('shopId', shopId);
     formData.append('file', file);
@@ -178,14 +229,9 @@ export const orderService = {
     // Reusing your existing POST /orders endpoint
     return await apiClient<SubmitOrderResponse>('/orders', {
       method: 'POST',
+      headers: operationHeaders(key),
       body: formData,
-    });
-  },
-
-  updateDraftWithoutFile: async (draftId: string, shopId: string, paperSize: string, printColorMode: string, orderName: string, orientation: string, copies: number, paymentMethod: PaymentMethod = 'GCASH') => {
-    return await apiClient(`/orders/${draftId}/update-draft`, {
-      method: 'PATCH',
-      body: JSON.stringify({ shopId, paperSize, printColorMode, orderName: orderName.trim(), orientation, copies, paymentMethod }),
+      timeoutMs: MULTIPART_TIMEOUT_MS,
     });
   },
 

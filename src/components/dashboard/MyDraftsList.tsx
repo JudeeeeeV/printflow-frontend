@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Document, TrashCan, Edit } from '@carbon/icons-react';
 import { orderService } from '../../services/orderService';
+import { ApiError } from '../../services/apiClient';
 import { MyDraftsSkeleton } from './skeletons/MyDraftsSkeleton';
 import { Pagination } from '../common/Pagination';
 import { AlertModal } from '../common/AlertModal';
@@ -9,6 +10,7 @@ import { CheckNowButton, StaleStatusNotice } from '../common/StaleStatusNotice';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
 export interface DraftOrder {
+ draftVersion?: number;
  paymentMethod?: 'GCASH' | 'CASH_ON_PICKUP';
  id: string;
  shopId: string;
@@ -81,8 +83,10 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  try {
  await orderService.deleteDraft(draftId);
  setDrafts(prev => prev.filter(draft => draft.id !== draftId));
- } catch {
- showAlert('Failed to delete draft.', 'error', 'Delete Failed');
+ } catch (error) {
+ // Already gone means the earlier delete went through.
+ if (error instanceof ApiError && error.status === 404) setDrafts(prev => prev.filter(draft => draft.id !== draftId));
+ else showAlert('Failed to delete draft.', 'error', 'Delete Failed');
  } finally {
  setIsActionLoading(null);
  setDraftToDelete(null);

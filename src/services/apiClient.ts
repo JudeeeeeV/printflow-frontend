@@ -198,6 +198,17 @@ function refreshSession(): Promise<RefreshOutcome> {
   return refreshPromise;
 }
 
+/** Scopes browser recovery data to the signed-in student. */
+export function getAccountId(): string {
+  try {
+    const payload = (getAccessToken() ?? '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { sub } = JSON.parse(atob(payload)) as { sub?: unknown };
+    return typeof sub === 'string' ? sub : 'session';
+  } catch {
+    return 'session';
+  }
+}
+
 function accessTokenExpiresSoon(): boolean {
   const token = getAccessToken();
   if (!token) return true;

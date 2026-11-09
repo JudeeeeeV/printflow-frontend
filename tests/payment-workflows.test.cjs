@@ -31,6 +31,15 @@ function fixture(kind, props, service = {}) {
     '../../../services/orderService': { orderService: service },
     '../../services/orderService': { orderService: service },
     '../../common/AlertModal': { AlertModal: 'Alert' },
+    '../../orders/SubmissionStatus': { SubmissionStatus: 'SubmissionStatus' },
+    '../../../hooks/useRecoverableSubmission': { useRecoverableSubmission: config => ({
+      phase: 'idle', isBusy: false, hasUnresolved: false, needsFile: false, duplicateOrderId: null, storageAvailable: true, ready: false,
+      saveFields() {}, retry() {}, check() {}, startOver() {}, submitAnyway() {}, dismissDuplicate() {},
+      submit: async (action, fields, file) => {
+        try { config.onSuccess(await config.send({ action, fields, file, key: 'test-key' }), action, fields); }
+        catch (error) { config.onFailure(error, action, fields); }
+      },
+    }) },
     '../common/ConfirmModal': { ConfirmModal: 'Confirm' },
   };
   const file = kind === 'checkout' ? 'components/checkout/CheckoutCard/CheckoutCard.tsx' : 'components/dashboard/ShopOrderActions.tsx';

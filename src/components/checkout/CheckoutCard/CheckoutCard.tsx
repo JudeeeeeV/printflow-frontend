@@ -7,6 +7,8 @@ import { ReceiptUploadZone } from '../ReceiptUploadZone/ReceiptUploadZone';
 import { SubmitVerificationButton } from '../SubmitVerificationButton/SubmitVerificationButton';
 import { orderService } from '../../../services/orderService';
 import { AlertModal } from '../../common/AlertModal';
+import { SubmissionStatus } from '../../orders/SubmissionStatus';
+import { useRecoverableSubmission } from '../../../hooks/useRecoverableSubmission';
 
 interface PaymentReceipt {
  receipt_url?: string;
@@ -60,7 +62,6 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  const canCancel = orderState === 'OPEN_INQUIRY';
  const [receiptFile, setReceiptFile] = useState<File | null>(null);
  const [referenceNumber, setReferenceNumber] = useState('');
- const [isSubmitting, setIsSubmitting] = useState(false);
  const [isCancelling, setIsCancelling] = useState(false);
  const [showDisputeModal, setShowDisputeModal] = useState(false);
  const [disputeReason, setDisputeReason] = useState('');
@@ -82,6 +83,17 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  type?: 'info' | 'success' | 'error' | 'warning';
  onCloseCallback?: () => void;
  }>({ isOpen: false, message: '' });
+
+ const submission = useRecoverableSubmission<{ message: string; state: string }, 'receipt', { referenceNumber: string }>({
+ scope: `receipt:${orderId}`,
+ send: ({ fields, file, key }) => orderService.uploadReceipt(orderId, file as File, fields.referenceNumber, key),
+ checkOperation: (key) => orderService.getOperation<{ message: string; state: string }>(key),
+ restore: (fields) => setReferenceNumber(fields.referenceNumber),
+ onSuccess: () => setShowSuccessModal(true),
+ onFailure: (err) => setError(err instanceof Error ? err.message : 'Failed to upload receipt. Please try again.'),
+ });
+ const isSubmitting = submission.isBusy;
+ const { ready: submissionReady, saveFields } = submission;
 
  const showAlert = (
  message: string,
@@ -140,18 +152,14 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  if (hasPaymentDeadline && isExpired) onDeadlineReached?.();
  }, [hasPaymentDeadline, isExpired, onDeadlineReached]);
 
- const handleSubmit = async () => {
- if (!receiptFile || !referenceNumber.trim() || isCash || closed) return;
- setIsSubmitting(true);
+ useEffect(() => {
+ if (submissionReady) saveFields({ referenceNumber });
+ }, [submissionReady, saveFields, referenceNumber]);
+
+ const handleSubmit = () => {
+ if (!receiptFile || !referenceNumber.trim() || isCash || closed || submission.hasUnresolved) return;
  setError(null);
- try {
- await orderService.uploadReceipt(orderId, receiptFile, referenceNumber);
- setShowSuccessModal(true);
- } catch (err: unknown) {
- setError(err instanceof Error ? err.message : 'Failed to upload receipt. Please try again.');
- } finally {
- setIsSubmitting(false);
- }
+ void submission.submit('receipt', { referenceNumber }, receiptFile);
  };
 
  const handleCancel = async () => {
@@ -325,6 +333,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  <input
  id="gcash-reference-number"
  required
+ disabled={submission.hasUnresolved}
  maxLength={120}
  type="text"
  inputMode="numeric"
@@ -337,7 +346,20 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  <p id="gcash-reference-help" className="mt-2 text-xs leading-relaxed text-gray-600">Enter the reference from this transfer so the shop can match the receipt and amount.</p>
  </div>
 
- <SubmitVerificationButton onSubmit={handleSubmit} isSubmitting={isSubmitting} disabled={!receiptFile || !referenceNumber.trim() || isExpired} />
+ <SubmissionStatus
+ phase={submission.phase}
+ needsFile={submission.needsFile}
+ hasFile={!!receiptFile}
+ storageAvailable={submission.storageAvailable}
+ duplicateOrderId={submission.duplicateOrderId}
+ onRetry={() => void submission.retry(receiptFile)}
+ onCheck={() => void submission.check()}
+ onStartOver={() => submission.startOver()}
+ onSubmitAnyway={() => void submission.submitAnyway()}
+ onDismissDuplicate={() => submission.dismissDuplicate()}
+ onViewOrder={() => undefined}
+ />
+ <SubmitVerificationButton onSubmit={handleSubmit} isSubmitting={isSubmitting} disabled={!receiptFile || !referenceNumber.trim() || isExpired || submission.hasUnresolved} />
  <div className="flex items-start gap-2 border-t border-gray-300 pt-4 text-xs leading-relaxed text-gray-600">
  <CheckmarkFilled aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
  Receipt is sent only to the print shop handling this order.

@@ -5,7 +5,7 @@ import { ShopSelector } from '../../components/orders/ShopSelector/ShopSelector'
 import { FileUploadZone } from '../../components/orders/FileUploadZone/FileUploadZone';
 import { OrderSummary } from '../../components/orders/OrderSummary/OrderSummary';
 import { MyOrdersList } from '../../components/dashboard/MyOrdersList';
-import { orderService, type OrderEstimate, type PaymentMethod } from '../../services/orderService';
+import { orderService, type OrderEstimate, type PaymentMethod, type SubmitOrderResponse } from '../../services/orderService';
 import { shopService } from '../../services/shopService';
 import { useDataEvents } from '../../hooks/useDataEvents';
 import type { PrintShop } from '../../services/orderService';
@@ -20,6 +20,21 @@ import styles from './NewOrderPage.module.css';
 
 import { prepareDocument, submissionFileFeedback, type FileFeedback as Feedback } from '../../services/documentPreparation';
 import { FileFeedback } from '../../components/orders/FileFeedback';
+import { MobileActionBar } from '../../components/orders/MobileActionBar';
+import { SubmissionStatus } from '../../components/orders/SubmissionStatus';
+import { useRecoverableSubmission } from '../../hooks/useRecoverableSubmission';
+import { clearAllRecovery } from '../../services/submissionRecovery';
+
+type NewOrderAction = 'submit' | 'save';
+type NewOrderFields = {
+    selectedShopId: string;
+    paperSize: string;
+    printColorMode: string;
+    orderName: string;
+    orientation: string;
+    copies: number;
+    paymentMethod: PaymentMethod;
+};
 
 export const NewOrderPage: React.FC = () => {
     const navigate = useNavigate();
@@ -30,6 +45,7 @@ export const NewOrderPage: React.FC = () => {
     const handleLogout = async () => {
         await apiClient('/auth/logout', { method: 'POST' }).catch(() => undefined);
         clearAuthTokens();
+        clearAllRecovery();
         localStorage.removeItem('user_role');
         navigate('/auth');
     };
@@ -68,10 +84,10 @@ export const NewOrderPage: React.FC = () => {
     const canPreviewFile = !!file && isFileValidated && (file.type.startsWith('image/') || file.type === 'application/pdf');
 
     const [estimate, setEstimate] = useState<OrderEstimate | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [fileIssue, setFileIssue] = useState<Feedback | null>(null);
     const validationGeneration = useRef(0);
-    const submissionPending = useRef(false);
+    const summaryRef = useRef<HTMLElement>(null);
+    const summaryHeadingRef = useRef<HTMLHeadingElement>(null);
     const retryOperation = useRef<'submit' | 'save'>('submit');
     useEffect(() => () => { validationGeneration.current++; }, []);
 
@@ -79,6 +95,55 @@ export const NewOrderPage: React.FC = () => {
     const showAlert = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', title?: string, onCloseAction?: () => void) => {
         setAlertState({ isOpen: true, message, type, title, onCloseAction });
     };
+
+    const submission = useRecoverableSubmission<SubmitOrderResponse, NewOrderAction, NewOrderFields>({
+        scope: 'new-order',
+        send: ({ action, fields, file: selected, key, confirmDuplicate }) => action === 'save'
+            ? orderService.saveDraft(fields.selectedShopId, selected as File, fields.paperSize, fields.printColorMode, fields.orderName, fields.orientation, fields.copies, fields.paymentMethod, key)
+            : orderService.submitOrder(fields.selectedShopId, selected as File, fields.paperSize, fields.printColorMode, fields.orderName, fields.orientation, fields.copies, fields.paymentMethod, key, confirmDuplicate),
+        checkOperation: (key) => orderService.getOperation<SubmitOrderResponse>(key),
+        restore: (fields) => {
+            if (fields.selectedShopId) setSelectedShopId(fields.selectedShopId);
+            setPaperSize(fields.paperSize);
+            setPrintColorMode(fields.printColorMode);
+            setOrderName(fields.orderName);
+            setOrientation(fields.orientation);
+            setCopies(fields.copies);
+            setPaymentMethod(fields.paymentMethod);
+        },
+        onSuccess: (response, action) => {
+            if (action !== 'save') {
+                navigate(`/checkout/${response.orderId}`);
+                return;
+            }
+            showAlert('Order saved as draft!', 'success', 'Success', () => {
+                handleTabChange('drafts');
+            });
+
+            // Reset the form so they can start a new order if they want
+            setFile(null);
+            setSelectedShopId(null);
+            setValidationResult(null);
+            setOrderName('');
+            setOrientation('PORTRAIT');
+            setCopies(1);
+            setPaymentMethod('GCASH');
+        },
+        onFailure: (err, action) => {
+            if (!handleFileFailure(err)) {
+                const fallback = action === 'save' ? 'The draft could not be saved.' : 'The order could not be submitted.';
+                showAlert(err instanceof Error ? err.message : fallback, 'error', action === 'save' ? 'Save Failed' : 'Submission Failed');
+            }
+        },
+    });
+    const isSubmitting = submission.isBusy;
+    const isSubmissionLocked = isSubmitting || submission.hasUnresolved;
+    const orderFields: NewOrderFields = { selectedShopId: selectedShopId ?? '', paperSize, printColorMode, orderName, orientation, copies, paymentMethod };
+    const { ready: submissionReady, saveFields } = submission;
+
+    useEffect(() => {
+        if (submissionReady) saveFields({ selectedShopId: selectedShopId ?? '', paperSize, printColorMode, orderName, orientation, copies, paymentMethod });
+    }, [submissionReady, saveFields, selectedShopId, paperSize, printColorMode, orderName, orientation, copies, paymentMethod]);
 
     useEffect(() => {
         let active = true;
@@ -144,7 +209,7 @@ export const NewOrderPage: React.FC = () => {
     }, [paperSize, printColorMode, selectedShopId, file, validationResult?.passed, shops, pageCount, copies]);
 
     const handleFileSelect = async (selectedFile: File) => {
-        if (submissionPending.current) return;
+        if (isSubmitting) return;
         if (!selectedShopId) {
             showAlert('Please select a print shop first.', 'warning', 'Missing Information');
             return;
@@ -203,80 +268,21 @@ export const NewOrderPage: React.FC = () => {
         setIsValidating(false);
     };
 
-    const handleSubmitOrder = async () => {
-        if (submissionPending.current || !selectedShopId || !file || !validationResult?.passed || !orderName.trim())
+    const handleSubmitOrder = () => {
+        if (isSubmissionLocked || !selectedShopId || !file || !validationResult?.passed || !orderName.trim())
             return;
-
-        submissionPending.current = true;
         retryOperation.current = 'submit';
         setFileIssue(null);
-        setIsSubmitting(true);
-        try {
-            const response = await orderService.submitOrder(
-                selectedShopId,
-                file,
-                paperSize,
-                printColorMode,
-                orderName,
-                orientation,
-                copies,
-                paymentMethod
-            );
-            navigate(`/checkout/${response.orderId}`);
-        } catch (err: unknown) {
-            if (!handleFileFailure(err))
-                showAlert(
-                    err instanceof Error ? err.message : 'The order could not be submitted.',
-                    'error',
-                    'Submission Failed'
-                );
-        } finally {
-            submissionPending.current = false;
-            setIsSubmitting(false);
-        }
+        return submission.submit('submit', orderFields, file);
     };
 
     // New handler for saving a draft
-    const handleSaveDraft = async () => {
-        if (submissionPending.current || !selectedShopId || !file || !validationResult?.passed || !orderName.trim())
+    const handleSaveDraft = () => {
+        if (isSubmissionLocked || !selectedShopId || !file || !validationResult?.passed || !orderName.trim())
             return;
-
-        submissionPending.current = true;
         retryOperation.current = 'save';
         setFileIssue(null);
-        setIsSubmitting(true);
-        try {
-            // Replaced the mock delay with the actual API call
-            await orderService.saveDraft(
-                selectedShopId,
-                file,
-                paperSize,
-                printColorMode,
-                orderName,
-                orientation,
-                copies,
-                paymentMethod
-            );
-
-            showAlert('Order saved as draft!', 'success', 'Success', () => {
-                handleTabChange('drafts');
-            });
-
-            // Reset the form so they can start a new order if they want
-            setFile(null);
-            setSelectedShopId(null);
-            setValidationResult(null);
-            setOrderName('');
-            setOrientation('PORTRAIT');
-            setCopies(1);
-            setPaymentMethod('GCASH');
-        } catch (err: unknown) {
-            if (!handleFileFailure(err))
-                showAlert(err instanceof Error ? err.message : 'The draft could not be saved.', 'error', 'Save Failed');
-        } finally {
-            submissionPending.current = false;
-            setIsSubmitting(false);
-        }
+        return submission.submit('save', orderFields, file);
     };
 
     return (
@@ -363,7 +369,7 @@ export const NewOrderPage: React.FC = () => {
                     </nav>
                 </header>
 
-                <div key={activeTab} className="animate-slide-fade pb-10">
+                <div key={activeTab} className={`animate-slide-fade ${activeTab === 'new' ? 'pb-28 xl:pb-10' : 'pb-10'}`}>
                 {activeTab === 'new' && (
                     <div className="grid grid-cols-1 items-start gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
                         <section className="min-w-0 border border-black bg-white shadow-[0_8px_24px_rgba(22,22,22,0.06)]">
@@ -406,7 +412,7 @@ export const NewOrderPage: React.FC = () => {
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-gray-100 text-xs font-black text-white">02</span>
                                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-black">Upload your work</p>
                                     </div>
-                                    <FileFeedback focusOnError feedback={fileIssue} onRetry={() => { if (retryOperation.current === 'save') void handleSaveDraft(); else void handleSubmitOrder(); }} onCheckOrders={() => { invalidateApiCache(); handleTabChange(retryOperation.current === 'save' ? 'drafts' : 'orders'); }} />
+                                    <FileFeedback focusOnError feedback={fileIssue} onRetry={() => { if (retryOperation.current === 'save') handleSaveDraft(); else handleSubmitOrder(); }} onCheckOrders={() => { invalidateApiCache(); handleTabChange(retryOperation.current === 'save' ? 'drafts' : 'orders'); }} />
                                     <div className="[&>div]:mb-0">
                                         {file && isFileValidated ? (
                                             <div className="border border-[#8d8d8d] bg-carbon-gray-100 p-2 shadow-[0_8px_20px_rgba(22,22,22,0.12)] sm:p-3">
@@ -415,10 +421,10 @@ export const NewOrderPage: React.FC = () => {
                                                         <span className="h-2.5 w-2.5 shrink-0 bg-carbon-blue-60" />
                                                         <span className="text-xs font-bold uppercase tracking-[0.16em]">Uploaded file preview</span>
                                                     </div>
-                                                    <span className="max-w-[55%] truncate text-xs text-gray-300" title={file.name}>{file.name}</span>
+                                                    <span className="max-w-[55%] text-right text-xs text-gray-300 [overflow-wrap:anywhere]" title={file.name}>{file.name}</span>
                                                 </div>
                                                 <p className="mt-2 px-1 text-xs text-gray-300 sm:px-2">Printing uses the selected paper size and orientation.</p>
-                                                <div className="group relative mt-3 flex h-[340px] items-center justify-center overflow-hidden bg-gray-200 sm:h-[460px] lg:h-[560px]">
+                                                <div className="group relative mt-3 flex h-[min(60dvh,560px)] min-h-72 items-center justify-center overflow-hidden bg-gray-200">
                                                     {file.type.startsWith('image/') ? (
                                                         <img ref={imagePreviewRef} alt={`Preview of ${file.name}`} className="h-full w-full object-contain" />
                                                     ) : file.type === 'application/pdf' ? (
@@ -462,15 +468,31 @@ export const NewOrderPage: React.FC = () => {
                             </div>
                         </section>
 
-                        <aside className="min-w-0 self-stretch">
-                            <div className="sticky top-6 border border-black">
+                        <aside ref={summaryRef} className="min-w-0 self-stretch">
+                            <div className="border border-black xl:sticky xl:top-6">
                                 <div className="border-b-4 border-carbon-blue-60 bg-carbon-gray-100 px-5 py-4 text-white">
                                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#87B0FE]">Final step</p>
                                     <p className="mt-1 text-sm text-gray-300">Review the details and submit when everything looks right.</p>
                                 </div>
+                                <div className="bg-white empty:hidden [&>*]:m-3">
+                                    <SubmissionStatus
+                                        phase={submission.phase}
+                                        needsFile={submission.needsFile}
+                                        hasFile={!!file && isFileValidated}
+                                        storageAvailable={submission.storageAvailable}
+                                        duplicateOrderId={submission.duplicateOrderId}
+                                        onRetry={() => void submission.retry(file)}
+                                        onCheck={() => void submission.check()}
+                                        onStartOver={() => submission.startOver()}
+                                        onSubmitAnyway={() => void submission.submitAnyway()}
+                                        onDismissDuplicate={() => submission.dismissDuplicate()}
+                                        onViewOrder={(orderId) => navigate(`/checkout/${orderId}`)}
+                                    />
+                                </div>
                                 <OrderSummary
                                     estimate={estimate}
-                                    isSubmitting={isSubmitting}
+                                    isSubmitting={isSubmissionLocked}
+                                    headingRef={summaryHeadingRef}
                                     onSubmit={handleSubmitOrder}
                                     onSaveDraft={handleSaveDraft}
                                     isReady={!!selectedShopId && !!validationResult?.passed && !!orderName.trim()}
@@ -490,6 +512,12 @@ export const NewOrderPage: React.FC = () => {
                                 />
                             </div>
                         </aside>
+                        <MobileActionBar
+                            total={estimate?.total ?? null}
+                            summaryRef={summaryRef}
+                            headingRef={summaryHeadingRef}
+                            hidden={alertState.isOpen || isChangePasswordOpen}
+                        />
                     </div>
                 )}
 
