@@ -73,6 +73,17 @@ test('GCash retains its countdown and switching to cash immediately hides a stal
   assert.equal(f.timerCount(), 0);
 });
 
+test('an expired countdown waits for server confirmation before declaring the order expired', () => {
+  const props = { orderId:'order', amount:45, paymentMethod:'GCASH', paymentStatus:'UNPAID', orderState:'OPEN_INQUIRY', expiresAt:new Date(Date.now()-1000).toISOString(), statusConfirmedAt:Date.now()-5000 };
+  const f = fixture('checkout', props);
+  f.startTimer(); f.render();
+  assert.doesNotMatch(f.text(), /Order expired/);
+  assert.match(f.text(), /Your receipt details are still here/);
+  props.statusConfirmedAt = Date.now(); f.render();
+  assert.match(f.text(), /Order expired/);
+  assert.doesNotMatch(f.text(), /Your receipt details are still here/);
+});
+
 test('GCash receipt submission requires the reference and verified payments never reopen upload controls', () => {
   const f = fixture('checkout',{orderId:'gcash-order',amount:45,paymentMethod:'GCASH',paymentStatus:'UNPAID',acceptanceStatus:'PENDING',orderState:'OPEN_INQUIRY'});
   assert.ok(f.find(node=>node.type==='QR'));

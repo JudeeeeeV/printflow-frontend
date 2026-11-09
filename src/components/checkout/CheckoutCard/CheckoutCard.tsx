@@ -29,6 +29,9 @@ interface CheckoutCardProps {
  shopRejectionReason?: string;
  orderState?: string;
  paymentReceipts?: PaymentReceipt[];
+ /** When the server last confirmed this order's status. */
+ statusConfirmedAt?: number;
+ onDeadlineReached?: () => void;
 }
 
 export const CheckoutCard: React.FC<CheckoutCardProps> = ({
@@ -47,6 +50,8 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  shopRejectionReason,
  orderState,
  paymentReceipts,
+ statusConfirmedAt,
+ onDeadlineReached,
 }) => {
  const status = paymentStatus || (orderState === 'AWAITING_PAYMENT_VERIFICATION' ? 'PENDING_VERIFICATION' : orderState === 'ESCALATED_DISPUTE' ? 'DISPUTED' : orderState === 'AWAITING_PAYMENT' ? 'REJECTED' : 'UNPAID');
  const isCash = paymentMethod === 'CASH_ON_PICKUP';
@@ -66,6 +71,9 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  const [timeLeft, setTimeLeft] = useState('');
  const [isExpired, setIsExpired] = useState(false);
  const navigate = useNavigate();
+ const expiryTime = expiresAt ? new Date(expiresAt).getTime() : status === 'UNPAID' && createdAt ? new Date(createdAt).getTime() + 15 * 60000 : null;
+ // This device's countdown is not proof; the server must have answered since.
+ const expiryConfirmed = hasPaymentDeadline && isExpired && expiryTime !== null && (statusConfirmedAt ?? 0) >= expiryTime;
 
  const [alertState, setAlertState] = useState<{
  isOpen: boolean;
@@ -85,8 +93,6 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  useEffect(() => {
  if (!hasPaymentDeadline) return;
  const updateTimer = () => {
- const expiryTime = expiresAt ? new Date(expiresAt).getTime() : status === 'UNPAID' && createdAt ? new Date(createdAt).getTime() + 15 * 60000 : null;
-
  if (expiryTime === null) {
  setTimeLeft('');
  setIsExpired(false);
@@ -116,10 +122,10 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  updateTimer();
  const intervalId = setInterval(updateTimer, 1000);
  return () => clearInterval(intervalId);
- }, [createdAt, expiresAt, hasPaymentDeadline, status]);
+ }, [expiryTime, hasPaymentDeadline, status]);
 
  useEffect(() => {
- if (!hasPaymentDeadline || !isExpired) return;
+ if (!expiryConfirmed) return;
  const alertTimer = window.setTimeout(() => setAlertState({
  isOpen: true,
  title: 'Order Expired',
@@ -128,7 +134,11 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  onCloseCallback: () => navigate('/new-order?tab=orders'),
  }), 0);
  return () => window.clearTimeout(alertTimer);
- }, [hasPaymentDeadline, isExpired, navigate]);
+ }, [expiryConfirmed, navigate]);
+
+ useEffect(() => {
+ if (hasPaymentDeadline && isExpired) onDeadlineReached?.();
+ }, [hasPaymentDeadline, isExpired, onDeadlineReached]);
 
  const handleSubmit = async () => {
  if (!receiptFile || !referenceNumber.trim() || isCash || closed) return;
@@ -180,7 +190,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  return (
  <article aria-busy={isSubmitting || isCancelling || isDisputing} className="relative w-full overflow-hidden border border-black bg-white shadow-[0_20px_60px_rgba(0,0,0,0.36)]">
 
- {hasPaymentDeadline && isExpired && (
+ {expiryConfirmed && (
  <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/90 p-6 backdrop-blur-sm" role="status">
  <div className="border border-black bg-white px-8 py-7 text-center shadow-xl">
  <WarningAlt aria-hidden="true" className="mx-auto h-10 w-10 text-red-700" />
@@ -231,6 +241,11 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  {!isCash && !closed && <ProgressTimeline currentStep={orderState === 'READY_FOR_PICKUP' ? 4 : ['IN_PRODUCTION', 'PRINTED'].includes(orderState || '') ? 3 : 2} />}
 
  <div className="space-y-5 p-4 sm:p-6 lg:p-8">
+ {hasPaymentDeadline && isExpired && !expiryConfirmed && (
+ <div className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3" role="status">
+ <p className="text-sm font-bold text-amber-900">The payment time has run out on this device. We're confirming with PrintFlow. Your receipt details are still here.</p>
+ </div>
+ )}
  {error && (
  <div className="border-l-4 border-red-700 bg-red-50 px-4 py-3" role="alert">
  <p className="text-sm font-bold text-red-800">{error}</p>

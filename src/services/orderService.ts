@@ -43,12 +43,14 @@ export interface UploadReceiptResponse {
  state: string;
 }
 
+const READ_TIMEOUT_MS = 30_000;
+
 export const orderService = {
  /**
  * Fetches available print shops for the directory.
  */
  async getShops(): Promise<PrintShop[]> {
- return apiClient<PrintShop[]>('/shops', { method: 'GET' });
+ return apiClient<PrintShop[]>('/shops', { method: 'GET', timeoutMs: READ_TIMEOUT_MS });
  },
 
  /**
@@ -74,6 +76,8 @@ export const orderService = {
  async getOrder(orderId: string): Promise<any> {
  return apiClient<any>(`/orders/${orderId}`, {
  method: 'GET',
+ cache: 'no-store',
+ timeoutMs: READ_TIMEOUT_MS,
  });
  },
 
@@ -87,7 +91,7 @@ export const orderService = {
  queryParams.append('limit', limit.toString());
  
  const queryString = queryParams.toString();
- return apiClient<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }>(`/orders?${queryString}`, { method: 'GET' });
+ return apiClient<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }>(`/orders?${queryString}`, { method: 'GET', timeoutMs: READ_TIMEOUT_MS });
  },
 
  async getShopOrders(): Promise<any[]> {
@@ -138,8 +142,9 @@ export const orderService = {
  queryParams.append('page', page.toString());
  queryParams.append('limit', limit.toString());
  const queryString = queryParams.toString();
- return await apiClient<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }>(`/orders/drafts?${queryString}`, { 
- method: 'GET' 
+ return await apiClient<{ data: any[], meta: { currentPage: number, totalPages: number, totalItems: number } }>(`/orders/drafts?${queryString}`, {
+ method: 'GET',
+ timeoutMs: READ_TIMEOUT_MS,
  });
  },
 
