@@ -5,7 +5,7 @@ const { test } = require('node:test');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function load(file, mocks = {}) {
+function load(file, mocks = {}, globals = {}) {
   const exports = {};
   const source = fs.readFileSync(path.join(__dirname, '../src/components/dashboard', file), 'utf8');
   const compiled = ts.transpileModule(source, {
@@ -13,6 +13,7 @@ function load(file, mocks = {}) {
   }).outputText;
   vm.runInNewContext(compiled, {
     exports,
+    ...globals,
     require: name => {
       if (name in mocks) return mocks[name];
       throw new Error(`Unexpected import ${name}`);
@@ -21,7 +22,8 @@ function load(file, mocks = {}) {
   return exports;
 }
 
-const { getOrderCardTitleParts } = load('orderCardTitle.ts');
+const titleHelpers = load('orderCardTitle.ts');
+const { getOrderCardTitleParts } = titleHelpers;
 const order = overrides => ({
   id: '12345678-order', state: 'AWAITING_PAYMENT_VERIFICATION',
   assets: [{ original_filename: 'Test Paper.pdf', file_url: '/receipt.png' }],
@@ -98,11 +100,12 @@ test('uses Manila day and year boundaries and zero-padded MM/DD/YY', () => {
 function renderCard(value, onClick, onToggleSelect, onReviewOrder = () => {}, stateChanges = [], isSelected = false) {
   const jsx = (type, props) => ({ type, props });
   const { OrderCard } = load('OrderCard.tsx', {
-    react: { useState: initial => [initial, next => stateChanges.push(next)] },
+    react: { useState: initial => [initial, next => stateChanges.push(next)], useRef: () => ({current:null}) },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-dom': { createPortal: node => node },
-    'framer-motion': { motion: { div: 'div' } },
-    './orderCardTitle': { getOrderCardTitleParts },
+    'framer-motion': { motion: { div: 'div' }, useReducedMotion: () => false },
+    '../common/useDialogFocus': {useDialogFocus(){}},
+    './orderCardTitle': titleHelpers,
     './OrderCardDetailsDialog': { OrderCardDetailsDialog: 'OrderCardDetailsDialog' },
   });
   return OrderCard({ order: value, onClick, onToggleSelect, onReviewOrder, isSelected });
@@ -126,11 +129,11 @@ test('all queue states render the new heading, supporting order ID, and status b
     assert.equal(text(heading), 'Test Paper');
     assert.ok(elements.some(node => /line-clamp-2/.test(node.props.className || '')));
     const customer = elements.find(node => node.type === 'p' && text(node) === 'Aldrin Novabos');
-    const date = elements.find(node => node.type === 'p' && text(node) === '04/10/26');
+    const date = elements.find(node => node.type === 'p' && text(node).includes('Created 04/10/26') && text(node).includes('08:00 AM PHT'));
     assert.ok(customer && date);
     assert.match(customer.props.className, /text-sm font-bold text-black/);
     assert.match(customer.props.className, /truncate/);
-    assert.match(date.props.className, /text-sm font-bold text-black/);
+    assert.match(date.props.className, /text-xs font-bold text-black/);
     assert.ok(!elements.some(node => text(node) === '•'));
     assert.match(heading.props.className, /overflow-wrap:anywhere/);
     assert.ok(elements.some(node => node.type === 'p' && text(node) === 'Order #12345678'));
@@ -238,9 +241,9 @@ test('disputed orders retain explicit receipt review and the administration noti
   assert.equal(reviewed, 1);
 });
 
-test('cards retain the metadata date and total without a redundant Created row', () => {
+test('cards label created date and Manila time without a redundant row', () => {
   const elements = nodes(renderCard(order()));
-  assert.ok(elements.some(node => node.type === 'p' && text(node) === '04/10/26'));
+  assert.ok(elements.some(node => node.type === 'p' && text(node).includes('Created 04/10/26') && text(node).includes('08:00 AM PHT')));
   assert.ok(elements.some(node => node.type === 'span' && text(node) === 'Total Amount:'));
   assert.ok(!elements.some(node => text(node) === 'Created:'));
 });
@@ -266,10 +269,10 @@ test('paper-size tags use their requested colors across all queues', () => {
   }
 });
 
-test('missing paper sizes retain green A4 and unexpected sizes use neutral white-text tags', () => {
+test('missing paper sizes are explicit and unexpected sizes use neutral white-text tags', () => {
   for (const paper_size of [undefined, null, '']) {
-    const tag = nodes(renderCard(order({ paper_size }))).find(node => node.type === 'span' && text(node) === 'A4');
-    assert.match(tag.props.className, /bg-green-600/);
+    const tag = nodes(renderCard(order({ paper_size }))).find(node => node.type === 'span' && text(node) === 'Paper unavailable');
+    assert.match(tag.props.className, /bg-gray-600/);
   }
   for (const paper_size of ['LETTER', 'toString', '__proto__']) {
     const tag = nodes(renderCard(order({ paper_size }))).find(node => node.type === 'span' && text(node) === paper_size);
@@ -279,7 +282,7 @@ test('missing paper sizes retain green A4 and unexpected sizes use neutral white
 });
 
 test('B&W has a visible white background and black label while COLOR uses an opaque white label over CMYK', () => {
-  for (const print_color_mode of ['BW', undefined]) {
+  for (const print_color_mode of ['BLACK_AND_WHITE']) {
     const tag = nodes(renderCard(order({ print_color_mode }))).find(node => node.type === 'span' && text(node) === 'B&W');
     assert.match(tag.props.className, /bg-white text-black/);
     assert.match(tag.props.className, /border border-gray-300/);
@@ -289,4 +292,77 @@ test('B&W has a visible white background and black label while COLOR uses an opa
   assert.match(color.props.style.backgroundImage, /rgba\(0, 0, 0, 0\.35\)/);
   assert.match(color.props.style.backgroundImage, /#00ffff.*#ff00ff.*#ffff00.*#000000/);
   assert.equal(color.props.style.opacity, undefined);
+});
+
+test('original identity includes its extension and unavailable specifications never imply approved settings', () => {
+  const value = order({ order_name: 'Custom title', assets: [{ original_filename: 'Résumé.v2.docx', file_url: '/generated-name.pdf' }] });
+  const parts = getOrderCardTitleParts(value);
+  assert.equal(parts.filename, 'Custom title');
+  assert.equal(parts.originalFilename, 'Résumé.v2.docx');
+  const specs = titleHelpers.getOrderSpecifications({});
+  for (const value of Object.values(specs)) assert.match(value, /unavailable/);
+  assert.equal(titleHelpers.getOrderSpecifications({ total: 0 }).total, '₱0.00');
+  assert.equal(titleHelpers.getOrderSpecifications({ page_count: -1, copies: 0 }).copies, 'Copies unavailable');
+  assert.equal(getOrderCardTitleParts(order({ created_at: '2026-04-09T16:01:00Z' })).time, '12:01 AM');
+});
+
+function detailsHarness(clipboard) {
+  const jsx = (type, props) => ({ type, props });
+  const listeners = new Map();
+  let cleanup, cursor = 0, message = '', closed = 0;
+  const root = { inert: false };
+  const document = {
+    body: { style: { overflow: 'auto' } }, activeElement: null,
+    getElementById: () => root, querySelector: () => previous,
+    addEventListener: (name, listener) => listeners.set(name, listener),
+    removeEventListener: name => listeners.delete(name),
+  };
+  const control = () => ({ isConnected: true, getClientRects: () => [1], closest: () => null,
+    focus() { document.activeElement = this; } });
+  const previous = control(), close = control(), content = control(), copy = control();
+  previous.focus();
+  const refs = [{ current: close }, { current: { querySelectorAll: () => [close, content, copy] } }, { current: null }];
+  const { OrderCardDetailsDialog } = load('OrderCardDetailsDialog.tsx', {
+    react: { useRef: () => refs[cursor++], useState: () => [message, next => { message = next; }],
+      useEffect(fn, deps) { if (deps.length) fn(); else if (!cleanup) cleanup = fn(); } },
+    'react/jsx-runtime': { jsx, jsxs: jsx }, 'react-dom': { createPortal: tree => tree },
+    '@carbon/icons-react': { Close: 'CloseIcon' }, './orderCardTitle': titleHelpers,
+  }, { document, navigator: { clipboard } });
+  const render = () => { cursor = 0; return OrderCardDetailsDialog({ order: order({ order_name: 'Custom title' }), onClose: () => closed++ }); };
+  const tree = render();
+  return { tree, render, document, root, close, copy, previous, listeners, cleanup: () => cleanup(), closed: () => closed };
+}
+
+test('details show full identity and settings, trap focus across controls and restore the trigger', () => {
+  const app = detailsHarness({ writeText: async () => {} });
+  const content = text(app.tree);
+  for (const value of ['Custom title', 'Test Paper.pdf', '12345678-order', 'Asia/Manila', '08:00 AM', 'Orientation unavailable']) {
+    assert.ok(content.includes(value), value);
+  }
+  assert.equal(app.root.inert, true);
+  assert.equal(app.document.activeElement, app.close);
+  let prevented = 0;
+  const key = (value, shiftKey = false) => app.listeners.get('keydown')({ key: value, shiftKey, preventDefault() { prevented++; }, stopPropagation() {} });
+  key('Tab'); assert.equal(prevented, 0); // normal navigation is handled by the browser
+  key('Tab', true); assert.equal(app.document.activeElement, app.copy);
+  key('Tab'); assert.equal(app.document.activeElement, app.close);
+  key('Escape'); assert.equal(app.closed(), 1);
+  app.cleanup();
+  assert.equal(app.root.inert, false);
+  assert.equal(app.document.body.style.overflow, 'auto');
+  assert.equal(app.document.activeElement, app.previous);
+  assert.equal(app.listeners.size, 0);
+});
+
+test('copy feedback reports success and failure without dismissing details', async () => {
+  for (const failure of [false, true]) {
+    let copied;
+    const app = detailsHarness({ async writeText(value) { if (failure) throw new Error('Denied'); copied = value; } });
+    await nodes(app.tree).find(node => node.type === 'button' && text(node) === 'Copy order reference').props.onClick();
+    const status = nodes(app.render()).find(node => node.props?.role === 'status');
+    assert.match(text(status), failure ? /Could not copy.*manually/ : /reference copied/);
+    if (!failure) assert.equal(copied, '12345678-order');
+    assert.equal(app.closed(), 0);
+    app.cleanup();
+  }
 });

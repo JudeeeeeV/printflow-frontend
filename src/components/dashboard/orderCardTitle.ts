@@ -12,6 +12,30 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: '2-digit',
 });
 
+const timeFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: true,
+});
+
+export function displayOrderStatus(state: string) {
+  return state ? state.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : 'Status unavailable';
+}
+
+export function getOrderSpecifications(order: {
+  paper_size?: string | null; print_color_mode?: string | null; orientation?: string | null;
+  page_count?: number | null; copies?: number | null; total?: number | null;
+}) {
+  const positiveInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
+  return {
+    paper: order.paper_size || 'Paper unavailable',
+    color: order.print_color_mode === 'COLOR' ? 'COLOR' : order.print_color_mode === 'BLACK_AND_WHITE' ? 'B&W' : 'Color unavailable',
+    orientation: order.orientation === 'LANDSCAPE' || order.orientation === 'PORTRAIT' ? order.orientation : 'Orientation unavailable',
+    pages: positiveInteger(order.page_count) ? `${order.page_count} ${order.page_count === 1 ? 'page' : 'pages'}` : 'Page count unavailable',
+    copies: positiveInteger(order.copies) ? `${order.copies} ${order.copies === 1 ? 'COPY' : 'COPIES'}` : 'Copies unavailable',
+    total: typeof order.total === 'number' && Number.isFinite(order.total) && order.total >= 0
+      ? `₱${order.total.toFixed(2)}` : 'Total unavailable',
+  };
+}
+
 export function getOrderCardTitleParts(order: OrderCardTitleData) {
   const originalFilename = Array.isArray(order.assets)
     ? order.assets[0]?.original_filename
@@ -32,5 +56,8 @@ export function getOrderCardTitleParts(order: OrderCardTitleData) {
     filename: orderName || filename || 'Filename unavailable',
     customer: customer || 'Name unavailable',
     date: formattedDate,
+    time: date && Number.isFinite(date.getTime()) ? timeFormatter.format(date) : 'Time unavailable',
+    originalFilename: typeof originalFilename === 'string' && originalFilename.trim()
+      ? originalFilename.trim() : 'Filename unavailable',
   };
 }

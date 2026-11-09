@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
-import { getOrderCardTitleParts } from "./orderCardTitle";
+import { motion, useReducedMotion } from "framer-motion";
+import { useDialogFocus } from "../common/useDialogFocus";
+import { getOrderCardTitleParts, getOrderSpecifications } from "./orderCardTitle";
+import type { ShopQueueOrder } from '../../services/shopQueueService';
 import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
 
 interface OrderCardProps {
-  order: any;
+  order: ShopQueueOrder;
+  loadOrder?: () => Promise<ShopQueueOrder>;
   onClick?: () => void;
   onReviewOrder?: () => void;
   isSelected?: boolean;
@@ -20,24 +23,30 @@ const paperSizeBackgrounds: Record<string, string> = {
   LONG: "bg-carbon-blue-60",
 };
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOrder, isSelected = false, onToggleSelect, statusBadge }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, loadOrder, onClick, onReviewOrder, isSelected = false, onToggleSelect, statusBadge }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const hasDocument = Boolean(order.assets?.[0]?.file_url);
+  const [details, setDetails] = useState<ShopQueueOrder | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const previewDialog = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  useDialogFocus(previewDialog, isPreviewOpen, () => setIsPreviewOpen(false));
+  const hasDocument = order.has_document ?? Boolean(order.assets?.[0]?.file_url);
+  const fetchDetails = async () => {
+    if (!loadOrder) return order;
+    const fresh = await loadOrder(); setDetails(fresh); return fresh;
+  };
   const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
-  const paperSize = order.paper_size || "A4";
+  const specs = getOrderSpecifications(order);
+  const paperSize = specs.paper;
   const paperSizeBackground = Object.hasOwn(paperSizeBackgrounds, paperSize)
     ? paperSizeBackgrounds[paperSize]
     : "bg-gray-600";
-  const pageCount = Number.isInteger(order.page_count) && order.page_count > 0
-    ? order.page_count as number
-    : null;
-  const copies = Number.isInteger(order.copies) && order.copies > 0 ? order.copies as number : 1;
-
   // Determine the state badge configuration
   let badgeText = order.state;
   let badgeColor = "bg-gray-100 text-gray-800";
@@ -99,11 +108,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0 }}
+      layout={!reducedMotion}
+      initial={{ opacity: reducedMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      transition={{ duration: reducedMotion ? 0 : 0.15, ease: "easeOut" }}
       onClick={onClick}
       className={`${onClick ? 'cursor-pointer' : 'cursor-default'} flex h-full min-h-52 min-w-0 flex-col bg-white transition-[border-color,box-shadow] duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[5px] shadow-md' : `border border-black p-2 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
     >
@@ -113,6 +122,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
             <button type="button" aria-label={`Show full title and customer for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
               event.stopPropagation();
               setIsDetailsOpen(true);
+              if (loadOrder) {
+                setDetailsLoading(true); setLoadError('');
+                void fetchDetails().catch(() => setLoadError('Fresh details could not be loaded. Close and try again.')).finally(() => setDetailsLoading(false));
+              }
             }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-8">
               <span className="line-clamp-2">{title.filename}</span>
             </button>
@@ -128,7 +141,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
           <div className={`max-w-full px-2 py-1 text-right text-[10px] font-bold leading-3 [overflow-wrap:anywhere] ${badgeColor}`}>
             {badgeText}
           </div>
-          <p className="whitespace-nowrap text-sm font-bold text-black leading-4">{title.date}</p>
+          <p className="text-right text-xs font-bold text-black leading-4"><span className="block">Created {title.date}</span><span className="block">{title.time} PHT</span></p>
         </div>
       </div>
 
@@ -145,17 +158,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
           </span>
         ) : (
           <span className="px-2 py-0.5 bg-white text-black text-[10px] font-bold border border-gray-300">
-            B&W
+            {specs.color}
           </span>
         )}
         <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-[10px] font-bold border border-[#e0e0e0]">
-          {pageCount === null ? 'Page count unavailable' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`}
+          {specs.pages}
         </span>
         <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800">
-          {order.orientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT'}
+          {specs.orientation}
         </span>
         <span className="border border-[#e0e0e0] bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800">
-          {copies} {copies === 1 ? 'COPY' : 'COPIES'}
+          {specs.copies}
         </span>
       </div>
 
@@ -163,7 +176,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
         <div className="flex flex-1 justify-between gap-2 text-sm">
           <span className="text-gray-500 font-medium">Total Amount:</span>
           <span className="font-bold text-carbon-gray-100">
-            ₱{order.total || 0}
+            {specs.total}
           </span>
         </div>
         {onToggleSelect && (
@@ -194,8 +207,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
               if (!hasDocument) return;
               setIsAssetLoading(true);
               setHasImageError(false);
-              setPreviewUrl(order.assets[0].file_url);
-              setIsPreviewOpen(true);
+              setIsPreviewOpen(true); setPreviewUrl(null); setLoadError('');
+              void fetchDetails().then(fresh => {
+                const url = fresh.assets?.[0]?.file_url;
+                if (!url) throw new Error('File unavailable');
+                setPreviewUrl(url);
+              }).catch(() => { setIsAssetLoading(false); setLoadError('The document could not be loaded. Close and try again.'); });
             }}
             className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6] disabled:cursor-not-allowed disabled:opacity-50`}
           >
@@ -241,12 +258,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
         </div>
       )}
 
-      {isDetailsOpen && <OrderCardDetailsDialog orderId={order.id} filename={title.filename} customer={title.customer} onClose={() => setIsDetailsOpen(false)} />}
+      {isDetailsOpen && <OrderCardDetailsDialog order={details || order} isLoading={detailsLoading} loadError={loadError} onClose={() => setIsDetailsOpen(false)} />}
 
       {/* Document Preview Modal */}
       {isPreviewOpen &&
-        order.assets &&
-        order.assets.length > 0 &&
         createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity"
@@ -256,6 +271,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
             }}
           >
             <div
+              ref={previewDialog}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Document preview"
               className="bg-white w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden rounded-xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -283,11 +302,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
                   Document Preview
                 </h3>
                 <button
+                  type="button"
+                  aria-label="Close document preview"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsPreviewOpen(false);
                   }}
-                  className="p-1 rounded-full text-gray-400 hover:text-carbon-gray-100 hover:bg-gray-100 transition-colors"
+                  className="min-h-11 min-w-11 p-1 rounded-full text-gray-400 hover:text-carbon-gray-100 hover:bg-gray-100 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60"
                 >
                   <svg
                     className="w-6 h-6"
@@ -305,6 +326,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
                 </button>
               </div>
               <div className="flex-1 relative flex flex-col overflow-hidden bg-gray-50">
+                {loadError && <p role="alert" className="p-6">{loadError}</p>}
                 {previewUrl?.match(/\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i) ? (
                   <div
                     className="w-full h-full flex items-center justify-center p-4 sm:p-8 overflow-auto relative"
@@ -351,14 +373,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
                       </div>
                     ) : (
                       <motion.img
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        initial={{ opacity: reducedMotion ? 1 : 0, scale: reducedMotion ? 1 : 0.95, y: reducedMotion ? 0 : 10 }}
                         animate={{
                           opacity: isAssetLoading ? 0 : 1,
                           scale: isAssetLoading ? 0.95 : 1,
                           y: isAssetLoading ? 10 : 0,
                         }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
-                        src={previewUrl}
+                        transition={{ duration: reducedMotion ? 0 : 0.4, ease: "easeOut" }}
+                        src={previewUrl || undefined}
                         alt="Document Preview"
                         onLoad={() => setIsAssetLoading(false)}
                         onError={() => {
@@ -383,18 +405,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewOr
                     )}
                     <iframe
                       src={previewUrl ?? undefined}
+                      tabIndex={-1}
                       referrerPolicy="no-referrer"
                       className="w-full h-full border-none bg-carbon-gray-10 relative z-20"
                       title="Document Preview"
                       onLoad={() => setIsAssetLoading(false)}
                       style={{
                         opacity: isAssetLoading ? 0 : 1,
-                        transition: "opacity 0.4s ease-out",
+                        transition: reducedMotion ? "none" : "opacity 0.4s ease-out",
                       }}
                     />
                   </>
                 )}
               </div>
+              {previewUrl && <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="min-h-11 shrink-0 p-3 text-sm font-bold underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open original document in a new tab</a>}
             </div>
           </div>,
           document.body,

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from 'react';
 import { getLiveQueueLayout, MIN_QUEUE_CARD_HEIGHT, type LiveQueueLayout } from './liveQueueLayout';
 
-export function useLiveQueueLayout() {
+export function useLiveQueueLayout(queueKey: string) {
   const [grid, gridRef] = useState<HTMLDivElement | null>(null);
   const [layout, setLayout] = useState<LiveQueueLayout & { queueKey: string | null }>(() => ({ ...getLiveQueueLayout(window.innerWidth, 0), queueKey: null }));
 
@@ -39,7 +39,7 @@ export function useLiveQueueLayout() {
       observer.disconnect();
       window.removeEventListener('resize', schedule);
     };
-  }, [grid]);
+  }, [grid, queueKey]);
 
   return { layout, gridRef };
 }

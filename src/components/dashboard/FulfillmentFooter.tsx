@@ -27,7 +27,7 @@ interface FulfillmentFooterProps {
 const formatTime = (value?: string | null) => {
  if (!value) return null;
  const date = new Date(value);
- return Number.isNaN(date.getTime()) ? null : date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+ return Number.isNaN(date.getTime()) ? null : date.toLocaleString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 };
 
 export const FulfillmentFooter: React.FC<FulfillmentFooterProps> = ({ order, attempt, actions, showMilestones, orderLabel, onAction }) => {

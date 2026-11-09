@@ -10,6 +10,7 @@ export interface PaymentReviewOrder {
  output_confirmed_at?: string | null;
  current_attempt?: { resolvedAt?: string | null } | null;
  id: string;
+ fingerprint?: string;
  state: string;
  total?: number | string | null;
  payment_status?: string;
@@ -34,6 +35,7 @@ interface PaymentReviewPanelProps {
  onClose: () => void;
  onVerify: (orderId: string, action: 'APPROVE' | 'REJECT', reason: string | undefined, receiptId: string, confirmed: boolean) => Promise<void>;
  isVerifying: boolean;
+ decisionsDisabled?: boolean;
  fulfillmentActions?: React.ReactNode;
  onUpdated?: (order: OrderDecisionResponse['order']) => void;
 }
@@ -90,7 +92,7 @@ const PrintJobDetails: React.FC<{ order: PaymentReviewOrder }> = ({ order }) => 
  );
 };
 
-const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'order'> & { order: PaymentReviewOrder }> = ({ order, onClose, onVerify, isVerifying, onUpdated, fulfillmentActions }) => {
+const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'order'> & { order: PaymentReviewOrder }> = ({ order, onClose, onVerify, isVerifying, decisionsDisabled = false, onUpdated, fulfillmentActions }) => {
  const [rejectReason, setRejectReason] = useState('');
  const [confirmed, setConfirmed] = useState(false);
  const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,13 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  const escalated = order.payment_status === 'DISPUTED' || order.state === 'ESCALATED_DISPUTE';
  const canVerify = !isCash && !escalated && (order.payment_status === 'PENDING_VERIFICATION' || (!order.payment_status && order.state === 'AWAITING_PAYMENT_VERIFICATION'));
  const canResume = !isCash && order.state === 'OPEN_INQUIRY' && order.payment_status === 'VERIFIED' && order.acceptance_status === 'PENDING';
- useEffect(() => { setConfirmed(false); }, [order.state, order.payment_status, order.total, receipt?.reference_number]);
+ const evidenceKey = JSON.stringify([order.state, order.payment_status, order.acceptance_status, order.total,
+   receipt?.reference_number, order.paper_size, order.print_color_mode, order.orientation, order.page_count, order.copies, order.fingerprint]);
+ const [confirmedEvidence, setConfirmedEvidence] = useState(evidenceKey);
+ if (confirmedEvidence !== evidenceKey) {
+ setConfirmedEvidence(evidenceKey);
+ setConfirmed(false);
+ }
 
  useEffect(() => { latestRef.current = { onClose, isVerifying, decisionBusy }; }, [onClose, isVerifying, decisionBusy]);
  useEffect(() => {
@@ -159,7 +167,7 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  if (!pendingRef.current && !isVerifying && !decisionBusy) onClose();
  };
  const handleVerify = async (action: 'APPROVE' | 'REJECT') => {
- if (pendingRef.current || busy || (!canVerify && !canResume) || (canResume && action !== 'APPROVE')) return;
+ if (pendingRef.current || busy || decisionsDisabled || (!canVerify && !canResume) || (canResume && action !== 'APPROVE')) return;
  pendingRef.current = true;
  setIsSubmitting(true);
  setError(null);
@@ -237,7 +245,7 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  </div>
  </>}
  {error && <p ref={errorRef} role="alert" tabIndex={-1} className="break-words border border-red-200 bg-red-50 p-3 text-sm text-red-700 focus:outline focus:outline-2 focus:outline-carbon-blue-60">{error}</p>}
- {(escalated || canVerify || canResume) && <section aria-label="GCash payment review" className="border-t border-gray-300 bg-carbon-gray-10 p-3">
+ {(escalated || canVerify || canResume) && <fieldset disabled={decisionsDisabled} aria-label="GCash payment review" className="border-t border-gray-300 bg-carbon-gray-10 p-3">
  {escalated ? (
  <p className="border border-blue-200 bg-blue-50 p-3 text-center text-sm font-bold text-blue-800">This payment is under review by Platform Administration.</p>
  ) : (
@@ -252,12 +260,12 @@ const PaymentReviewDialog: React.FC<Omit<PaymentReviewPanelProps, 'isOpen' | 'or
  <p role="status" className="sr-only">{busy ? 'Verifying payment. Please wait.' : ''}</p>
  </div>
  )}
- </section>}
+ </fieldset>}
  {canResume && <p role="status" className="text-sm text-amber-800">Payment is already verified. Restore the document and shop eligibility, then retry production authorization. This does not record payment again.</p>}
  {fulfillmentActions && <fieldset disabled={busy} className="border-t border-gray-300 pt-3" aria-label="Print fulfillment">{fulfillmentActions}</fieldset>}
  {onUpdated && <ShopOrderActions
  order={{ ...order, total: order.total ?? 0, payment_method: order.payment_method || 'GCASH', payment_status: order.payment_status || 'UNPAID', acceptance_status: order.acceptance_status || 'PENDING' }}
- onUpdated={onUpdated} disabled={isVerifying || isSubmitting} onBusyChange={setDecisionBusy}
+ onUpdated={onUpdated} disabled={isVerifying || isSubmitting || decisionsDisabled} onBusyChange={setDecisionBusy}
  />}
  </div>
  </motion.div>

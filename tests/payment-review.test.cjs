@@ -241,37 +241,34 @@ test('reduced motion disables the entrance movement', () => {
   assert.equal(dialog.props.transition.duration, 0);
 });
 
-test('dashboard uses authoritative responses without inferring acceptance or production', async () => {
-  const source = read('pages/ShopDashboard/ShopDashboard.tsx');
-  const handler = source.slice(source.indexOf(' const handleOrderUpdated ='), source.indexOf(' const handleToggleReadySelection ='));
-  const state = { busy: [], selected: order(), orders: [order()], refreshed: 0 };
-  let failure;
-  const exports = {};
-  vm.runInNewContext(compile(`${handler}\nexport { handleVerifyPayment };`), {
-    exports,
-    orderService: { verifyPayment: async (_id, action) => {
-      if (failure) throw failure;
-      return { order: order({ state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'OPEN_INQUIRY', payment_status: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED', acceptance_status: action === 'APPROVE' ? 'ACCEPTED' : 'PENDING' }) };
-    } },
-    setIsVerifying: value => state.busy.push(value),
-    setSelectedPaymentOrder: value => { state.selected = value; },
-    setShopOrders: update => { state.orders = update(state.orders); },
-    refreshOrdersAfterChange: () => { state.refreshed++; },
-  });
-  failure = new Error('Offline');
-  await assert.rejects(exports.handleVerifyPayment('order-12345678', 'APPROVE', undefined, 'receipt-current', true), /Offline/);
-  assert.equal(state.selected.id, 'order-12345678');
-  assert.equal(state.refreshed, 0);
-  failure = null;
-  for (const [action, expected] of [['APPROVE', 'VERIFIED'], ['REJECT', 'REJECTED']]) {
-    await exports.handleVerifyPayment('order-12345678', action, 'Reason', 'receipt-current', true);
-    assert.equal(state.orders[0].state, action === 'APPROVE' ? 'IN_PRODUCTION' : 'OPEN_INQUIRY');
-    assert.equal(state.orders[0].payment_status, expected);
-    assert.equal(state.orders[0].acceptance_status, action === 'APPROVE' ? 'ACCEPTED' : 'PENDING');
-    assert.equal(state.selected, null);
-  }
-  assert.equal(state.refreshed, 2);
-  assert.deepEqual(state.busy, [true, false, true, false, true, false]);
+test('order review refreshes authoritative data after verification and preserves failures', async () => {
+ const exports={}, state={busy:[],closed:0,refreshed:0}, calls=[];
+ let failure;
+ const original=order();
+ vm.runInNewContext(compile(read('components/dashboard/OrderReviewDialog.tsx')), {
+ exports, require(name) {
+ if(name==='react')return {useState:()=>[false,value=>state.busy.push(value)],useRef:()=>({current:null})};
+ if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
+ if(name==='react-dom')return {createPortal:tree=>tree};
+ if(name.endsWith('/useDialogFocus'))return {useDialogFocus(){}};
+ if(name.endsWith('/useLiveResource'))return {useLiveResource:()=>({data:{...original,available_actions:[]},refresh:async()=>{},error:null})};
+ if(name.endsWith('/shopQueueService'))return {shopQueueService:{}};
+ if(name.endsWith('/orderService'))return {orderService:{verifyPayment:async(...args)=>{calls.push(args);if(failure)throw failure;return {order:{...original,state:'IN_PRODUCTION'}};}}};
+ if(name==='./PaymentReviewPanel')return {PaymentReviewPanel:'Review'};
+ if(name==='./FulfillmentFooter')return {FulfillmentFooter:'Footer'};
+ if(name==='./orderCardTitle')return {getOrderCardTitleParts:()=>({filename:'Test'})};
+ throw new Error(name);
+ }});
+ const tree=exports.OrderReviewDialog({orderId:original.id,onClose:()=>state.closed++,onUpdated:()=>state.refreshed++,onFulfillment(){}});
+ failure=new Error('Offline');
+ await assert.rejects(tree.props.onVerify(original.id,'APPROVE',undefined,'receipt-current',true),/Offline/);
+ assert.equal(state.closed,0);assert.equal(state.refreshed,0);
+ failure=null;
+ await tree.props.onVerify(original.id,'APPROVE',undefined,'receipt-current',true);
+ assert.equal(state.closed,1);assert.equal(state.refreshed,1);
+ assert.equal(original.state,'AWAITING_PAYMENT_VERIFICATION');
+ assert.deepEqual(calls[1],[original.id,'APPROVE',undefined,'receipt-current',true]);
+ assert.deepEqual(state.busy,[true,false,true,false]);
 });
 
 test('verification requires explicit evidence confirmation and never reviews an arbitrary historical receipt', async () => {
@@ -385,4 +382,19 @@ test('cancellation during review requires a fresh confirmation for the refund ob
   f.render();
   assert.equal(f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.checked, false);
   assert.match(f.text(f.render()), /manual refund obligation/);
+});
+
+test('failed detail refresh disables payment and shop decisions while allowing dismissal', async () => {
+  const f=fixture({decisionsDisabled:true,onUpdated(){}});
+  f.confirm();f.button(approve).props.onClick();await f.flush();
+  assert.equal(f.calls.length,0);
+  assert.equal(f.find(node=>node.props['aria-label']==='GCash payment review').props.disabled,true);
+  assert.equal(f.find(node=>node.type==='ShopOrderActions').props.disabled,true);
+  assert.equal(f.button('Close payment review').props.disabled,false);
+});
+
+test('changed print settings require renewed payment evidence confirmation',()=>{
+  const f=fixture({order:order({copies:1})});f.confirm();
+  f.update({order:order({copies:2})});f.render();
+  assert.equal(f.find(node=>node.type==='input'&&node.props.type==='checkbox').props.checked,false);
 });
