@@ -167,7 +167,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({ shops, selectedShopI
  >
  <ShopThumbnail key={shop.shop_photo_url || 'no-photo'} photoUrl={shop.shop_photo_url} />
  <div className="min-w-0 flex-1">
- <h4 className="truncate font-bold text-carbon-gray-100 text-lg" title={shop.name}>{shop.name}</h4>
+ <h4 className="font-bold text-carbon-gray-100 text-lg [overflow-wrap:anywhere]" title={shop.name}>{shop.name}</h4>
  <p className="mt-1 text-xs font-medium leading-5 text-gray-600">
  <span className={open ? 'text-blue-600' : 'text-carbon-gray-100'}>
  {open ? 'OPEN' : 'CLOSED'}

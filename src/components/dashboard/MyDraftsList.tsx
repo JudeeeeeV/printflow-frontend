@@ -1,13 +1,16 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Document, TrashCan, Edit } from '@carbon/icons-react';
 import { orderService } from '../../services/orderService';
+import { ApiError } from '../../services/apiClient';
 import { MyDraftsSkeleton } from './skeletons/MyDraftsSkeleton';
 import { Pagination } from '../common/Pagination';
 import { AlertModal } from '../common/AlertModal';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { CheckNowButton, StaleStatusNotice } from '../common/StaleStatusNotice';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
 export interface DraftOrder {
+ draftVersion?: number;
  paymentMethod?: 'GCASH' | 'CASH_ON_PICKUP';
  id: string;
  shopId: string;
@@ -42,15 +45,28 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  setAlertState({ isOpen: true, message, type, title });
  };
 
+ const [loadFailure, setLoadFailure] = useState<'initial' | 'background' | null>(null);
+ const [confirmedAt, setConfirmedAt] = useState<number | null>(null);
+ const latestRequest = useRef(0);
+ const loadedPage = useRef<number | null>(null);
+
  const fetchDrafts = useCallback(async () => {
- setIsLoading(true);
+ const request = ++latestRequest.current;
+ // Background refreshes keep the current drafts and any open edit on screen.
+ if (loadedPage.current !== currentPage) setIsLoading(true);
  try {
  const res = await orderService.getDrafts(currentPage, 6);
+ if (request !== latestRequest.current) return;
+ loadedPage.current = currentPage;
  setDrafts(res.data as DraftOrder[]);
  setTotalPages(res.meta.totalPages);
+ setConfirmedAt(Date.now());
+ setLoadFailure(null);
+ setIsLoading(false);
  } catch (error) {
+ if (request !== latestRequest.current) return;
  console.error('Failed to fetch drafts:', error);
- } finally {
+ setLoadFailure(loadedPage.current === currentPage ? 'background' : 'initial');
  setIsLoading(false);
  }
  }, [currentPage]);
@@ -67,8 +83,10 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
  try {
  await orderService.deleteDraft(draftId);
  setDrafts(prev => prev.filter(draft => draft.id !== draftId));
- } catch {
- showAlert('Failed to delete draft.', 'error', 'Delete Failed');
+ } catch (error) {
+ // Already gone means the earlier delete went through.
+ if (error instanceof ApiError && error.status === 404) setDrafts(prev => prev.filter(draft => draft.id !== draftId));
+ else showAlert('Failed to delete draft.', 'error', 'Delete Failed');
  } finally {
  setIsActionLoading(null);
  setDraftToDelete(null);
@@ -77,7 +95,14 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
 
  if (isLoading) return <MyDraftsSkeleton />;
 
- if (drafts.length === 0) return (
+ if (loadFailure === 'initial') return (
+ <div className="bg-white border border-black p-12 text-center" role="alert">
+ <p className="text-gray-700 font-semibold mb-4 text-lg">We couldn't load your drafts. Check your connection and try again.</p>
+ <CheckNowButton onRetry={fetchDrafts} label="Try again" />
+ </div>
+ );
+
+ if (drafts.length === 0 && loadFailure === null) return (
  <div className="bg-white border-2 border-dashed border-[#8d8d8d] p-12 text-center flex flex-col items-center justify-center">
  <Document className="w-12 h-12 text-gray-300 mb-4" />
  <h3 className="text-lg font-bold text-carbon-gray-100 mb-2">No Drafts Found</h3>
@@ -87,6 +112,11 @@ export const MyDraftsList: React.FC<MyDraftsListProps> = ({ onEditDraft }) => {
 
  return (
  <>
+ {loadFailure === 'background' && (
+ <div className="mb-4">
+ <StaleStatusNotice confirmedAt={confirmedAt} onRetry={fetchDrafts} />
+ </div>
+ )}
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
  {drafts.map((draft) => (
  <div key={draft.id} className="flex min-w-0 flex-col border-2 border-black bg-white p-5 transition-colors duration-200 hover:border-carbon-blue-60 motion-reduce:transition-none sm:p-6">

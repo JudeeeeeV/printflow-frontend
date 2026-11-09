@@ -10,9 +10,14 @@ export function createRefreshQueue<T>(load: () => Promise<T>, apply: (value: T) 
     pending = (async () => {
       do {
         queued = false;
-        const value = await load();
-        // A mutation arrived during this request. Discard the older snapshot.
-        if (!queued) apply(value);
+        try {
+          const value = await load();
+          // A mutation arrived during this request. Discard the older snapshot.
+          if (!queued) apply(value);
+        } catch (error) {
+          // A queued read supersedes this failure, so it must still run.
+          if (!queued) throw error;
+        }
       } while (queued);
     })().finally(() => { pending = null; });
     return pending;

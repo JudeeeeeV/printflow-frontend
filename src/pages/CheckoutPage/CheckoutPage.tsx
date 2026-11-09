@@ -1,11 +1,14 @@
-import React, { type ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { type ReactNode, useCallback } from 'react';
 import { WarningAlt } from '@carbon/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckoutCard } from '../../components/checkout/CheckoutCard/CheckoutCard';
+import { CheckNowButton, StaleStatusNotice } from '../../components/common/StaleStatusNotice';
+import { useLiveResource } from '../../hooks/useLiveResource';
+import { ApiError } from '../../services/apiClient';
+import type { DataResource } from '../../services/dataEvents';
 import { orderService } from '../../services/orderService';
 import { CheckoutSkeleton } from './CheckoutSkeleton';
 import styles from './CheckoutPage.module.css';
-import { useDataEvents } from '../../hooks/useDataEvents';
 
 interface CheckoutOrder {
  payment_method?: 'GCASH' | 'CASH_ON_PICKUP';
@@ -25,6 +28,8 @@ interface CheckoutOrder {
  gcash_qr_url?: string;
  };
 }
+
+const CHECKOUT_RESOURCES: DataResource[] = ['orders', 'receipts'];
 
 const CheckoutAmbientBackground = () => (
  <div aria-hidden="true" className={styles.ambientLayer}>
@@ -51,51 +56,22 @@ const CheckoutPageShell: React.FC<{ children: ReactNode }> = ({ children }) => (
  </main>
 );
 
-export const CheckoutPage: React.FC = () => {
- const { orderId } = useParams<{ orderId: string }>();
+const LiveCheckout: React.FC<{ orderId: string }> = ({ orderId }) => {
  const navigate = useNavigate();
- const [order, setOrder] = useState<CheckoutOrder | null>(null);
- const [isLoading, setIsLoading] = useState(true);
- const [orderNotFound, setOrderNotFound] = useState(false);
-
- const fetchOrder = useCallback(() => {
- if (!orderId) return Promise.resolve();
- return orderService.getOrder(orderId)
- .then((data) => {
- setOrder(data);
- setOrderNotFound(false);
- setIsLoading(false);
- })
- .catch(() => {
- setOrderNotFound(true);
- setIsLoading(false);
- });
- }, [orderId]);
-
- useEffect(() => {
- if (!orderId) return;
- void fetchOrder();
- const intervalId = setInterval(() => void fetchOrder(), 5000);
- return () => {
- clearInterval(intervalId);
- };
- }, [fetchOrder, orderId]);
-
- useDataEvents(['orders', 'receipts'], () => void fetchOrder());
-
- if (!orderId) {
- return (
- <CheckoutPageShell>
- <section className="mx-auto max-w-md border border-black border-t-4 border-t-red-700 bg-white p-7 text-center shadow-2xl" role="alert">
- <WarningAlt aria-hidden="true" className="mx-auto h-12 w-12 text-red-700" />
- <h1 className="mt-4 text-xl font-black text-carbon-gray-100">Invalid order ID</h1>
- <p className="mt-2 text-sm leading-relaxed text-gray-600">Checkout cannot continue without a valid order.</p>
- </section>
- </CheckoutPageShell>
+ const loadOrder = useCallback(() => orderService.getOrder(orderId) as Promise<CheckoutOrder>, [orderId]);
+ const { data: order, error, isLoading, confirmedAt, isOffline, refresh } = useLiveResource(orderId, loadOrder, CHECKOUT_RESOURCES);
+ const returnToDashboard = () => navigate('/new-order?tab=orders');
+ const dashboardButton = (
+ <button
+ type="button"
+ onClick={returnToDashboard}
+ className="mt-3 min-h-11 w-full cursor-pointer border border-carbon-gray-100 bg-white px-6 py-3 text-sm font-bold text-carbon-gray-100 transition-colors hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
+ >
+ Return to Dashboard
+ </button>
  );
- }
 
- if (orderNotFound) {
+ if (error instanceof ApiError && error.status === 404) {
  return (
  <CheckoutPageShell>
  <section className="mx-auto max-w-md border border-black border-t-4 border-t-carbon-blue-60 bg-white p-7 text-center shadow-2xl" role="alert">
@@ -104,7 +80,7 @@ export const CheckoutPage: React.FC = () => {
  <p className="mt-2 text-sm leading-relaxed text-gray-600">Order may have expired, been cancelled, or never existed.</p>
  <button
  type="button"
- onClick={() => navigate('/new-order?tab=orders')}
+ onClick={returnToDashboard}
  className="mt-6 min-h-11 w-full cursor-pointer bg-carbon-gray-100 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 motion-reduce:transition-none"
  >
  Return to Dashboard
@@ -122,25 +98,65 @@ export const CheckoutPage: React.FC = () => {
  );
  }
 
+ // Never render the card without an order; its fallback amount would be false.
+ if (!order) {
  return (
  <CheckoutPageShell>
+ <section className="mx-auto max-w-md border border-black border-t-4 border-t-red-700 bg-white p-7 text-center shadow-2xl" role="alert">
+ <WarningAlt aria-hidden="true" className="mx-auto h-12 w-12 text-red-700" />
+ <h1 className="mt-4 text-xl font-black text-carbon-gray-100">We couldn't load this order</h1>
+ <p className="mt-2 text-sm leading-relaxed text-gray-600">{isOffline ? "You're offline. Reconnect and we'll check again." : 'This may be a connection problem. Your order has not been changed.'}</p>
+ <CheckNowButton onRetry={refresh} label="Try again" className="mt-6 w-full" />
+ {dashboardButton}
+ </section>
+ </CheckoutPageShell>
+ );
+ }
+
+ return (
+ <CheckoutPageShell>
+ {(error != null || isOffline) && (
+ <div className="mb-3">
+ <StaleStatusNotice confirmedAt={confirmedAt} isOffline={isOffline} onRetry={refresh} />
+ </div>
+ )}
  <CheckoutCard
  orderId={orderId}
- paymentMethod={order?.payment_method}
- paymentStatus={order?.payment_status}
- acceptanceStatus={order?.acceptance_status}
- acceptanceReason={order?.acceptance_reason}
- isUnclaimed={order?.is_unclaimed}
- unclaimedReason={order?.unclaimed_reason}
- amount={order?.total ?? 15}
- gcashNumber={order?.shops?.gcash_number}
- gcashQrUrl={order?.shops?.gcash_qr_url}
- createdAt={order?.created_at}
- expiresAt={order?.expires_at}
- shopRejectionReason={order?.shop_rejection_reason}
- orderState={order?.state}
- paymentReceipts={order?.payment_receipts}
+ paymentMethod={order.payment_method}
+ paymentStatus={order.payment_status}
+ acceptanceStatus={order.acceptance_status}
+ acceptanceReason={order.acceptance_reason}
+ isUnclaimed={order.is_unclaimed}
+ unclaimedReason={order.unclaimed_reason}
+ amount={order.total ?? 15}
+ gcashNumber={order.shops?.gcash_number}
+ gcashQrUrl={order.shops?.gcash_qr_url}
+ createdAt={order.created_at}
+ expiresAt={order.expires_at}
+ shopRejectionReason={order.shop_rejection_reason}
+ orderState={order.state}
+ paymentReceipts={order.payment_receipts}
+ statusConfirmedAt={confirmedAt ?? undefined}
+ onDeadlineReached={refresh}
  />
  </CheckoutPageShell>
  );
+};
+
+export const CheckoutPage: React.FC = () => {
+ const { orderId } = useParams<{ orderId: string }>();
+
+ if (!orderId) {
+ return (
+ <CheckoutPageShell>
+ <section className="mx-auto max-w-md border border-black border-t-4 border-t-red-700 bg-white p-7 text-center shadow-2xl" role="alert">
+ <WarningAlt aria-hidden="true" className="mx-auto h-12 w-12 text-red-700" />
+ <h1 className="mt-4 text-xl font-black text-carbon-gray-100">Invalid order ID</h1>
+ <p className="mt-2 text-sm leading-relaxed text-gray-600">Checkout cannot continue without a valid order.</p>
+ </section>
+ </CheckoutPageShell>
+ );
+ }
+
+ return <LiveCheckout orderId={orderId} />;
 };

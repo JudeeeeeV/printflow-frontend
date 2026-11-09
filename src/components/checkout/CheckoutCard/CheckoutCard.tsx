@@ -7,6 +7,8 @@ import { ReceiptUploadZone } from '../ReceiptUploadZone/ReceiptUploadZone';
 import { SubmitVerificationButton } from '../SubmitVerificationButton/SubmitVerificationButton';
 import { orderService } from '../../../services/orderService';
 import { AlertModal } from '../../common/AlertModal';
+import { SubmissionStatus } from '../../orders/SubmissionStatus';
+import { useRecoverableSubmission } from '../../../hooks/useRecoverableSubmission';
 
 interface PaymentReceipt {
  receipt_url?: string;
@@ -29,6 +31,9 @@ interface CheckoutCardProps {
  shopRejectionReason?: string;
  orderState?: string;
  paymentReceipts?: PaymentReceipt[];
+ /** When the server last confirmed this order's status. */
+ statusConfirmedAt?: number;
+ onDeadlineReached?: () => void;
 }
 
 export const CheckoutCard: React.FC<CheckoutCardProps> = ({
@@ -47,6 +52,8 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  shopRejectionReason,
  orderState,
  paymentReceipts,
+ statusConfirmedAt,
+ onDeadlineReached,
 }) => {
  const status = paymentStatus || (orderState === 'AWAITING_PAYMENT_VERIFICATION' ? 'PENDING_VERIFICATION' : orderState === 'ESCALATED_DISPUTE' ? 'DISPUTED' : orderState === 'AWAITING_PAYMENT' ? 'REJECTED' : 'UNPAID');
  const isCash = paymentMethod === 'CASH_ON_PICKUP';
@@ -55,7 +62,6 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  const canCancel = orderState === 'OPEN_INQUIRY';
  const [receiptFile, setReceiptFile] = useState<File | null>(null);
  const [referenceNumber, setReferenceNumber] = useState('');
- const [isSubmitting, setIsSubmitting] = useState(false);
  const [isCancelling, setIsCancelling] = useState(false);
  const [showDisputeModal, setShowDisputeModal] = useState(false);
  const [disputeReason, setDisputeReason] = useState('');
@@ -66,6 +72,9 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  const [timeLeft, setTimeLeft] = useState('');
  const [isExpired, setIsExpired] = useState(false);
  const navigate = useNavigate();
+ const expiryTime = expiresAt ? new Date(expiresAt).getTime() : status === 'UNPAID' && createdAt ? new Date(createdAt).getTime() + 15 * 60000 : null;
+ // This device's countdown is not proof; the server must have answered since.
+ const expiryConfirmed = hasPaymentDeadline && isExpired && expiryTime !== null && (statusConfirmedAt ?? 0) >= expiryTime;
 
  const [alertState, setAlertState] = useState<{
  isOpen: boolean;
@@ -74,6 +83,17 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  type?: 'info' | 'success' | 'error' | 'warning';
  onCloseCallback?: () => void;
  }>({ isOpen: false, message: '' });
+
+ const submission = useRecoverableSubmission<{ message: string; state: string }, 'receipt', { referenceNumber: string }>({
+ scope: `receipt:${orderId}`,
+ send: ({ fields, file, key }) => orderService.uploadReceipt(orderId, file as File, fields.referenceNumber, key),
+ checkOperation: (key) => orderService.getOperation<{ message: string; state: string }>(key),
+ restore: (fields) => setReferenceNumber(fields.referenceNumber),
+ onSuccess: () => setShowSuccessModal(true),
+ onFailure: (err) => setError(err instanceof Error ? err.message : 'Failed to upload receipt. Please try again.'),
+ });
+ const isSubmitting = submission.isBusy;
+ const { ready: submissionReady, saveFields } = submission;
 
  const showAlert = (
  message: string,
@@ -85,8 +105,6 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  useEffect(() => {
  if (!hasPaymentDeadline) return;
  const updateTimer = () => {
- const expiryTime = expiresAt ? new Date(expiresAt).getTime() : status === 'UNPAID' && createdAt ? new Date(createdAt).getTime() + 15 * 60000 : null;
-
  if (expiryTime === null) {
  setTimeLeft('');
  setIsExpired(false);
@@ -116,10 +134,10 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  updateTimer();
  const intervalId = setInterval(updateTimer, 1000);
  return () => clearInterval(intervalId);
- }, [createdAt, expiresAt, hasPaymentDeadline, status]);
+ }, [expiryTime, hasPaymentDeadline, status]);
 
  useEffect(() => {
- if (!hasPaymentDeadline || !isExpired) return;
+ if (!expiryConfirmed) return;
  const alertTimer = window.setTimeout(() => setAlertState({
  isOpen: true,
  title: 'Order Expired',
@@ -128,20 +146,20 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  onCloseCallback: () => navigate('/new-order?tab=orders'),
  }), 0);
  return () => window.clearTimeout(alertTimer);
- }, [hasPaymentDeadline, isExpired, navigate]);
+ }, [expiryConfirmed, navigate]);
 
- const handleSubmit = async () => {
- if (!receiptFile || !referenceNumber.trim() || isCash || closed) return;
- setIsSubmitting(true);
+ useEffect(() => {
+ if (hasPaymentDeadline && isExpired) onDeadlineReached?.();
+ }, [hasPaymentDeadline, isExpired, onDeadlineReached]);
+
+ useEffect(() => {
+ if (submissionReady) saveFields({ referenceNumber });
+ }, [submissionReady, saveFields, referenceNumber]);
+
+ const handleSubmit = () => {
+ if (!receiptFile || !referenceNumber.trim() || isCash || closed || submission.hasUnresolved) return;
  setError(null);
- try {
- await orderService.uploadReceipt(orderId, receiptFile, referenceNumber);
- setShowSuccessModal(true);
- } catch (err: unknown) {
- setError(err instanceof Error ? err.message : 'Failed to upload receipt. Please try again.');
- } finally {
- setIsSubmitting(false);
- }
+ void submission.submit('receipt', { referenceNumber }, receiptFile);
  };
 
  const handleCancel = async () => {
@@ -180,7 +198,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  return (
  <article aria-busy={isSubmitting || isCancelling || isDisputing} className="relative w-full overflow-hidden border border-black bg-white shadow-[0_20px_60px_rgba(0,0,0,0.36)]">
 
- {hasPaymentDeadline && isExpired && (
+ {expiryConfirmed && (
  <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/90 p-6 backdrop-blur-sm" role="status">
  <div className="border border-black bg-white px-8 py-7 text-center shadow-xl">
  <WarningAlt aria-hidden="true" className="mx-auto h-10 w-10 text-red-700" />
@@ -231,6 +249,11 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  {!isCash && !closed && <ProgressTimeline currentStep={orderState === 'READY_FOR_PICKUP' ? 4 : ['IN_PRODUCTION', 'PRINTED'].includes(orderState || '') ? 3 : 2} />}
 
  <div className="space-y-5 p-4 sm:p-6 lg:p-8">
+ {hasPaymentDeadline && isExpired && !expiryConfirmed && (
+ <div className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3" role="status">
+ <p className="text-sm font-bold text-amber-900">The payment time has run out on this device. We're confirming with PrintFlow. Your receipt details are still here.</p>
+ </div>
+ )}
  {error && (
  <div className="border-l-4 border-red-700 bg-red-50 px-4 py-3" role="alert">
  <p className="text-sm font-bold text-red-800">{error}</p>
@@ -310,6 +333,7 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  <input
  id="gcash-reference-number"
  required
+ disabled={submission.hasUnresolved}
  maxLength={120}
  type="text"
  inputMode="numeric"
@@ -322,7 +346,20 @@ export const CheckoutCard: React.FC<CheckoutCardProps> = ({
  <p id="gcash-reference-help" className="mt-2 text-xs leading-relaxed text-gray-600">Enter the reference from this transfer so the shop can match the receipt and amount.</p>
  </div>
 
- <SubmitVerificationButton onSubmit={handleSubmit} isSubmitting={isSubmitting} disabled={!receiptFile || !referenceNumber.trim() || isExpired} />
+ <SubmissionStatus
+ phase={submission.phase}
+ needsFile={submission.needsFile}
+ hasFile={!!receiptFile}
+ storageAvailable={submission.storageAvailable}
+ duplicateOrderId={submission.duplicateOrderId}
+ onRetry={() => void submission.retry(receiptFile)}
+ onCheck={() => void submission.check()}
+ onStartOver={() => submission.startOver()}
+ onSubmitAnyway={() => void submission.submitAnyway()}
+ onDismissDuplicate={() => submission.dismissDuplicate()}
+ onViewOrder={() => undefined}
+ />
+ <SubmitVerificationButton onSubmit={handleSubmit} isSubmitting={isSubmitting} disabled={!receiptFile || !referenceNumber.trim() || isExpired || submission.hasUnresolved} />
  <div className="flex items-start gap-2 border-t border-gray-300 pt-4 text-xs leading-relaxed text-gray-600">
  <CheckmarkFilled aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
  Receipt is sent only to the print shop handling this order.

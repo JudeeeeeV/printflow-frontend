@@ -15,6 +15,9 @@ function loadModule(file, mocks = {}) {
     exports,
     Headers,
     FormData,
+    AbortController,
+    setTimeout,
+    clearTimeout,
     ...mocks.globals,
     require: name => {
       if (name in mocks) return mocks[name];

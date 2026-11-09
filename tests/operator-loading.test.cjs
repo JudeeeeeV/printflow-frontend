@@ -11,7 +11,7 @@ function loadModule(file, mocks = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2023 },
   }).outputText;
   const exports = {};
-  vm.runInNewContext(compiled, { exports, Headers, FormData, ...mocks.globals,
+  vm.runInNewContext(compiled, { exports, Headers, FormData, AbortController, setTimeout, clearTimeout, ...mocks.globals,
     require: name => {
       if (name in mocks) return mocks[name];
       throw new Error(`Unexpected import ${name}`);
