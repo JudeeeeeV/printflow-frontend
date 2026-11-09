@@ -81,7 +81,8 @@ export const EditDraftPanel: React.FC<EditDraftPanelProps> = ({ draft, shops, on
  };
 
  const submission = useRecoverableSubmission<SubmitOrderResponse, DraftAction, DraftFields>({
- scope: `draft:${draft.id}`,
+ // Tied to the version, so saved fields never replace a newer copy of this draft.
+ scope: `draft:${draft.id}:${draft.draftVersion ?? 'unknown'}`,
  send: ({ action, fields, file, key }) => {
  const settings: DraftSettings = {
  shopId: fields.shopId,
