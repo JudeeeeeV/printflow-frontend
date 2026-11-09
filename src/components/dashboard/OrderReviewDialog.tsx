@@ -5,6 +5,7 @@ import { shopQueueService } from "../../services/shopQueueService";
 import { orderService } from "../../services/orderService";
 import { PaymentReviewPanel } from "./PaymentReviewPanel";
 import { FulfillmentFooter } from "./FulfillmentFooter";
+import { OrderReviewSkeleton } from "./skeletons/OrderReviewSkeleton";
 import type { FulfillmentMode } from "./FulfillmentDialog";
 import type { PrintableOrder, OperatorAction } from "./printFulfillment";
 import { getOrderCardTitleParts } from "./orderCardTitle";
@@ -37,22 +38,20 @@ export function OrderReviewDialog({
         ref={loadingDialog}
         aria-modal="true"
         aria-label="Loading order review"
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       >
-        <div className="space-y-3 border border-black bg-white p-6">
-          <p role={live.error ? "alert" : "status"}>
-            {live.error
-              ? "The order could not be loaded."
-              : "Loading fresh order details…"}
-          </p>
-          <button
-            type="button"
-            className="min-h-11 border border-black px-4"
-            onClick={onClose}
-          >
-            Close
-          </button>
-          {live.error != null && (
+        {live.error == null ? (
+          <OrderReviewSkeleton onClose={onClose} />
+        ) : (
+          <div className="space-y-3 border border-black bg-white p-6">
+            <p role="alert">The order could not be loaded.</p>
+            <button
+              type="button"
+              className="min-h-11 border border-black px-4"
+              onClick={onClose}
+            >
+              Close
+            </button>
             <button
               type="button"
               className="min-h-11 border border-black px-4"
@@ -60,8 +59,8 @@ export function OrderReviewDialog({
             >
               Retry
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>,
       document.body,
     );

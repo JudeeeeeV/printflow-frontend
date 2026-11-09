@@ -288,12 +288,44 @@ test('reduced motion disables the entrance movement', () => {
   assert.equal(dialog.props.transition.duration, 0);
 });
 
+test('order review shows a skeleton while loading and offers retry after a failure', () => {
+ const allNodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(allNodes) : [node, ...allNodes(node.props.children)];
+ const allText = node => !node ? '' : typeof node !== 'object' ? String(node) : Array.isArray(node) ? node.map(allText).join('') : allText(node.props.children);
+ const renderLoading = error => {
+  const exports = {}, state = { closed: 0, refreshed: 0 };
+  const jsx = (type, props) => ({ type, props });
+  vm.runInNewContext(compile(read('components/dashboard/OrderReviewDialog.tsx')), { exports, document: { body: {} }, require(name) {
+   if (name === 'react') return { useState: () => [false, () => {}], useRef: () => ({ current: null }) };
+   if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
+   if (name === 'react-dom') return { createPortal: tree => tree };
+   if (name.endsWith('/useDialogFocus')) return { useDialogFocus() {} };
+   if (name.endsWith('/useLiveResource')) return { useLiveResource: () => ({ data: null, error, refresh: async () => { state.refreshed++; } }) };
+   return { shopQueueService: {}, orderService: {}, PaymentReviewPanel: 'Review', FulfillmentFooter: 'Footer', OrderReviewSkeleton: 'Skeleton', getOrderCardTitleParts() {} };
+  } });
+  return { tree: exports.OrderReviewDialog({ orderId: 'order', onClose: () => state.closed++, onUpdated() {}, onFulfillment() {} }), state };
+ };
+ const loading = renderLoading(null);
+ const elements = allNodes(loading.tree);
+ const skeleton = elements.find(node => node.type === 'Skeleton');
+ assert.ok(skeleton);
+ assert.equal(allText(loading.tree).includes('Loading'), false);
+ skeleton.props.onClose();
+ assert.equal(loading.state.closed, 1);
+ const failed = renderLoading(new Error('Offline'));
+ const failedElements = allNodes(failed.tree);
+ assert.equal(failedElements.find(node => node.type === 'Skeleton'), undefined);
+ assert.equal(allText(failedElements.find(node => node.props.role === 'alert')), 'The order could not be loaded.');
+ failedElements.find(node => node.type === 'button' && allText(node) === 'Retry').props.onClick();
+ assert.equal(failed.state.refreshed, 1);
+});
+
 test('order review refreshes authoritative data after verification and preserves failures', async () => {
  const exports={}, state={busy:[],closed:0,refreshed:0}, calls=[];
  let failure;
  const original=order();
  vm.runInNewContext(compile(read('components/dashboard/OrderReviewDialog.tsx')), {
  exports, require(name) {
+ if(name.endsWith('/OrderReviewSkeleton'))return {OrderReviewSkeleton:'Skeleton'};
  if(name==='react')return {useState:()=>[false,value=>state.busy.push(value)],useRef:()=>({current:null})};
  if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
  if(name==='react-dom')return {createPortal:tree=>tree};
