@@ -3,14 +3,14 @@ import { queueGridClassName, type LiveQueueLayout } from '../liveQueueLayout';
 
 export const DashboardSkeleton: React.FC<{ layout: LiveQueueLayout; gridRef: React.Ref<HTMLDivElement> }> = ({ layout, gridRef }) => {
     const containedClass = layout.contained ? 'xl:min-h-0 xl:flex-1 xl:overflow-hidden' : '';
-    const placeholderCount = layout.rows === 1 ? 6 : layout.pageSize;
+    const placeholderCount = layout.pageSize;
     return (
         <div role="status" aria-label="Loading live queue" className={`flex min-h-full w-full min-w-0 flex-col font-sans ${layout.contained ? 'xl:h-full xl:min-h-0 xl:overflow-hidden' : ''} motion-reduce:[&_.animate-pulse]:animate-none`}>
             <div className={`flex flex-none flex-col ${containedClass}`}>
                 <div className={`flex flex-none flex-col bg-gray-100/50 ${containedClass}`}>
                     
-                    <div aria-hidden="true" className="grid shrink-0 grid-cols-3 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:gap-2 sm:px-2">
-                        {[1, 2, 3].map(tab => (
+                    <div aria-hidden="true" className="grid shrink-0 grid-cols-2 gap-1 border-b border-gray-300 bg-carbon-gray-10 p-1 sm:grid-cols-4 sm:gap-2 sm:px-2">
+                        {[1, 2, 3, 4].map(tab => (
                             <div key={tab} className={`flex h-11 items-center justify-center gap-2 border border-black shadow-[0_2px_0_rgba(22,22,22,0.12)] lg:h-9 ${tab === 1 ? 'bg-blue-100' : 'bg-white'}`}>
                                 <div className={`h-4 animate-pulse ${tab === 1 ? 'w-20 bg-blue-200' : 'w-16 bg-gray-200'}`} />
                                 <div className="h-5 w-7 animate-pulse bg-black" />
@@ -34,9 +34,9 @@ export const DashboardSkeleton: React.FC<{ layout: LiveQueueLayout; gridRef: Rea
 
                     <div className={`flex flex-none flex-col overflow-hidden p-3 ${containedClass}`}>
                         <div className={`flex w-full min-w-0 flex-col overflow-hidden border border-black bg-gray-100 ${containedClass}`}>
-                            <div ref={gridRef} data-queue="new" className={`${queueGridClassName} ${containedClass}`} style={layout.contained ? { gridTemplateRows: 'repeat(2, minmax(7rem, 1fr))' } : undefined}>
+                            <div ref={gridRef} data-queue="new" className={`${queueGridClassName} ${containedClass}`} style={layout.contained ? { gridTemplateRows: 'repeat(2, minmax(13rem, 1fr))' } : undefined}>
                                 {Array.from({ length: placeholderCount }).map((_, cardIndex) => (
-                                    <div key={cardIndex} className="flex h-full min-w-0 flex-col animate-pulse border border-black bg-white p-3 xl:min-h-28">
+                                    <div key={cardIndex} className="flex h-full min-h-52 min-w-0 flex-col animate-pulse border border-black bg-white p-2">
                                         <div className="mb-3 flex items-start justify-between gap-2 xl:mb-2">
                                             <div className="space-y-2 xl:space-y-1">
                                                 <div className="h-4 w-24 bg-gray-200 xl:h-3" />

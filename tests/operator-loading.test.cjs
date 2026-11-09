@@ -11,7 +11,7 @@ function loadModule(file, mocks = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2023 },
   }).outputText;
   const exports = {};
-  vm.runInNewContext(compiled, { exports, Headers, FormData, ...mocks.globals,
+  vm.runInNewContext(compiled, { exports, Headers, FormData, AbortController, setTimeout, clearTimeout, ...mocks.globals,
     require: name => {
       if (name in mocks) return mocks[name];
       throw new Error(`Unexpected import ${name}`);
@@ -158,6 +158,44 @@ test('GET requests share in-flight work, use a short cache, and mutations invali
   await apiClient('/orders/one', { method: 'PATCH', body: '{}' });
   const refreshed = await apiClient('/orders');
   assert.equal(requests, 3); assert.equal(refreshed.request, 3);
+});
+
+test('no-store GETs always read fresh and leave the shared cache alone', async () => {
+  let requests = 0;
+  const { apiClient } = loadModule('apiClient.ts', {
+    '../config/runtime': { API_URL: 'https://api.example.test' },
+    globals: { fetch: async () => {
+      requests++;
+      return new Response(JSON.stringify({ request: requests }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } },
+  });
+  const cached = await apiClient('/orders');
+  const live = await apiClient('/devices', { cache: 'no-store' });
+  const liveAgain = await apiClient('/devices', { cache: 'no-store' });
+  assert.equal(live.request, 2);
+  assert.equal(liveAgain.request, 3);
+  assert.equal((await apiClient('/orders')).request, cached.request, 'a live read does not invalidate cached data');
+});
+
+test('a response that started before an invalidation is not cached', async () => {
+  const responses = [];
+  const { apiClient, invalidateApiCache } = loadModule('apiClient.ts', {
+    '../config/runtime': { API_URL: 'https://api.example.test' },
+    globals: { fetch: () => { const next = deferred(); responses.push(next); return next.promise; } },
+  });
+  const json = (value) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
+  const stale = apiClient('/devices');
+  await new Promise((resolve) => setImmediate(resolve));
+  invalidateApiCache();
+  responses[0].resolve(json({ printers: [] }));
+  assert.deepEqual([...(await stale).printers], []);
+  const fresh = apiClient('/devices');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(responses.length, 2, 'the stale response must not satisfy the next read');
+  responses[1].resolve(json({ printers: ['Desk'] }));
+  assert.deepEqual([...(await fresh).printers], ['Desk']);
 });
 
 test('profile saves refresh an expired cookie session and retry the same PATCH', async () => {

@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --test tests/auth-dual-tokens.test.cjs tests/auth-email-regression.test.cjs tests/operator-loading.test.cjs tests/daemonSocketService.test.cjs tests/shop-distance.test.cjs tests/shop-availability.test.cjs tests/shop-gcash-qr.test.cjs tests/payment-review.test.cjs tests/order-card-title.test.cjs tests/live-queue-layout.test.cjs tests/print-settings.test.cjs tests/shop-settings.test.cjs",
+    "test": "node --test tests/auth-dual-tokens.test.cjs tests/auth-email-regression.test.cjs tests/email-resend.test.cjs tests/operator-loading.test.cjs tests/daemonSocketService.test.cjs tests/shop-distance.test.cjs tests/shop-availability.test.cjs tests/shop-gcash-qr.test.cjs tests/payment-review.test.cjs tests/order-card-title.test.cjs tests/live-queue-layout.test.cjs tests/print-settings.test.cjs tests/shop-settings.test.cjs tests/print-fulfillment.test.cjs tests/printer-agent-live.test.cjs tests/payment-workflows.test.cjs tests/fulfillment-dialog.test.cjs tests/shop-order-review.test.cjs tests/document-preparation.test.cjs tests/network-recovery.test.cjs tests/submission-recovery.test.cjs",
     "test:daemon": "node --test tests/daemonSocketService.test.cjs",
     "preview": "vite preview"
   },

@@ -90,7 +90,7 @@ export const ReceiptUploadZone: React.FC<ReceiptUploadZoneProps> = ({ onReceiptS
 
  <div className="flex flex-col gap-3 border-t border-gray-300 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
  <div className="min-w-0">
- <p className="truncate text-sm font-bold text-carbon-gray-100" title={selectedFile.name}>{selectedFile.name}</p>
+ <p className="text-sm font-bold text-carbon-gray-100 [overflow-wrap:anywhere]" title={selectedFile.name}>{selectedFile.name}</p>
  <p className="mt-1 text-xs text-gray-500">Check receipt details before submitting.</p>
  </div>
  <button

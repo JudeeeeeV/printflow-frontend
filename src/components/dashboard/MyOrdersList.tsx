@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { studentStage } from './printFulfillment';
 import { orderService } from '../../services/orderService';
 import { useNavigate } from 'react-router-dom';
 import { TableSkeleton } from '../common/TableSkeleton';
 import { ArrowDown, ArrowUp, Filter, ChevronDown } from '@carbon/icons-react';
 import { Pagination } from '../common/Pagination';
+import { CheckNowButton, StaleStatusNotice } from '../common/StaleStatusNotice';
 import { useDataEvents } from '../../hooks/useDataEvents';
 
 export const MyOrdersList: React.FC = () => {
@@ -14,6 +16,10 @@ export const MyOrdersList: React.FC = () => {
  const [statusFilter, setStatusFilter] = useState('All');
  const [currentPage, setCurrentPage] = useState(1);
  const [totalPages, setTotalPages] = useState(1);
+ const [loadFailure, setLoadFailure] = useState<'initial' | 'background' | null>(null);
+ const [confirmedAt, setConfirmedAt] = useState<number | null>(null);
+ const latestRequest = useRef(0);
+ const loadedQuery = useRef<string | null>(null);
  const navigate = useNavigate();
 
  useEffect(() => {
@@ -22,15 +28,24 @@ export const MyOrdersList: React.FC = () => {
  }, []);
 
  const fetchOrders = useCallback(() => {
- setIsLoading(true);
+ const query = `${sortByDate}|${statusFilter}|${currentPage}`;
+ const request = ++latestRequest.current;
+ // Background refreshes keep the current rows on screen.
+ if (loadedQuery.current !== query) setIsLoading(true);
  return orderService.getUserOrders(sortByDate, statusFilter, currentPage, 10)
  .then(res => {
+ if (request !== latestRequest.current) return;
+ loadedQuery.current = query;
  setOrders(res.data);
  setTotalPages(res.meta.totalPages);
+ setConfirmedAt(Date.now());
+ setLoadFailure(null);
  setIsLoading(false);
  })
  .catch(err => {
+ if (request !== latestRequest.current) return;
  console.error(err);
+ setLoadFailure(loadedQuery.current === query ? 'background' : 'initial');
  setIsLoading(false);
  });
  }, [sortByDate, statusFilter, currentPage]);
@@ -51,16 +66,25 @@ export const MyOrdersList: React.FC = () => {
  setCurrentPage(1);
  };
 
- const formatState = (state: string, hasReceipts: boolean) => {
+ const formatState = (order: { state: string; fulfillment_stage?: string | null }, hasReceipts: boolean) => {
+ const state = order.state;
+ // Production stages come from the shop's recorded progress; device errors stay internal.
+ const stage = studentStage(order);
+ if (stage) {
+ const color = stage.label === 'Completed'
+ ? 'bg-gray-200 text-carbon-gray-100 font-bold'
+ : stage.label === 'Ready for pickup'
+ ? 'bg-green-100 text-green-800 font-bold'
+ : 'bg-purple-100 text-purple-800';
+ return { text: stage.label, color };
+ }
  switch (state) {
- case 'OPEN_INQUIRY': return { text: 'Pending Checkout', color: 'bg-yellow-100 text-yellow-800' };
+ case 'OPEN_INQUIRY': return { text: 'Awaiting shop / payment', color: 'bg-yellow-100 text-yellow-800' };
  case 'AWAITING_PAYMENT': return hasReceipts 
  ? { text: 'Payment Denied', color: 'bg-gray-200 text-carbon-gray-100' }
  : { text: 'Awaiting Payment', color: 'bg-blue-100 text-blue-800' };
  case 'AWAITING_PAYMENT_VERIFICATION': return { text: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800' };
  case 'PROOF_APPROVED': return { text: 'Proof Approved', color: 'bg-indigo-100 text-indigo-800' };
- case 'IN_PRODUCTION': return { text: 'In Production', color: 'bg-purple-100 text-purple-800' };
- case 'PRINTED': return { text: 'Completed', color: 'bg-gray-200 text-carbon-gray-100 font-bold' };
  case 'ESCALATED_DISPUTE': return { text: 'Dispute Under Review', color: 'bg-blue-100 text-blue-800' };
  default: return { text: state, color: 'bg-gray-100 text-gray-800' };
  }
@@ -97,11 +121,17 @@ export const MyOrdersList: React.FC = () => {
  >
  <option value="All">All Statuses</option>
  <option value="OPEN_INQUIRY">Pending Checkout</option>
- <option value="AWAITING_PAYMENT">Awaiting Payment</option>
+ <option value="UNPAID">Awaiting GCash payment</option>
+ <option value="PENDING_VERIFICATION">Verifying payment</option>
+ <option value="DISPUTED">Payment dispute</option>
+ <option value="DUE_AT_PICKUP">Cash due at pickup</option>
+ <option value="REFUND_DUE">Refund due</option>
+ <option value="REFUNDED">Refund recorded</option>
  <option value="AWAITING_PAYMENT_VERIFICATION">Verifying Payment</option>
  <option value="PROOF_APPROVED">Proof Approved</option>
  <option value="IN_PRODUCTION">In Production</option>
- <option value="PRINTED">Completed / Printed</option>
+ <option value="READY_FOR_PICKUP">Ready for Pickup</option>
+ <option value="COMPLETED">Completed</option>
  <option value="ESCALATED_DISPUTE">Dispute Under Review</option>
  </select>
  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -116,9 +146,16 @@ export const MyOrdersList: React.FC = () => {
  </button>
  </div>
  
+ {!isLoading && loadFailure === 'background' && <StaleStatusNotice confirmedAt={confirmedAt} onRetry={fetchOrders} />}
+
  {isLoading ? (
  <div className="py-12">
         <TableSkeleton columns={5} rows={5} />
+ </div>
+ ) : loadFailure === 'initial' ? (
+ <div className="bg-white p-12 text-center" role="alert">
+ <p className="text-gray-700 font-semibold mb-4 text-lg">We couldn't load your orders. Check your connection and try again.</p>
+ <CheckNowButton onRetry={fetchOrders} label="Try again" />
  </div>
  ) : orders.length === 0 ? (
  <div className="bg-white p-12 text-center">
@@ -146,7 +183,7 @@ export const MyOrdersList: React.FC = () => {
  <tbody className="bg-white divide-y divide-gray-200">
  {orders.map(order => {
  const hasReceipts = true; // In the DB, order might not return receipts here if not joined, but AWAITING_PAYMENT means it had receipts rejected because initial is OPEN_INQUIRY
- const badge = formatState(order.state, hasReceipts);
+ const badge = formatState(order, hasReceipts);
  return (
  <tr key={order.id} className="hover:bg-carbon-gray-10 transition-colors">
  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-carbon-gray-100">
@@ -166,12 +203,16 @@ export const MyOrdersList: React.FC = () => {
  <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold ${badge.color}`}>
  {badge.text}
  </span>
- {order.state === 'OPEN_INQUIRY' && (
+ <span className="mt-2 text-xs font-bold text-gray-800">{order.payment_method === 'CASH_ON_PICKUP' ? 'Cash on pickup' : 'GCash'} · {order.payment_status?.replaceAll('_', ' ')}</span>
+ {order.payment_method === 'CASH_ON_PICKUP' && <span className="mt-1 text-xs text-gray-600">Shop: {order.acceptance_status?.replaceAll('_', ' ')}</span>}
+ {order.is_unclaimed && <span className="mt-1 text-xs text-amber-800">Unclaimed: {order.unclaimed_reason || 'Contact the shop to arrange collection.'}</span>}
+ {order.payment_status === 'REFUND_DUE' && <span className="mt-1 text-xs text-amber-800">Contact the shop to arrange a full manual refund.</span>}
+ {order.payment_method === 'GCASH' && order.payment_status === 'UNPAID' && order.expires_at && (
  <span className="text-[10px] text-carbon-gray-100 font-bold mt-1.5 ml-1">
- Expires in {getRemainingTime(order.created_at, true)}
+ Expires in {getRemainingTime(order.expires_at, false)}
  </span>
  )}
- {order.state === 'AWAITING_PAYMENT' && order.expires_at && (
+ {order.payment_method === 'GCASH' && order.payment_status === 'REJECTED' && order.expires_at && (
  <span className="text-[10px] text-carbon-gray-100 font-bold mt-1.5 ml-1">
  Expires in {getRemainingTime(order.expires_at, false)}
  </span>
@@ -179,14 +220,7 @@ export const MyOrdersList: React.FC = () => {
  </div>
  </td>
  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
- {(order.state === 'OPEN_INQUIRY' || order.state === 'AWAITING_PAYMENT') && (
- <button 
- onClick={() => navigate(`/checkout/${order.id}`)}
- className={`text-white px-4 py-1.5 transition-colors ${order.state === 'AWAITING_PAYMENT' ? 'bg-carbon-gray-100 hover:bg-carbon-gray-100' : 'bg-carbon-blue-60 hover:bg-carbon-blue-70 '}`}
- >
- {order.state === 'AWAITING_PAYMENT' ? 'Review & Appeal' : 'Checkout'}
- </button>
- )}
+ <button onClick={() => navigate(`/checkout/${order.id}`)} className="bg-carbon-blue-60 px-4 py-1.5 text-white hover:bg-carbon-blue-70">View order</button>
  </td>
  </tr>
  );

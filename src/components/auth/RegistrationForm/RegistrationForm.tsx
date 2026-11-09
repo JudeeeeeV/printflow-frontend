@@ -1,5 +1,6 @@
 // src/components/auth/RegistrationForm/RegistrationForm.tsx
 import {
+  getEmailSendError,
   getRetrySeconds,
   useRetryCountdown,
 } from "../../../hooks/useRetryCountdown";
@@ -13,6 +14,8 @@ import {
   type AccountRole,
 } from "../AccountTypeSelector/AccountTypeSelector";
 import { SubmitButton } from "../SubmitButton/SubmitButton";
+import { CaptchaWidget } from "../CaptchaWidget/CaptchaWidget";
+import { useCaptcha } from "../CaptchaWidget/useCaptcha";
 import {
   authService,
   type RegisterPayload,
@@ -68,13 +71,14 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const retry = useRetryCountdown();
+  const captcha = useCaptcha();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setPasswordTouched(true);
     setConfirmTouched(true);
-    if (isSubmitting || retry.seconds > 0) return;
+    if (isSubmitting || retry.seconds > 0 || !captcha.ready) return;
 
     if (!isEmailValid) {
       setError("Please provide a valid email address.");
@@ -109,7 +113,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
         shopName: accountType === "Print Shop" ? shopName : undefined,
       };
 
-      const result = await authService.register(payload);
+      const result = await authService.register(payload, captcha.take());
 
       setPassword("");
       setConfirmPassword("");
@@ -119,7 +123,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
       if (wait !== null) {
         retry.start(wait);
       } else if (err instanceof Error) {
-        setError(err.message || "Registration failed. Please try again.");
+        setError(getEmailSendError(err, "Registration failed. Please try again."));
       } else {
         setError("Registration failed. Please try again.");
       }
@@ -354,6 +358,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
           {retry.seconds === 1 ? "second" : "seconds"}.
         </p>
       )}
+      <CaptchaWidget key={captcha.widgetKey} onToken={captcha.setToken} />
       <AuthErrorMessage message={error} />
 
       <div className="mt-2 [&>button]:min-h-11 [&>button]:py-3">
@@ -364,7 +369,7 @@ export const RegistrationForm: React.FC<{ onSignIn: () => void }> = ({
               : "Continue to verification"
           }
           isLoading={isSubmitting}
-          disabled={isSubmitting || retry.seconds > 0}
+          disabled={isSubmitting || retry.seconds > 0 || !captcha.ready}
         />
       </div>
     </form>

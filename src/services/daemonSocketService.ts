@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { API_URL } from "../config/runtime";
+import type { AttemptProgress } from "../components/dashboard/printFulfillment";
 
 export type DaemonStatus = "CONNECTED" | "OFFLINE" | "RECONNECTING";
 
@@ -11,13 +12,12 @@ class DaemonSocketService {
   private shopId: string | null = null;
   private status: DaemonStatus = "OFFLINE";
   private printers: string[] = [];
+  private updateRequired = false;
+  private updateRequiredListeners: ((required: boolean) => void)[] = [];
   private lastStatusAt = 0;
   private statusTimer: ReturnType<typeof setInterval> | null = null;
   private statusListeners: ((status: DaemonStatus) => void)[] = [];
-  private jobProgressListeners: ((data: {
-    orderId: string;
-    status: string;
-  }) => void)[] = [];
+  private jobProgressListeners: ((data: AttemptProgress) => void)[] = [];
   private printersListeners: ((printers: string[]) => void)[] = [];
 
   private readonly BACKEND_URL = `${API_URL}/daemon`;
@@ -53,19 +53,24 @@ class DaemonSocketService {
       this.notifyStatus("RECONNECTING");
     });
 
-    this.socket.on("daemon_status", (data: { status: string }) => {
-      if (data.status === "CONNECTED" || data.status === "OFFLINE") {
-        this.lastStatusAt = Date.now();
-        this.notifyStatus(data.status);
-      }
-    });
-
     this.socket.on(
-      "job_progress",
-      (data: { orderId: string; status: string }) => {
-        this.jobProgressListeners.forEach((fn) => fn(data));
+      "daemon_status",
+      (data: { status: string; agentUpdateRequired?: boolean }) => {
+        if (data.status === "CONNECTED" || data.status === "OFFLINE") {
+          this.lastStatusAt = Date.now();
+          this.notifyUpdateRequired(
+            data.status === "CONNECTED" && data.agentUpdateRequired === true,
+          );
+          this.notifyStatus(data.status);
+        }
       },
     );
+
+    this.socket.on("job_progress", (data: AttemptProgress) => {
+      // Only attempt-bound progress is authoritative.
+      if (!data || typeof data.attemptId !== "string") return;
+      this.jobProgressListeners.forEach((fn) => fn(data));
+    });
 
     this.socket.on("printers_list", (printers: string[]) => {
       if (this.status === "CONNECTED") this.notifyPrinters(printers);
@@ -120,10 +125,21 @@ class DaemonSocketService {
     };
   }
 
-  onJobProgress(callback: (data: { orderId: string; status: string }) => void) {
+  onJobProgress(callback: (data: AttemptProgress) => void) {
     this.jobProgressListeners.push(callback);
     return () => {
       this.jobProgressListeners = this.jobProgressListeners.filter(
+        (fn) => fn !== callback,
+      );
+    };
+  }
+
+  /** True while the connected agent is too old for attempt reporting. */
+  onUpdateRequired(callback: (required: boolean) => void) {
+    this.updateRequiredListeners.push(callback);
+    callback(this.updateRequired);
+    return () => {
+      this.updateRequiredListeners = this.updateRequiredListeners.filter(
         (fn) => fn !== callback,
       );
     };
@@ -141,8 +157,17 @@ class DaemonSocketService {
 
   private notifyStatus(status: DaemonStatus) {
     this.status = status;
-    if (status !== "CONNECTED") this.notifyPrinters([]);
+    if (status !== "CONNECTED") {
+      this.notifyPrinters([]);
+      this.notifyUpdateRequired(false);
+    }
     this.statusListeners.forEach((fn) => fn(status));
+  }
+
+  private notifyUpdateRequired(required: boolean) {
+    if (required === this.updateRequired) return;
+    this.updateRequired = required;
+    this.updateRequiredListeners.forEach((fn) => fn(required));
   }
 
   private notifyPrinters(printers: string[]) {

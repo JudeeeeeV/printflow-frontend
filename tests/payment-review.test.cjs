@@ -15,8 +15,9 @@ const deferred = () => {
   return { promise, resolve, reject };
 };
 const order = (overrides = {}) => ({
+  current_receipt_id: 'receipt-current', payment_status: 'PENDING_VERIFICATION', acceptance_status: 'PENDING',
   id: 'order-12345678', state: 'AWAITING_PAYMENT_VERIFICATION', total: 50,
-  payment_receipts: [{ reference_number: 'reference-123', receipt_url: 'https://example.test/receipt.png' }],
+  payment_receipts: [{ id: 'receipt-current', reference_number: 'reference-123', receipt_url: 'https://example.test/receipt.png' }],
   ...overrides,
 });
 
@@ -72,6 +73,7 @@ function fixture(overrides = {}, reducedMotion = false) {
       if (name === 'react-dom') return { createPortal: node => node };
       if (name === 'framer-motion') return { motion: { div: 'div' }, useReducedMotion: () => reducedMotion };
       if (name === '@carbon/icons-react') return { Close: 'icon', Checkmark: 'icon' };
+      if (name === './ShopOrderActions') return { ShopOrderActions: 'ShopOrderActions' };
       if (name === '../maps/Maps.module.css') return { default: { primaryButton: 'primary', secondaryButton: 'secondary' } };
       throw new Error(`Unexpected import ${name}`);
     },
@@ -105,34 +107,34 @@ function fixture(overrides = {}, reducedMotion = false) {
   const button = label => find(node => node.type === 'button' && (text(node).trim() === label || node.props['aria-label'] === label));
   const flush = async () => { await new Promise(resolve => setImmediate(resolve)); render(); };
   const update = changes => { Object.assign(props, changes); render(); };
-  const reason = value => { find(node => node.type === 'input').props.onChange({ target: { value } }); render(); };
+  const reason = value => { find(node => node.type === 'input' && node.props.type === 'text').props.onChange({ target: { value } }); render(); };
   const escape = () => listeners.get('keydown')?.({ key: 'Escape', preventDefault() {} });
   render();
-  return { props, calls, root, trigger, tab, document, listeners, render, find, text, button, flush, update, reason, escape, closed: () => closed };
+  return { confirm: () => { find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } }); render(); }, props, calls, root, trigger, tab, document, listeners, render, find, text, button, flush, update, reason, escape, closed: () => closed };
 }
 
-const approve = 'Verify & Send to Production';
+const approve = 'Verify payment';
 const reject = 'Reject & Request New Receipt';
 
-test('approve and reject pass the selected order and optional reason unchanged', async () => {
+test('review targets the current receipt and rejects an empty rejection reason', async () => {
   const f = fixture();
-  f.button(approve).props.onClick(); await f.flush();
+  f.confirm(); f.button(approve).props.onClick(); await f.flush();
   f.reason('Wrong amount');
   f.button(reject).props.onClick(); await f.flush();
   f.reason('');
   f.button(reject).props.onClick(); await f.flush();
-  assert.deepEqual(f.calls, [['order-12345678', 'APPROVE'], ['order-12345678', 'REJECT', 'Wrong amount'], ['order-12345678', 'REJECT', '']]);
+  assert.deepEqual(f.calls, [['order-12345678', 'APPROVE', undefined, 'receipt-current', true], ['order-12345678', 'REJECT', 'Wrong amount', 'receipt-current', true]]);
 });
 
 test('pending verification blocks duplicate submissions and all dismissal paths', async () => {
   const request = deferred(); let submissions = 0;
   const f = fixture({ onVerify: () => { submissions++; return request.promise; } });
-  f.button(approve).props.onClick();
+  f.confirm(); f.button(approve).props.onClick();
   f.button(reject).props.onClick();
   f.render();
   assert.equal(submissions, 1);
   for (const label of [approve, reject, 'Close payment review']) assert.equal(f.button(label).props.disabled, true);
-  assert.equal(f.find(node => node.type === 'input').props.disabled, true);
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'text').props.disabled, true);
   assert.equal(f.find(node => node.props.role === 'dialog').props['aria-busy'], true);
   assert.ok(f.find(node => node.props.role === 'status' && f.text(node).includes('Verifying payment')));
   f.escape(); f.button('Close payment review').props.onClick();
@@ -145,7 +147,7 @@ test('pending verification blocks duplicate submissions and all dismissal paths'
 
 test('externally busy state disables actions before any callback starts', () => {
   const f = fixture({ isVerifying: true });
-  f.button(approve).props.onClick(); f.escape();
+  f.confirm(); f.button(approve).props.onClick(); f.escape();
   assert.equal(f.calls.length, 0);
   assert.equal(f.closed(), 0);
   assert.equal(f.button(reject).props.disabled, true);
@@ -157,7 +159,7 @@ test('failure stays inline, preserves the rejection reason, and permits retry', 
   f.reason('Blurry receipt');
   f.button(reject).props.onClick(); await f.flush();
   assert.equal(f.text(f.find(node => node.props.role === 'alert')), 'Service unavailable');
-  assert.equal(f.find(node => node.type === 'input').props.value, 'Blurry receipt');
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'text').props.value, 'Blurry receipt');
   assert.equal(f.button(reject).props.disabled, false);
   assert.equal(f.closed(), 0);
   f.button(reject).props.onClick(); await f.flush();
@@ -167,7 +169,7 @@ test('failure stays inline, preserves the rejection reason, and permits retry', 
 
 test('unknown failures show a useful retry message', async () => {
   const f = fixture({ onVerify: async () => { throw null; } });
-  f.button(approve).props.onClick(); await f.flush();
+  f.confirm(); f.button(approve).props.onClick(); await f.flush();
   assert.match(f.text(f.find(node => node.props.role === 'alert')), /Please try again/);
 });
 
@@ -181,7 +183,7 @@ test('receipt loading, failure, success, replacement, and missing states are exp
   f.find(node => node.type === 'img').props.onError(); f.render();
   assert.ok(f.find(node => node.props.role === 'status' && f.text(node).includes('could not be loaded')));
   assert.ok(f.find(node => node.type === 'a'));
-  f.update({ order: order({ payment_receipts: [{ receipt_url: 'https://example.test/replacement.png' }] }) });
+  f.update({ order: order({ payment_receipts: [{ id: 'receipt-current', receipt_url: 'https://example.test/replacement.png' }] }) });
   assert.ok(f.find(node => node.props.role === 'status' && f.text(node) === 'Loading receipt…'));
   f.find(node => node.type === 'img').props.onLoad(); f.render();
   assert.equal(f.find(node => node.props.role === 'status' && f.text(node) === 'Loading receipt…'), undefined);
@@ -201,12 +203,12 @@ test('closing and changing order discard unsent reason, errors, and receipt stat
   assert.equal(f.trigger.focused, true);
   assert.equal(f.listeners.size, 0);
   f.update({ isOpen: true });
-  assert.equal(f.find(node => node.type === 'input').props.value, '');
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'text').props.value, '');
   assert.equal(f.find(node => node.props.role === 'alert'), undefined);
   assert.ok(f.find(node => node.type === 'img'));
   f.reason('Another unsaved reason');
   f.update({ order: order({ id: 'different-order' }) });
-  assert.equal(f.find(node => node.type === 'input').props.value, '');
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'text').props.value, '');
   assert.equal(f.document.body.style.overflow, 'hidden');
 });
 
@@ -215,7 +217,7 @@ test('escalated disputes are read-only and still allow receipt inspection', () =
   assert.ok(f.find(node => f.text(node).includes('under review by Platform Administration')));
   assert.equal(f.button(approve), undefined);
   assert.equal(f.button(reject), undefined);
-  assert.equal(f.find(node => node.type === 'input'), undefined);
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'text'), undefined);
   assert.ok(f.find(node => node.type === 'a'));
 });
 
@@ -239,31 +241,148 @@ test('reduced motion disables the entrance movement', () => {
   assert.equal(dialog.props.transition.duration, 0);
 });
 
-test('dashboard verification propagates failures and preserves successful queue updates', async () => {
+test('dashboard uses authoritative responses without inferring acceptance or production', async () => {
   const source = read('pages/ShopDashboard/ShopDashboard.tsx');
-  const handler = source.slice(source.indexOf(' const handleVerifyPayment ='), source.indexOf(' const handleToggleReadySelection ='));
+  const handler = source.slice(source.indexOf(' const handleOrderUpdated ='), source.indexOf(' const handleToggleReadySelection ='));
   const state = { busy: [], selected: order(), orders: [order()], refreshed: 0 };
   let failure;
   const exports = {};
   vm.runInNewContext(compile(`${handler}\nexport { handleVerifyPayment };`), {
     exports,
-    orderService: { verifyPayment: async () => { if (failure) throw failure; } },
+    orderService: { verifyPayment: async (_id, action) => {
+      if (failure) throw failure;
+      return { order: order({ state: action === 'APPROVE' ? 'IN_PRODUCTION' : 'OPEN_INQUIRY', payment_status: action === 'APPROVE' ? 'VERIFIED' : 'REJECTED', acceptance_status: action === 'APPROVE' ? 'ACCEPTED' : 'PENDING' }) };
+    } },
     setIsVerifying: value => state.busy.push(value),
     setSelectedPaymentOrder: value => { state.selected = value; },
     setShopOrders: update => { state.orders = update(state.orders); },
     refreshOrdersAfterChange: () => { state.refreshed++; },
   });
   failure = new Error('Offline');
-  await assert.rejects(exports.handleVerifyPayment('order-12345678', 'APPROVE'), /Offline/);
+  await assert.rejects(exports.handleVerifyPayment('order-12345678', 'APPROVE', undefined, 'receipt-current', true), /Offline/);
   assert.equal(state.selected.id, 'order-12345678');
-  assert.equal(state.orders[0].state, 'AWAITING_PAYMENT_VERIFICATION');
   assert.equal(state.refreshed, 0);
   failure = null;
-  for (const [action, expected] of [['APPROVE', 'IN_PRODUCTION'], ['REJECT', 'AWAITING_PAYMENT']]) {
-    await exports.handleVerifyPayment('order-12345678', action);
-    assert.equal(state.orders[0].state, expected);
+  for (const [action, expected] of [['APPROVE', 'VERIFIED'], ['REJECT', 'REJECTED']]) {
+    await exports.handleVerifyPayment('order-12345678', action, 'Reason', 'receipt-current', true);
+    assert.equal(state.orders[0].state, action === 'APPROVE' ? 'IN_PRODUCTION' : 'OPEN_INQUIRY');
+    assert.equal(state.orders[0].payment_status, expected);
+    assert.equal(state.orders[0].acceptance_status, action === 'APPROVE' ? 'ACCEPTED' : 'PENDING');
     assert.equal(state.selected, null);
   }
   assert.equal(state.refreshed, 2);
   assert.deepEqual(state.busy, [true, false, true, false, true, false]);
+});
+
+test('verification requires explicit evidence confirmation and never reviews an arbitrary historical receipt', async () => {
+  const f = fixture();
+  f.button(approve).props.onClick(); await f.flush();
+  assert.equal(f.calls.length, 0);
+  assert.match(f.text(f.find(node => node.props.role === 'alert')), /Confirm the receipt/);
+  f.update({ order: order({ current_receipt_id: 'missing-current' }) });
+  f.confirm(); f.button(approve).props.onClick(); await f.flush();
+  assert.equal(f.calls.length, 0);
+  assert.match(f.text(f.find(node => node.props.role === 'alert')), /current receipt is unavailable/);
+});
+
+test('cash modal shows pickup payment and shop decisions without GCash receipt controls', () => {
+  const f = fixture({ order: order({ payment_method: 'CASH_ON_PICKUP', payment_status: 'DUE_AT_PICKUP', state: 'OPEN_INQUIRY' }), onUpdated() {} });
+  assert.ok(f.find(node => f.text(node).includes('Amount due at pickup: ₱50.00')));
+  assert.equal(f.find(node => node.type === 'img'), undefined);
+  assert.equal(f.button(approve), undefined);
+  assert.equal(f.button(reject), undefined);
+  const actions = f.find(node => node.type === 'ShopOrderActions');
+  assert.equal(actions.props.order.payment_method, 'CASH_ON_PICKUP');
+  assert.equal(actions.props.order.payment_status, 'DUE_AT_PICKUP');
+  assert.match(f.text(f.find(node => f.text(node).includes('Recording cash collection'))), /Recording cash collection completes the order/);
+  f.update({ order: order({ payment_method:'CASH_ON_PICKUP', payment_status:'COLLECTED', state:'COMPLETED', acceptance_status:'ACCEPTED' }) });
+  assert.ok(f.find(node => f.text(node).includes('Cash payment has been collected. This order is complete.')));
+  assert.equal(f.find(node => f.text(node).includes('then confirm handover')), undefined);
+});
+
+test('cash review shows the print job and keeps the preview pinned across refreshes', () => {
+  const cash = (file_url = 'https://example.test/doc.pdf?token=first') => order({
+    payment_method: 'CASH_ON_PICKUP', payment_status: 'DUE_AT_PICKUP', state: 'OPEN_INQUIRY',
+    order_name: 'Thesis', paper_size: 'LONG', print_color_mode: 'COLOR', orientation: 'LANDSCAPE', page_count: 12, copies: 3,
+    assets: [{ file_url, original_filename: 'thesis.docx' }],
+  });
+  const f = fixture({ order: cash() });
+  const shown = f.text(f.find(node => node.props['aria-label'] === 'Print job'));
+  for (const value of ['Thesis', 'thesis.docx', 'LONG', 'Color', 'Landscape', '12', '3']) assert.ok(shown.includes(value), value);
+  assert.equal(f.find(node => node.type === 'iframe'), undefined);
+  f.button('Preview document').props.onClick(); f.render();
+  assert.equal(f.find(node => node.type === 'iframe').props.src, 'https://example.test/doc.pdf?token=first');
+  f.update({ order: cash('https://example.test/doc.pdf?token=second') });
+  assert.equal(f.find(node => node.type === 'iframe').props.src, 'https://example.test/doc.pdf?token=first');
+  assert.equal(f.find(node => node.type === 'a').props.href, 'https://example.test/doc.pdf?token=second');
+  f.button('Hide document').props.onClick(); f.render();
+  assert.equal(f.find(node => node.type === 'iframe'), undefined);
+});
+
+test('review explains a document that cannot be loaded', () => {
+  const f = fixture({ order: order({ payment_method: 'CASH_ON_PICKUP', payment_status: 'DUE_AT_PICKUP', state: 'OPEN_INQUIRY', assets: [{ file_url: null }] }) });
+  assert.ok(f.find(node => f.text(node).includes('The document could not be loaded')));
+  assert.equal(f.button('Preview document'), undefined);
+});
+
+test('the content security policy allows stored and local document previews', () => {
+  const policy = fs.readFileSync(path.join(__dirname, '../render.yaml'), 'utf8').match(/frame-src ([^;]+);/);
+  assert.ok(policy, 'render.yaml must declare frame-src');
+  for (const source of ["'self'", 'blob:', 'https://*.supabase.co']) assert.ok(policy[1].split(' ').includes(source), source);
+});
+
+test('settled GCash orders retain fulfillment actions and receipt inspection without repeat verification', () => {
+  const f = fixture({ order: order({ payment_method: 'GCASH', payment_status: 'VERIFIED', state: 'OPEN_INQUIRY' }), onUpdated() {} });
+  assert.ok(f.find(node => node.type === 'img'));
+  assert.ok(f.find(node => node.type === 'ShopOrderActions'));
+  assert.equal(f.button(approve), undefined);
+  assert.equal(f.button(reject), undefined);
+  assert.equal(f.find(node => f.text(node) === 'Shop acceptance: PENDING'), undefined);
+  assert.ok(f.find(node => f.text(node).includes('Verifying the receipt authorizes production')));
+});
+
+test('shop confirmation owns dismissal and blocks concurrent receipt verification', () => {
+  const f = fixture({ onUpdated() {} });
+  const actions = f.find(node => node.type === 'ShopOrderActions');
+  actions.props.onBusyChange(true); f.render();
+  f.escape(); f.button('Close payment review').props.onClick();
+  f.button(approve).props.onClick();
+  assert.equal(f.closed(), 0);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.button(approve).props.disabled, true);
+  let prevented = false;
+  f.listeners.get('keydown')({ key:'Tab', preventDefault() { prevented = true; } });
+  assert.equal(prevented, true); // Immediate decisions keep focus in the parent dialog.
+  prevented = false;
+  f.listeners.get('keydown')({ key:'Tab', target:{closest:() => ({})}, preventDefault() { prevented = true; } });
+  assert.equal(prevented, false); // Nested financial confirmations handle their own keys.
+  actions.props.onBusyChange(false); f.render();
+  f.escape();
+  assert.equal(f.closed(), 1);
+});
+
+
+test('stranded verified GCash retries production authorization using the same receipt', async () => {
+  const f = fixture({ order: order({ state: 'OPEN_INQUIRY', payment_method: 'GCASH', payment_status: 'VERIFIED', acceptance_status: 'PENDING' }) });
+  assert.match(f.text(f.render()), /does not record payment again/);
+  assert.equal(f.button('Reject & Request New Receipt'), undefined);
+  f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } });
+  f.render();
+  f.button('Retry production authorization').props.onClick();
+  await f.flush();
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0][1], 'APPROVE');
+  assert.equal(f.calls[0][3], 'receipt-current');
+  assert.equal(f.calls[0][4], true);
+});
+
+test('cancellation during review requires a fresh confirmation for the refund obligation', () => {
+  const f = fixture({ order: order({ state: 'OPEN_INQUIRY' }) });
+  f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } });
+  f.render();
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.checked, true);
+  f.update({ order: order({ state: 'CANCELLED' }) });
+  f.render();
+  assert.equal(f.find(node => node.type === 'input' && node.props.type === 'checkbox').props.checked, false);
+  assert.match(f.text(f.render()), /manual refund obligation/);
 });

@@ -1,17 +1,20 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useDialogFocus } from "../common/useDialogFocus";
 import { getOrderCardTitleParts, getOrderSpecifications } from "./orderCardTitle";
+import type { ShopQueueOrder } from '../../services/shopQueueService';
 import { OrderCardDetailsDialog } from "./OrderCardDetailsDialog";
 
-import type { ShopOrder } from './queueBrowsing';
-
 interface OrderCardProps {
-  order: ShopOrder;
+  order: ShopQueueOrder;
+  loadOrder?: () => Promise<ShopQueueOrder>;
   onClick?: () => void;
-  onReviewPayment?: () => void;
+  onReviewOrder?: () => void;
   isSelected?: boolean;
   onToggleSelect?: (orderId: string) => void;
+  /** Overrides the order-state badge, e.g. with the current print attempt. */
+  statusBadge?: { text: string; className: string } | null;
 }
 
 const paperSizeBackgrounds: Record<string, string> = {
@@ -20,15 +23,23 @@ const paperSizeBackgrounds: Record<string, string> = {
   LONG: "bg-carbon-blue-60",
 };
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPayment, isSelected = false, onToggleSelect }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ order, loadOrder, onClick, onReviewOrder, isSelected = false, onToggleSelect, statusBadge }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const [hasImageError, setHasImageError] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const isPaymentPending = order.state === "AWAITING_PAYMENT_VERIFICATION";
-  const documentUrl = order.assets?.[0]?.file_url;
-  const hasDocument = Boolean(documentUrl);
+  const [details, setDetails] = useState<ShopQueueOrder | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const previewDialog = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  useDialogFocus(previewDialog, isPreviewOpen, () => setIsPreviewOpen(false));
+  const hasDocument = order.has_document ?? Boolean(order.assets?.[0]?.file_url);
+  const fetchDetails = async () => {
+    if (!loadOrder) return order;
+    const fresh = await loadOrder(); setDetails(fresh); return fresh;
+  };
   const actionButtonClassName = "flex h-11 min-w-0 items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold leading-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:h-9 motion-reduce:transition-none";
   const title = getOrderCardTitleParts(order);
   const specs = getOrderSpecifications(order);
@@ -51,7 +62,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       badgeColor = "bg-gray-100 text-gray-600";
       break;
     case "OPEN_INQUIRY":
-      badgeText = "Pending Checkout";
+      badgeText = order.payment_status === 'DISPUTED' ? 'Dispute Under Review' : order.payment_status === 'REVIEW_REQUIRED' ? 'Payment review required' : order.payment_status === 'PENDING_VERIFICATION' ? 'Payment Review Pending' : order.payment_status === 'REJECTED' ? 'Receipt Rejected' : 'Awaiting shop / payment';
       badgeColor = "bg-gray-100 text-gray-600";
       break;
     case "PROOF_APPROVED":
@@ -60,6 +71,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       break;
     case "IN_PRODUCTION":
       badgeText = "In Production";
+      badgeColor = "bg-gray-200 text-carbon-gray-100";
+      break;
+    case "PRINTED":
+      // Legacy state: a submission was reported but output was never checked.
+      badgeText = "Awaiting Output Check";
       badgeColor = "bg-gray-200 text-carbon-gray-100";
       break;
     case "READY_FOR_PICKUP":
@@ -77,25 +93,40 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
       break;
   }
 
-  const canReviewPayment = (isPaymentPending || isDisputed) && !!onReviewPayment;
+  if (order.state === 'REJECTED') {
+    badgeText = 'Order Rejected'; badgeColor = 'bg-red-100 text-red-800';
+  } else if (['OPEN_INQUIRY', 'AWAITING_PAYMENT'].includes(order.state) && order.payment_status === 'REJECTED') {
+    badgeText = 'Receipt Rejected'; badgeColor = 'bg-red-100 text-red-800';
+  }
+  isDisputed = isDisputed || order.payment_status === 'DISPUTED';
+
+  if (statusBadge) {
+    badgeText = statusBadge.text;
+    badgeColor = statusBadge.className;
+  }
+
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0 }}
+      layout={!reducedMotion}
+      initial={{ opacity: reducedMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      transition={{ duration: reducedMotion ? 0 : 0.15, ease: "easeOut" }}
       onClick={onClick}
-      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} flex h-full min-w-0 flex-col bg-white transition-[border-color,box-shadow] duration-200 xl:min-h-64 ${isSelected ? 'border-4 border-carbon-blue-60 p-[9px] shadow-md' : `border border-black p-3 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
+      className={`${onClick ? 'cursor-pointer' : 'cursor-default'} flex h-full min-h-52 min-w-0 flex-col bg-white transition-[border-color,box-shadow] duration-200 ${isSelected ? 'border-4 border-carbon-blue-60 p-[5px] shadow-md' : `border border-black p-2 ${onClick ? 'hover:border-carbon-blue-60 hover:shadow-md' : ''}`}`}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
+      <div className="mb-1 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h4 className="font-black leading-5 text-carbon-gray-100 [overflow-wrap:anywhere]">
-            <button type="button" aria-label={`Show details for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
+            <button type="button" aria-label={`Show full title and customer for order ${order.id.slice(0, 8)}`} aria-haspopup="dialog" aria-expanded={isDetailsOpen} onClick={event => {
               event.stopPropagation();
               setIsDetailsOpen(true);
-            }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-10">
+              if (loadOrder) {
+                setDetailsLoading(true); setLoadError('');
+                void fetchDetails().catch(() => setLoadError('Fresh details could not be loaded. Close and try again.')).finally(() => setDetailsLoading(false));
+              }
+            }} className="block min-h-11 w-full text-left hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60 xl:min-h-8">
               <span className="line-clamp-2">{title.filename}</span>
             </button>
           </h4>
@@ -114,7 +145,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         </div>
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-1 [&>span]:max-w-full [&>span]:break-words [&>span]:leading-3">
+      <div className="mb-1 flex flex-wrap gap-1 [&>span]:max-w-full [&>span]:break-words [&>span]:leading-3">
         <span className={`px-2 py-0.5 text-white text-[10px] font-bold border border-[#e0e0e0] ${paperSizeBackground}`}>
           {paperSize}
         </span>
@@ -141,18 +172,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         </span>
       </div>
 
-      <div className="mb-2">
-        <div className="flex justify-between text-sm">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3">
+        <div className="flex flex-1 justify-between gap-2 text-sm">
           <span className="text-gray-500 font-medium">Total Amount:</span>
           <span className="font-bold text-carbon-gray-100">
             {specs.total}
           </span>
         </div>
-      </div>
-
-      {/* Payment actions share a row; selectable cards keep their checkbox. */}
-      <div className={`mt-auto gap-2 border-t border-[#e0e0e0] pt-2 ${canReviewPayment ? `grid ${hasDocument ? 'grid-cols-2' : 'grid-cols-1'}` : 'flex min-h-11 items-center justify-between'}`}>
-        {!canReviewPayment && (onToggleSelect ? (
+        {onToggleSelect && (
           <label
             className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-carbon-gray-100 xl:min-h-9"
             onClick={(e) => e.stopPropagation()}
@@ -169,18 +196,25 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
             />
             <span className="text-xs select-none">{isSelected ? 'Selected' : 'Select'}</span>
           </label>
-        ) : <div />)}
-        {hasDocument && (
+        )}
+      </div>
+      <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#e0e0e0] pt-2">
           <button
             type="button"
+            disabled={!hasDocument}
             onClick={(e) => {
               e.stopPropagation();
+              if (!hasDocument) return;
               setIsAssetLoading(true);
               setHasImageError(false);
-              setPreviewUrl(documentUrl || null);
-              setIsPreviewOpen(true);
+              setIsPreviewOpen(true); setPreviewUrl(null); setLoadError('');
+              void fetchDetails().then(fresh => {
+                const url = fresh.assets?.[0]?.file_url;
+                if (!url) throw new Error('File unavailable');
+                setPreviewUrl(url);
+              }).catch(() => { setIsAssetLoading(false); setLoadError('The document could not be loaded. Close and try again.'); });
             }}
-            className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6]`}
+            className={`${actionButtonClassName} border border-black bg-white text-black hover:bg-[#e6e6e6] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <svg
               className="h-4 w-4 shrink-0"
@@ -203,19 +237,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
             </svg>
             <span className="min-w-0">Preview Document</span>
           </button>
-        )}
-        {canReviewPayment && (
+
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onReviewPayment?.();
+              onReviewOrder?.();
             }}
             className={`${actionButtonClassName} bg-carbon-gray-100 text-white hover:bg-[#454545]`}
           >
-            Review Payment
+            Review Order
           </button>
-        )}
       </div>
 
       {isDisputed && (
@@ -226,12 +258,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
         </div>
       )}
 
-      {isDetailsOpen && <OrderCardDetailsDialog order={order} onClose={() => setIsDetailsOpen(false)} />}
+      {isDetailsOpen && <OrderCardDetailsDialog order={details || order} isLoading={detailsLoading} loadError={loadError} onClose={() => setIsDetailsOpen(false)} />}
 
       {/* Document Preview Modal */}
       {isPreviewOpen &&
-        order.assets &&
-        order.assets.length > 0 &&
         createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity"
@@ -241,6 +271,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
             }}
           >
             <div
+              ref={previewDialog}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Document preview"
               className="bg-white w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden rounded-xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -268,11 +302,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
                   Document Preview
                 </h3>
                 <button
+                  type="button"
+                  aria-label="Close document preview"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsPreviewOpen(false);
                   }}
-                  className="p-1 rounded-full text-gray-400 hover:text-carbon-gray-100 hover:bg-gray-100 transition-colors"
+                  className="min-h-11 min-w-11 p-1 rounded-full text-gray-400 hover:text-carbon-gray-100 hover:bg-gray-100 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60"
                 >
                   <svg
                     className="w-6 h-6"
@@ -290,6 +326,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
                 </button>
               </div>
               <div className="flex-1 relative flex flex-col overflow-hidden bg-gray-50">
+                {loadError && <p role="alert" className="p-6">{loadError}</p>}
                 {previewUrl?.match(/\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i) ? (
                   <div
                     className="w-full h-full flex items-center justify-center p-4 sm:p-8 overflow-auto relative"
@@ -336,14 +373,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
                       </div>
                     ) : (
                       <motion.img
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        initial={{ opacity: reducedMotion ? 1 : 0, scale: reducedMotion ? 1 : 0.95, y: reducedMotion ? 0 : 10 }}
                         animate={{
                           opacity: isAssetLoading ? 0 : 1,
                           scale: isAssetLoading ? 0.95 : 1,
                           y: isAssetLoading ? 10 : 0,
                         }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
-                        src={previewUrl}
+                        transition={{ duration: reducedMotion ? 0 : 0.4, ease: "easeOut" }}
+                        src={previewUrl || undefined}
                         alt="Document Preview"
                         onLoad={() => setIsAssetLoading(false)}
                         onError={() => {
@@ -368,18 +405,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, onReviewPa
                     )}
                     <iframe
                       src={previewUrl ?? undefined}
+                      tabIndex={-1}
                       referrerPolicy="no-referrer"
                       className="w-full h-full border-none bg-carbon-gray-10 relative z-20"
                       title="Document Preview"
                       onLoad={() => setIsAssetLoading(false)}
                       style={{
                         opacity: isAssetLoading ? 0 : 1,
-                        transition: "opacity 0.4s ease-out",
+                        transition: reducedMotion ? "none" : "opacity 0.4s ease-out",
                       }}
                     />
                   </>
                 )}
               </div>
+              {previewUrl && <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="min-h-11 shrink-0 p-3 text-sm font-bold underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60">Open original document in a new tab</a>}
             </div>
           </div>,
           document.body,

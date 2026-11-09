@@ -1,6 +1,9 @@
 import React from "react";
+import type { PaymentMethod } from "../../../services/orderService";
 
 interface OrderSummaryProps {
+  paymentMethod?: PaymentMethod;
+  setPaymentMethod?: (method: PaymentMethod) => void;
   estimate: {
     total: number;
     pageCount: number;
@@ -22,6 +25,7 @@ interface OrderSummaryProps {
   setOrientation: (orientation: string) => void;
   copies: number;
   setCopies: (copies: number) => void;
+  headingRef?: React.Ref<HTMLHeadingElement>;
 }
 
 export const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -40,10 +44,13 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   setOrientation,
   copies,
   setCopies,
+  paymentMethod = 'GCASH',
+  setPaymentMethod,
+  headingRef,
 }) => {
   return (
     <div className="bg-white border-2 border-gray-100 p-6 flex flex-col min-h-[500px] h-fit">
-      <h3 className="text-xl font-bold text-carbon-gray-100 mb-6">
+      <h3 ref={headingRef} tabIndex={-1} className="scroll-mt-6 text-xl font-bold text-carbon-gray-100 mb-6 focus:outline-hidden">
         Order Summary
       </h3>
 
@@ -167,14 +174,14 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             <button
               onClick={() => setPrintColorMode("BLACK_AND_WHITE")}
               disabled={isSubmitting}
-              className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === "BLACK_AND_WHITE" ? "bg-black/90 text-white " : "text-gray-500 hover:text-gray-700"}`}
+              className={`min-h-11 flex-1 py-2 text-sm font-bold transition-all ${printColorMode === "BLACK_AND_WHITE" ? "bg-black/90 text-white " : "text-gray-500 hover:text-gray-700"}`}
             >
               B&W
             </button>
             <button
               onClick={() => setPrintColorMode("COLOR")}
               disabled={isSubmitting}
-              className={`flex-1 py-2 text-sm font-bold transition-all ${printColorMode === "COLOR" ? "text-white" : "text-gray-500 hover:text-gray-700"}`}
+              className={`min-h-11 flex-1 py-2 text-sm font-bold transition-all ${printColorMode === "COLOR" ? "text-white" : "text-gray-500 hover:text-gray-700"}`}
               style={
                 printColorMode === "COLOR"
                   ? {
@@ -189,6 +196,19 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             </button>
           </div>
         </div>
+        <fieldset disabled={isSubmitting}>
+          <legend className="mb-2 text-sm font-bold text-gray-700">Payment method</legend>
+          <div className="grid grid-cols-2 gap-1 bg-gray-200 p-1">
+            {(['GCASH', 'CASH_ON_PICKUP'] as const).map(method => (
+              <button key={method} type="button" aria-pressed={paymentMethod === method}
+                onClick={() => setPaymentMethod?.(method)}
+                className={`min-h-11 px-2 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon-blue-60 disabled:opacity-50 ${paymentMethod === method ? 'bg-carbon-blue-60 text-white' : 'bg-white text-carbon-gray-100 hover:bg-gray-100'}`}>
+                {method === 'GCASH' ? 'GCash' : 'Cash on pickup'}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-gray-600">{paymentMethod === 'GCASH' ? 'Submit your receipt for review after placing the order.' : 'Pay the full amount at the shop before collecting your prints.'} Payment method is locked after submission.</p>
+        </fieldset>
       </div>
 
       {estimate ? (

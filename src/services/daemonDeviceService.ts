@@ -24,7 +24,9 @@ export interface AgentRelease {
 }
 
 export const daemonDeviceService = {
-  listMine: () => apiClient<DaemonDevice[]>('/daemon-devices/mine'),
+  // Live printer status: always read the current list.
+  listMine: () =>
+    apiClient<DaemonDevice[]>('/daemon-devices/mine', { cache: 'no-store' }),
   latestRelease: () => apiClient<AgentRelease>('/agent-releases/latest'),
   rescan: (deviceId: string) =>
     apiClient<{ message: string }>(`/daemon-devices/${deviceId}/rescan`, {

@@ -1,0 +1,5 @@
+# Only the sign-in page is meant for search engines.
+User-agent: *
+Allow: /$
+Allow: /auth$
+Disallow: /
