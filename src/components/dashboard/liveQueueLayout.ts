@@ -8,11 +8,10 @@ export interface LiveQueueLayout {
 }
 
 export function getLiveQueueLayout(width: number, contentHeight: number, cardHeight = MIN_QUEUE_CARD_HEIGHT, gap = QUEUE_GRID_GAP): LiveQueueLayout {
-  return {
-    pageSize: 6,
-    rows: width < 768 ? 6 : width < 1280 ? 3 : 2,
-    contained: width >= 1280 && contentHeight >= cardHeight * 2 + gap,
-  };
+  if (width < 768) return { pageSize: 3, rows: 3, contained: false };
+  if (width < 1280) return { pageSize: 4, rows: 2, contained: false };
+  const rows = contentHeight >= cardHeight * 2 + gap ? 2 : 1;
+  return { pageSize: rows * 3, rows, contained: contentHeight >= cardHeight };
 }
 
 export function getQueuePage(page: number, previousSize: number, pageSize: number, total: number) {

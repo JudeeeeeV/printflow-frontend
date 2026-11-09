@@ -15,7 +15,7 @@ interface PrintJobProgressModalProps {
 const formatTime = (value?: string) => {
  if (!value) return '';
  const date = new Date(value);
- return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+ return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', second: '2-digit' });
 };
 
 export const PrintJobProgressModal: React.FC<PrintJobProgressModalProps> = ({ isOpen, onClose, jobs, orderLabels }) => {

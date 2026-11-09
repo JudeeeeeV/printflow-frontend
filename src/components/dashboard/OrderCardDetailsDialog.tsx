@@ -6,10 +6,12 @@ import { displayOrderStatus, getOrderCardTitleParts, getOrderSpecifications } fr
 
 interface OrderCardDetailsDialogProps {
   order: ShopOrder;
+  isLoading?: boolean;
+  loadError?: string;
   onClose: () => void;
 }
 
-export function OrderCardDetailsDialog({ order, onClose }: OrderCardDetailsDialogProps) {
+export function OrderCardDetailsDialog({ order, onClose, isLoading, loadError }: OrderCardDetailsDialogProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [copyMessage, setCopyMessage] = useState('');
@@ -78,6 +80,8 @@ export function OrderCardDetailsDialog({ order, onClose }: OrderCardDetailsDialo
           </button>
         </header>
         <div tabIndex={0} aria-label="Order details content" className="min-h-0 overflow-y-auto overscroll-contain p-4 [overflow-wrap:anywhere] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-carbon-blue-60">
+          {isLoading && <p role="status">Loading fresh details…</p>}
+          {loadError && <p role="alert">{loadError}</p>}
           <dl className="space-y-3">
             {[
               ['Order title', title.filename], ['Original filename', title.originalFilename],
@@ -86,8 +90,12 @@ export function OrderCardDetailsDialog({ order, onClose }: OrderCardDetailsDialo
               ['Status', displayOrderStatus(order.state)], ['Paper size', specs.paper],
               ['Color', specs.color], ['Orientation', specs.orientation], ['Pages', specs.pages],
               ['Copies', specs.copies], ['Total', specs.total],
+              ['Payment method', displayOrderStatus(order.payment_method || '')],
+              ['Payment status', displayOrderStatus(order.payment_status || '')],
+              ['Acceptance status', displayOrderStatus(order.acceptance_status || '')],
             ].map(([label, value]) => <div key={label}><dt className="text-sm text-gray-600">{label}</dt><dd className="select-text font-bold">{value}</dd></div>)}
           </dl>
+          {order.blocking_reasons?.length ? <div className="mt-3"><h3 className="font-bold">Production holds</h3><ul>{order.blocking_reasons.map(reason => <li key={reason} className="text-sm">{reason}</li>)}</ul></div> : null}
           <button type="button" onClick={copyReference} className="mt-4 min-h-11 border border-black px-4 py-2 font-bold hover:bg-carbon-gray-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon-blue-60">Copy order reference</button>
           <p role="status" aria-live="polite" aria-atomic="true" className="mt-2 text-sm">{copyMessage}</p>
         </div>

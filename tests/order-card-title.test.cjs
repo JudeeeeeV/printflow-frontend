@@ -100,10 +100,11 @@ test('uses Manila day and year boundaries and zero-padded MM/DD/YY', () => {
 function renderCard(value, onClick, onToggleSelect, onReviewOrder = () => {}, stateChanges = [], isSelected = false) {
   const jsx = (type, props) => ({ type, props });
   const { OrderCard } = load('OrderCard.tsx', {
-    react: { useState: initial => [initial, next => stateChanges.push(next)] },
+    react: { useState: initial => [initial, next => stateChanges.push(next)], useRef: () => ({current:null}) },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-dom': { createPortal: node => node },
-    'framer-motion': { motion: { div: 'div' } },
+    'framer-motion': { motion: { div: 'div' }, useReducedMotion: () => false },
+    '../common/useDialogFocus': {useDialogFocus(){}},
     './orderCardTitle': titleHelpers,
     './OrderCardDetailsDialog': { OrderCardDetailsDialog: 'OrderCardDetailsDialog' },
   });
