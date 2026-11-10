@@ -129,7 +129,8 @@ function queueHarness(options={}) {
   };
   const { LiveShopQueue } = load('components/dashboard/LiveShopQueue.tsx', {
     react, 'react/jsx-runtime':{jsx,jsxs:jsx}, 'react-router-dom':{Link:'Link'},
-    '../../hooks/useLiveResource':{useLiveResource:(_key,fn)=>({data:fn(),refresh:async()=>{},isLoading:false,error:null})},
+    './skeletons/DashboardSkeleton':{QueueCardSkeleton:'Skeleton'},
+    '../../hooks/useLiveResource':{useLiveResource:(_key,fn)=>options.loading?{data:null,refresh:async()=>{},isLoading:true,error:null}:({data:fn(),refresh:async()=>{},isLoading:false,error:null})},
     '../../hooks/useDataEvents':{useDataEvents(){}}, '../../services/shopQueueService':{...selectionHelpers,shopQueueService:service},
     '../../services/daemonSocketService':{daemonSocketService:{onStatusChange:()=>()=>{},onPrintersList:()=>()=>{},onUpdateRequired:()=>()=>{},onJobProgress:()=>()=>{}}},
     '../../services/printFulfillmentService':{downloadPinnedFile:async()=>true},
@@ -159,6 +160,13 @@ test('three live tabs use backend summaries and responsive pages while History h
   app.resize(1440,300);assert.equal(app.cards().length,3);assert.equal(app.cards()[0].props.order.id,first);
   app.resize(1024,800);assert.equal(app.cards().length,4);
   app.resize(375,800);assert.equal(app.cards().length,3);
+});
+
+test('a loading queue shows one placeholder card per visible slot', () => {
+  const app=queueHarness({loading:true});
+  assert.equal(nodes(app.render()).filter(node=>node.type==='Skeleton').length,6);
+  assert.equal(app.cards().length,0);
+  assert.equal(nodes(queueHarness().render()).filter(node=>node.type==='Skeleton').length,0);
 });
 
 test('filters, sort and pages are independent by tab and clearing preserves sort', () => {

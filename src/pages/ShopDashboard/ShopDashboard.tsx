@@ -2,6 +2,13 @@ import { useState } from "react";
 import { useLiveResource } from "../../hooks/useLiveResource";
 import { shopService } from "../../services/shopService";
 import { LiveShopQueue } from "../../components/dashboard/LiveShopQueue";
+import { DashboardSkeleton } from "../../components/dashboard/skeletons/DashboardSkeleton";
+import { useLiveQueueLayout } from "../../components/dashboard/useLiveQueueLayout";
+
+const ShopDashboardLoading = () => {
+  const { layout, gridRef } = useLiveQueueLayout("new");
+  return <DashboardSkeleton layout={layout} gridRef={gridRef} />;
+};
 
 export const ShopDashboard = () => {
   const live = useLiveResource(
@@ -13,21 +20,18 @@ export const ShopDashboard = () => {
   const [qr, setQr] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  if (!live.data && !live.error) return <ShopDashboardLoading />;
   if (!live.data)
     return (
       <div className="p-6">
-        <p role={live.error ? "alert" : "status"}>
-          {live.error ? "The shop could not be loaded." : "Loading shop..."}
-        </p>
-        {live.error != null && (
-          <button
-            type="button"
-            className="min-h-11 border border-black px-4"
-            onClick={() => void live.refresh()}
-          >
-            Retry
-          </button>
-        )}
+        <p role="alert">The shop could not be loaded.</p>
+        <button
+          type="button"
+          className="min-h-11 border border-black px-4"
+          onClick={() => void live.refresh()}
+        >
+          Retry
+        </button>
       </div>
     );
   const shop = live.data;
