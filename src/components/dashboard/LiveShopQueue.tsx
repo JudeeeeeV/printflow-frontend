@@ -39,6 +39,7 @@ import {
   type PrintableOrder,
 } from "./printFulfillment";
 import { getOrderCardTitleParts } from "./orderCardTitle";
+import { QueueCardSkeleton } from "./skeletons/DashboardSkeleton";
 
 type LiveSection = Exclude<QueueSection, "history">;
 const SECTIONS: LiveSection[] = ["new", "ready", "pickup"];
@@ -519,7 +520,11 @@ export function LiveShopQueue({ shopId }: { shopId: string }) {
         <h2 id={`queue-${active}-heading`} className="sr-only">
           {LABELS[active]}
         </h2>
-        {live.isLoading && <p role="status">Loading queue…</p>}
+        {live.isLoading && (
+          <span role="status" className="sr-only">
+            Loading queue…
+          </span>
+        )}
         <div
           ref={gridRef}
           data-queue={active}
@@ -553,6 +558,11 @@ export function LiveShopQueue({ shopId }: { shopId: string }) {
               />
             );
           })}
+          {live.isLoading &&
+            rows.length === 0 &&
+            Array.from({ length: layout.pageSize }, (_, index) => (
+              <QueueCardSkeleton key={index} />
+            ))}
           {!live.isLoading && rows.length === 0 && (
             <p className="col-span-full p-6 text-center text-sm">
               No orders match this queue and its filters.
