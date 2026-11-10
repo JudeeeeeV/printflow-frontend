@@ -71,7 +71,7 @@ export const AuthPage: React.FC = () => {
             </aside>
 
             <main className={`${styles.authMain} relative flex min-w-0 items-start justify-center bg-[#F4F4F4] px-4 sm:px-8 lg:px-12 xl:px-16 ${activeView !== 'forgot-password' ? 'py-3 sm:py-4 min-h-0 overflow-hidden' : 'py-6 sm:py-10 lg:py-10 min-h-[calc(100vh-13rem)] lg:h-screen lg:min-h-0 lg:overflow-y-auto'}`}>
-                <div className={`relative z-10 min-w-0 w-full max-w-[500px] ${activeView !== 'forgot-password' ? `my-auto grid max-h-full min-h-0 grid-rows-[minmax(0,1fr)] ${activeView === 'login' ? 'h-[42rem]' : 'h-[36rem]'}` : ''}`}>
+                <div className={`relative z-10 min-w-0 w-full max-w-[500px] ${activeView !== 'forgot-password' ? 'my-auto grid h-[42rem] max-h-full min-h-0 grid-rows-[minmax(0,1fr)]' : ''}`}>
                     <div className={`border border-gray-200 border-t-4 border-t-carbon-blue-60 bg-white shadow-[0_16px_40px_rgba(22,22,22,0.10)] ${activeView !== 'forgot-password' ? 'min-h-0 overflow-hidden' : ''}`}>
                         <div
                             className={`${styles.authCardContent} px-5 sm:px-8 ${activeView !== 'forgot-password' ? 'py-4 sm:py-5 h-full min-h-0 overflow-y-auto overscroll-contain' : 'py-7 sm:py-9 lg:px-10 lg:py-10'}`}
